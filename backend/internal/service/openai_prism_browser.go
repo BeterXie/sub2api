@@ -364,7 +364,7 @@ func (s *OpenAIGatewayService) forwardPrismBrowser(ctx context.Context, c *gin.C
 	// This path buffers and writes a complete JSON or SSE response, including
 	// errors. The handler must never append another response.failed envelope.
 	defer func() {
-		if c.Writer.Written() {
+		if OpenAICompactKeepaliveAdjustedWrittenSize(c) > 0 {
 			MarkResponseCommitted(c)
 		}
 	}()
@@ -413,7 +413,16 @@ func (s *OpenAIGatewayService) forwardPrismBrowser(ctx context.Context, c *gin.C
 		return nil, err
 	}
 	upstreamModel = gjson.GetBytes(body, "model").String()
+	// Prism supplies its complete result at the end of the turn. Keep the
+	// downstream alive while the adapter prepares, polls and returns it;
+	// adapter-side heartbeats would still be held by our response buffer.
+	stopKeepalive := func() {}
+	if stream && s.cfg != nil {
+		stopKeepalive = startOpenAISSEKeepalive(c, time.Duration(s.cfg.Gateway.StreamKeepaliveInterval)*time.Second)
+	}
+	defer stopKeepalive()
 	responseBody, upstreamHeaders, status, err := s.callPrismBrowserForCaller(ctx, account, body, sessionID, prismBrowserCallerID(c, account.ID))
+	stopKeepalive()
 	if err != nil {
 		fail(http.StatusBadGateway, "prism_unavailable", "Prism adapter unavailable; request was not replayed")
 		return nil, err

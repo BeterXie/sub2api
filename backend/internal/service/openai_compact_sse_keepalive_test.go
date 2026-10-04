@@ -312,6 +312,24 @@ func TestOpenAIStreamClientOutputStarted_IgnoresCompactKeepaliveBytes(t *testing
 	require.True(t, openAIStreamClientOutputStarted(c, false))
 }
 
+func TestOpenAISSEKeepalive_ReentryKeepsEarlierCommentBytes(t *testing.T) {
+	c, rec := newCompactBridgeTestContext(t, true)
+	previous := 0
+	for range 3 {
+		stop := startOpenAISSEKeepalive(c, keepaliveTestInterval)
+		waitForKeepaliveBeats()
+		stop()
+		require.True(t, StopOpenAICompactSSEKeepaliveCommitted(c))
+		require.Greater(t, rec.Body.Len(), previous)
+		require.Equal(t, -1, OpenAICompactKeepaliveAdjustedWrittenSize(c), "all attempts' comment bytes must be excluded")
+		require.False(t, openAIStreamClientOutputStarted(c, false))
+		previous = rec.Body.Len()
+	}
+	_, err := c.Writer.Write([]byte("real-output"))
+	require.NoError(t, err)
+	require.Equal(t, len("real-output"), OpenAICompactKeepaliveAdjustedWrittenSize(c))
+}
+
 // fast policy block 在心跳未提交时保持 403 JSON 原语义。
 func TestWriteOpenAIFastPolicyBlockedResponse_BeforeKeepaliveCommit(t *testing.T) {
 	c, rec := newCompactBridgeTestContext(t, true)

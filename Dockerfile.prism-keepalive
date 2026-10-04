@@ -1,0 +1,26 @@
+FROM sub2api:v2.9.8-prism-frontend-tests AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/ ./
+RUN ["node", "node_modules/vite/bin/vite.js", "build"]
+
+FROM sub2api:v2.9.8-prism-usage-verify AS backend-builder
+ENV CGO_ENABLED=0
+WORKDIR /app/backend
+COPY backend/ ./
+COPY --from=frontend-builder /app/backend/internal/web/dist ./internal/web/dist
+
+RUN --mount=type=cache,id=sub2api-gomod,target=/go/pkg/mod \
+    --mount=type=cache,id=sub2api-gobuild,target=/root/.cache/go-build \
+    ["go", "test", "-tags=unit", "./internal/service", "./internal/handler", "-run", "Prism|Compact.*Keepalive|SSEKeepalive|Passthrough.*Keepalive|OpenAIForwardMayFailover|OpenAIForwardErrorAlreadyCommunicated", "-count=1", "-timeout=5m"]
+RUN ["apk", "add", "--no-cache", "gcc", "musl-dev"]
+ENV CGO_ENABLED=1
+RUN --mount=type=cache,id=sub2api-gomod,target=/go/pkg/mod \
+    --mount=type=cache,id=sub2api-gobuild,target=/root/.cache/go-build \
+    ["go", "test", "-race", "-tags=unit", "./internal/service", "-run", "TestPrismBrowserStreamKeepaliveBeforeBufferedResult|TestPrismBrowserKeepaliveSurvivesCapacityFailover|TestOpenAISSEKeepalive_ReentryKeepsEarlierCommentBytes", "-count=1", "-timeout=5m"]
+ENV CGO_ENABLED=0
+RUN --mount=type=cache,id=sub2api-gomod,target=/go/pkg/mod \
+    --mount=type=cache,id=sub2api-gobuild,target=/root/.cache/go-build \
+    ["go", "build", "-tags=embed", "-ldflags=-s -w -X main.Version=2.9.8 -X main.Commit=prism-keepalive-20261004 -X main.Date=2026-10-04 -X main.BuildType=release", "-trimpath", "-o", "/app/sub2api", "./cmd/server"]
+
+FROM sub2api:2.9.8-prism-capacity-20261004
+COPY --from=backend-builder --chown=sub2api:sub2api /app/sub2api /app/sub2api

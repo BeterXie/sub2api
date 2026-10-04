@@ -64,6 +64,22 @@ func startOpenAISSEKeepalive(c *gin.Context, interval time.Duration) func() {
 		writer: originalWriter,
 		stop:   make(chan struct{}),
 	}
+	// A buffered Prism attempt can stop its heartbeat and return a safe
+	// capacity rejection before the handler selects another account. Keep
+	// earlier comment bytes excluded from the failover output check, and
+	// retain the fact that HTTP 200 headers have already been committed.
+	if value, ok := c.Get(openAICompactSSEKeepaliveKey); ok {
+		if previous, valid := value.(*openAICompactSSEKeepalive); valid && previous != nil {
+			previous.mu.Lock()
+			previous.markStoppedLocked()
+			k.started, k.bytes = previous.started, previous.bytes
+			previous.mu.Unlock()
+			if wrapped, ok := originalWriter.(*openAICompactKeepaliveWriter); ok && wrapped.k == previous {
+				originalWriter = wrapped.ResponseWriter
+				k.writer = originalWriter
+			}
+		}
+	}
 	c.Set(openAICompactSSEKeepaliveKey, k)
 	wrappedWriter := &openAICompactKeepaliveWriter{ResponseWriter: originalWriter, k: k}
 	c.Writer = wrappedWriter
