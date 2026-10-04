@@ -358,6 +358,8 @@ export default {
     description: '查看和分析您的 API 使用历史',
     costDetails: '费用明细',
     tokenDetails: 'Token 明细',
+    estimatedTokens: '估算用量',
+    estimatedTokensHint: '按可见输入、输出和工具内容估算 token，以实际模型标准单价计费；不包含隐藏推理 token，缓存命中未知。',
     cacheTtlOverriddenHint: '缓存 TTL Override 已启用',
     cacheTtlOverriddenLabel: 'TTL 替换',
     cacheTtlOverridden5m: '按 5m 计费',

@@ -158,6 +158,12 @@
           <!-- Token 请求 -->
           <div v-else class="flex items-center gap-1.5">
             <div class="space-y-1 text-sm">
+              <span
+                v-if="row.usage_source === 'estimated_visible_text'"
+                data-testid="estimated-usage-badge"
+                :title="t('usage.estimatedTokensHint')"
+                class="inline-flex rounded bg-amber-100 px-1.5 py-0.5 text-xs text-amber-700 dark:bg-amber-900/30 dark:text-amber-300"
+              >{{ t('usage.estimatedTokens') }}</span>
               <div class="flex items-center gap-2">
                 <div class="inline-flex items-center gap-1">
                   <Icon name="arrowDown" size="sm" class="h-3.5 w-3.5 text-emerald-500" />

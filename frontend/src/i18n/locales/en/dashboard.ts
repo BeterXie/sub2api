@@ -353,6 +353,8 @@ export default {
     description: 'View and analyze your API usage history',
     costDetails: 'Cost Breakdown',
     tokenDetails: 'Token Breakdown',
+    estimatedTokens: 'Estimated usage',
+    estimatedTokensHint: 'Tokens estimated from visible input, output and tool content, billed at the actual model’s standard price. Hidden reasoning tokens are excluded; cache hits are unknown.',
     cacheTtlOverriddenHint: 'Cache TTL Override enabled',
     cacheTtlOverriddenLabel: 'TTL Override',
     cacheTtlOverridden5m: 'Billed as 5m',

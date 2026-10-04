@@ -147,8 +147,10 @@ type UsageLog struct {
 	GroupID        *int64
 	SubscriptionID *int64
 
-	InputTokens         int
-	OutputTokens        int
+	InputTokens  int
+	OutputTokens int
+	// Empty means provider usage; estimates retain their source in history.
+	UsageSource         string
 	CacheCreationTokens int
 	CacheReadTokens     int
 

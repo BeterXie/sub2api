@@ -48,7 +48,8 @@ func TestPrismBrowserNativeLive(t *testing.T) {
 		}
 		require.Equal(t, http.StatusOK, rec.Code)
 		require.Equal(t, "unavailable", rec.Header().Get("X-Prism-Usage"))
-		require.True(t, result.UsageUnavailable)
+		require.False(t, result.UsageUnavailable)
+		require.Equal(t, UsageSourceEstimatedVisibleText, result.UsageSource)
 		require.Equal(t, "gpt-6-astra", result.Model)
 		require.Equal(t, "gpt-6.1-sol", result.UpstreamModel)
 		require.Contains(t, rec.Header().Get("Server-Timing"), "prism_prepare;dur=")
@@ -104,7 +105,8 @@ func TestPrismFallbackNativeLive(t *testing.T) {
 			t.Fatalf("fallback live failed stream=%t HTTP=%d: %v", stream, rec.Code, err)
 		}
 		require.Equal(t, http.StatusOK, rec.Code)
-		require.True(t, result.UsageUnavailable)
+		require.False(t, result.UsageUnavailable)
+		require.Equal(t, UsageSourceEstimatedVisibleText, result.UsageSource)
 		require.Equal(t, "gpt-6.1-sol", result.UpstreamModel)
 		if stream {
 			require.Empty(t, upstream.requests)

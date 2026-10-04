@@ -1849,6 +1849,7 @@ export interface UsageLog {
 
   input_tokens: number
   output_tokens: number
+  usage_source?: string
   cache_creation_tokens: number
   cache_read_tokens: number
   cache_creation_5m_tokens: number

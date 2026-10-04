@@ -146,7 +146,8 @@ func TestPrismShadowUsesLiveParentCredentialsAndProfile(t *testing.T) {
 		result, err := s.Forward(context.Background(), c, shadow, []byte(prismFallbackFixtureBody))
 		require.NoError(t, err)
 		require.Equal(t, http.StatusOK, rec.Code)
-		require.True(t, result.UsageUnavailable)
+		require.False(t, result.UsageUnavailable)
+		require.Equal(t, UsageSourceEstimatedVisibleText, result.UsageSource)
 		require.Equal(t, "gpt-6.1-sol", result.UpstreamModel)
 	}
 	require.Equal(t, 2, bridgeCalls)

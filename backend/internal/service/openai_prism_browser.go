@@ -370,6 +370,7 @@ func (s *OpenAIGatewayService) forwardPrismBrowser(ctx context.Context, c *gin.C
 	}
 	model := strings.TrimSpace(gjson.GetBytes(body, "model").String())
 	stream := gjson.GetBytes(body, "stream").Bool()
+	requestedEffort := extractOpenAIReasoningEffortFromBody(body, model)
 	if model == "" {
 		fail(http.StatusBadRequest, "invalid_request_error", "model is required")
 		return nil, errors.New("prism adapter model is required")
@@ -416,12 +417,17 @@ func (s *OpenAIGatewayService) forwardPrismBrowser(ctx context.Context, c *gin.C
 		fail(http.StatusBadGateway, "invalid_prism_response", "Prism adapter returned an undeclared client tool")
 		return nil, err
 	}
+	responseBody, usage, err := prismBrowserResponseWithUsage(body, responseBody, stream)
+	if err != nil {
+		fail(http.StatusBadGateway, "prism_usage_unavailable", "Failed to estimate Prism usage")
+		return nil, err
+	}
 	contentType := "application/json"
 	if stream {
 		contentType = "text/event-stream"
 	}
 	SetActualOpenAIUpstreamEndpoint(c, "/v1/responses")
-	c.Header("X-Prism-Usage", "unavailable")
+	c.Header("X-Prism-Usage", UsageSourceEstimatedVisibleText)
 	if timing := upstreamHeaders.Get("Server-Timing"); timing != "" {
 		c.Header("Server-Timing", timing)
 	}
@@ -434,15 +440,21 @@ func (s *OpenAIGatewayService) forwardPrismBrowser(ctx context.Context, c *gin.C
 	}
 	c.Data(http.StatusOK, contentType, responseBody)
 	return &OpenAIForwardResult{
-		RequestID:        responseID,
-		ResponseID:       responseID,
-		UpstreamHeaders:  upstreamHeaders,
-		Model:            model,
-		UpstreamModel:    upstreamModel,
-		Stream:           stream,
-		Duration:         time.Since(started),
-		FirstTokenMs:     firstTokenMs,
-		UsageUnavailable: true,
+		RequestID:                responseID,
+		ResponseID:               responseID,
+		UpstreamHeaders:          upstreamHeaders,
+		Model:                    model,
+		BillingModel:             upstreamModel,
+		UpstreamModel:            upstreamModel,
+		UpstreamEndpoint:         "/v1/responses",
+		UpstreamResponseModel:    upstreamModel,
+		ReasoningEffort:          extractOpenAIReasoningEffortFromBody(body, upstreamModel),
+		RequestedReasoningEffort: requestedEffort,
+		Usage:                    usage,
+		UsageSource:              UsageSourceEstimatedVisibleText,
+		Stream:                   stream,
+		Duration:                 time.Since(started),
+		FirstTokenMs:             firstTokenMs,
 	}, nil
 }
 

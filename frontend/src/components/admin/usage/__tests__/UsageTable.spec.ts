@@ -22,6 +22,8 @@ import UsageTable from '../UsageTable.vue'
 const messages: Record<string, string> = {
   'admin.usage.userDeletedBadge': 'Deleted',
   'usage.costDetails': 'Cost Breakdown',
+  'usage.estimatedTokens': 'Estimated usage',
+  'usage.estimatedTokensHint': 'Visible text estimate; hidden reasoning and cache hits are unknown.',
   'admin.usage.inputCost': 'Input Cost',
   'admin.usage.outputCost': 'Output Cost',
   'admin.usage.cacheCreationCost': 'Cache Creation Cost',
@@ -302,6 +304,26 @@ describe('admin UsageTable tooltip', () => {
     expect(text).toContain('$5.0000 / 1M tokens')
     expect(text).toContain('$30.0000 / 1M tokens')
     expect(text).toContain('$0.069568')
+  })
+
+  it('discloses estimated tokens in admin and user records', () => {
+    for (const showAccountBilling of [true, false]) {
+      const wrapper = mount(UsageTable, {
+        props: {
+          data: [
+            { ...baseImageRow, request_id: 'estimated', image_count: 0, billing_mode: 'token', input_tokens: 12, output_tokens: 3, usage_source: 'estimated_visible_text' },
+            { ...baseImageRow, request_id: 'provider', image_count: 0, billing_mode: 'token', usage_source: '' },
+          ],
+          loading: false, columns: [], showAccountBilling,
+        },
+        global: { stubs: { DataTable: DataTableStub, EmptyState: true, Icon: true, Teleport: true } },
+      })
+      const badges = wrapper.findAll('[data-testid="estimated-usage-badge"]')
+      expect(badges).toHaveLength(1)
+      expect(badges[0].text()).toBe('Estimated usage')
+      expect(badges[0].attributes('title')).toContain('hidden reasoning')
+      wrapper.unmount()
+    }
   })
 
   it.each(['token', 'image', 'per_request'])('keeps eight decimal places in %s cost details', async (billingMode) => {

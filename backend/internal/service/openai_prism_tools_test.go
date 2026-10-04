@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 )
 
 func prismToolResponse(kind string) map[string]any {
@@ -145,8 +146,20 @@ func TestPrismClientToolGatewayForward(t *testing.T) {
 	result, err := s.forwardPrismBrowser(context.Background(), c, account, body, time.Now())
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, w.Code)
-	require.Equal(t, string(sse), w.Body.String())
+	terminalOffset := strings.LastIndex(string(sse), "event: response.completed")
+	require.Greater(t, terminalOffset, 0)
+	require.True(t, strings.HasPrefix(w.Body.String(), string(sse[:terminalOffset])))
+	wantOutput, err := json.Marshal(response["output"])
+	require.NoError(t, err)
+	for _, line := range strings.Split(w.Body.String(), "\n") {
+		data := strings.TrimPrefix(line, "data: ")
+		if gjson.Get(data, "type").String() == "response.completed" {
+			require.JSONEq(t, string(wantOutput), gjson.Get(data, "response.output").Raw)
+			require.Greater(t, gjson.Get(data, "response.usage.output_tokens").Int(), int64(0))
+		}
+	}
 	require.Equal(t, prismBrowserCallerID(c, account.ID), caller)
 	require.NotEqual(t, "external-spoof", caller)
-	require.True(t, result.UsageUnavailable)
+	require.False(t, result.UsageUnavailable)
+	require.Equal(t, UsageSourceEstimatedVisibleText, result.UsageSource)
 }

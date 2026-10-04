@@ -28,6 +28,15 @@ func TestUsageLogFromService_IncludesOpenAIWSMode(t *testing.T) {
 	require.False(t, UsageLogFromServiceAdmin(httpLog).OpenAIWSMode)
 }
 
+func TestUsageLogFromService_ExposesEstimatedUsageSource(t *testing.T) {
+	log := &service.UsageLog{Model: "gpt-6-astra", UsageSource: service.UsageSourceEstimatedVisibleText, InputTokens: 12, OutputTokens: 3}
+	for _, dto := range []any{UsageLogFromService(log), UsageLogFromServiceAdmin(log)} {
+		body, err := json.Marshal(dto)
+		require.NoError(t, err)
+		require.Contains(t, string(body), `"usage_source":"estimated_visible_text"`)
+	}
+}
+
 func TestUsageLogFromService_PreservesNativeCompactionAndStream(t *testing.T) {
 	t.Parallel()
 

@@ -99,7 +99,8 @@ func TestPrismFallbackForward(t *testing.T) {
 				require.Equal(t, expectBridge, bridgeCalls, "Prism must receive at most one turn")
 				require.Len(t, upstream.requests, expectOpenAI)
 				if expectBridge > 0 {
-					require.True(t, result.UsageUnavailable)
+					require.False(t, result.UsageUnavailable)
+					require.Equal(t, UsageSourceEstimatedVisibleText, result.UsageSource)
 					require.Equal(t, "gpt-6-astra", result.Model)
 					require.Equal(t, "gpt-6.1-sol", result.UpstreamModel)
 				}

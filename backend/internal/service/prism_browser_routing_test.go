@@ -41,7 +41,14 @@ func TestPrismBrowserNativeMappingAndAccountProxy(t *testing.T) {
 	require.Equal(t, http.StatusOK, rec.Code)
 	require.Equal(t, "gpt-6-astra", result.Model)
 	require.Equal(t, "gpt-6.1-sol", result.UpstreamModel)
-	require.True(t, result.UsageUnavailable)
+	require.False(t, result.UsageUnavailable)
+	require.Equal(t, UsageSourceEstimatedVisibleText, result.UsageSource)
+	require.Equal(t, "gpt-6.1-sol", result.BillingModel)
+	require.Greater(t, result.Usage.InputTokens, 0)
+	require.Greater(t, result.Usage.OutputTokens, 0)
+	require.Equal(t, UsageSourceEstimatedVisibleText, rec.Header().Get("X-Prism-Usage"))
+	require.Equal(t, result.Usage.InputTokens, int(gjson.GetBytes(rec.Body.Bytes(), "usage.input_tokens").Int()))
+	require.Equal(t, result.Usage.OutputTokens, int(gjson.GetBytes(rec.Body.Bytes(), "usage.output_tokens").Int()))
 }
 
 func TestPrismBrowserEffortMappingKeepsExplicitEffort(t *testing.T) {
@@ -324,7 +331,7 @@ func TestPrismBrowserForwardTerminalAndUsage(t *testing.T) {
 		}
 		result, err := s.forwardPrismBrowser(context.Background(), c, account, []byte(body), time.Now().Add(-25*time.Millisecond))
 		server.Close()
-		if err != nil || w.Code != http.StatusOK || result == nil || !result.UsageUnavailable || result.ResponseID != "resp_fixture" {
+		if err != nil || w.Code != http.StatusOK || result == nil || result.UsageUnavailable || result.ResponseID != "resp_fixture" {
 			t.Fatalf("unexpected result: result=%+v status=%d err=%v", result, w.Code, err)
 		}
 		require.Equal(t, "prism_verify;dur=120.0, prism_prepare;dur=50.0", w.Header().Get("Server-Timing"))
@@ -335,9 +342,9 @@ func TestPrismBrowserForwardTerminalAndUsage(t *testing.T) {
 		} else {
 			require.Nil(t, result.FirstTokenMs)
 		}
-		if err := s.RecordUsage(context.Background(), &OpenAIRecordUsageInput{Result: result}); err == nil {
-			t.Fatal("unknown usage must not enter billing as zero tokens")
-		}
+		require.Equal(t, UsageSourceEstimatedVisibleText, result.UsageSource)
+		require.Greater(t, result.Usage.InputTokens, 0)
+		require.Greater(t, result.Usage.OutputTokens, 0)
 	}
 	for _, raw := range []string{`event: response.completed`, `data: {"type":"response.failed"}`, "data: not-json"} {
 		if _, err := prismBrowserTerminal([]byte(raw), "gpt-5.6-sol", true); err == nil {

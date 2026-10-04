@@ -5,6 +5,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"regexp"
 	"strconv"
 	"strings"
@@ -20,6 +21,30 @@ var (
 	usageLogStaticInsertShapeRe = regexp.MustCompile(`(?s)INSERT INTO usage_logs \((.*?)\) VALUES \((.*?)\)`)
 	usageLogPlaceholderRe       = regexp.MustCompile(`\$(\d+)`)
 )
+
+func TestUsageLogEstimatedSourcePersistsAcrossInsertAndRead(t *testing.T) {
+	for _, source := range []string{"", service.UsageSourceEstimatedVisibleText} {
+		t.Run(source, func(t *testing.T) {
+			log := &service.UsageLog{UserID: 1, APIKeyID: 2, AccountID: 23, RequestID: "resp_prism_usage", Model: "gpt-6.1-sol", UsageSource: source,
+				InputTokens: 12, OutputTokens: 3, TotalCost: 0.001, ActualCost: 0.00008, RateMultiplier: 0.08, CreatedAt: time.Now().UTC()}
+			prepared := prepareUsageLogInsert(log)
+			values := append([]driver.Value{int64(10)}, anySliceToDriverValues(prepared.args)...)
+			db, mock, err := sqlmock.New()
+			require.NoError(t, err)
+			defer db.Close()
+			mock.ExpectQuery("SELECT .* FROM usage_logs WHERE id").WithArgs(int64(10)).
+				WillReturnRows(sqlmock.NewRows(strings.Split(usageLogSelectColumns, ", ")).AddRow(values...))
+			got, err := (&usageLogRepository{sql: db}).GetByID(context.Background(), 10)
+			require.NoError(t, err)
+			require.Equal(t, source, got.UsageSource)
+			require.Equal(t, log.InputTokens, got.InputTokens)
+			require.Equal(t, log.OutputTokens, got.OutputTokens)
+			require.Equal(t, log.AccountID, got.AccountID)
+			require.Equal(t, log.ActualCost, got.ActualCost)
+			require.NoError(t, mock.ExpectationsWereMet())
+		})
+	}
+}
 
 // newSQLCapturingMock 返回把实际下发 SQL 记录到 captured 的 sqlmock；语句一律视为匹配，
 // 参数仍由 WithArgs 校验。
