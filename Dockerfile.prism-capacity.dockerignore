@@ -1,0 +1,14 @@
+**
+!Dockerfile.prism-capacity
+!backend/
+!backend/**
+!frontend/
+!frontend/**
+backend/internal/web/dist
+backend/**/.env*
+backend/**/*.log
+backend/**/__pycache__/
+frontend/node_modules
+frontend/dist
+frontend/.env*
+frontend/*.log

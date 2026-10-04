@@ -341,6 +341,24 @@ func prismBrowserForwardError(status int, body []byte) error {
 	}
 }
 
+func prismBrowserCapacityRejected(status int, body []byte) bool {
+	if status != http.StatusConflict || !gjson.ValidBytes(body) {
+		return false
+	}
+	// Only the manager can confirm that this request was rejected before a
+	// worker received it. An unknown submitted turn must never be replayed.
+	submitted := gjson.GetBytes(body, "error.request_submitted")
+	if submitted.Type != gjson.False {
+		return false
+	}
+	switch gjson.GetBytes(body, "error.type").String() {
+	case "prism_busy", "prism_pending_turn":
+		return true
+	default:
+		return false
+	}
+}
+
 func (s *OpenAIGatewayService) forwardPrismBrowser(ctx context.Context, c *gin.Context, account *Account, body []byte, started time.Time) (*OpenAIForwardResult, error) {
 	MarkPrismBrowserAttempt(c, account.ID)
 	// This path buffers and writes a complete JSON or SSE response, including
@@ -401,6 +419,14 @@ func (s *OpenAIGatewayService) forwardPrismBrowser(ctx context.Context, c *gin.C
 		return nil, err
 	}
 	if status != http.StatusOK {
+		if prismBrowserCapacityRejected(status, responseBody) {
+			return nil, &UpstreamFailoverError{
+				StatusCode:        status,
+				ResponseBody:      responseBody,
+				ResponseHeaders:   upstreamHeaders,
+				NextAccountAction: NextAccountRetry,
+			}
+		}
 		if prismBrowserAdapterMisconfigured(status) {
 			fail(http.StatusBadGateway, "prism_unavailable", "Prism adapter rejected the gateway; check the adapter key and endpoint")
 			return nil, fmt.Errorf("prism adapter returned HTTP %d", status)
