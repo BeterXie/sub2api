@@ -26,6 +26,7 @@
                 {{ account.type }}
               </span>
               <span>{{ t('admin.accounts.account') }}</span>
+              <span v-if="isPrismShadow">· Prism</span>
             </div>
           </div>
         </div>
@@ -423,10 +424,11 @@ const uploadAudioName = ref('')
 const imageFileInput = ref<HTMLInputElement | null>(null)
 const audioFileInput = ref<HTMLInputElement | null>(null)
 const isOpenAIAccount = computed(() => props.account?.platform === 'openai')
+const isPrismShadow = computed(() => isOpenAIAccount.value && Boolean(props.account?.parent_account_id) && props.account?.quota_dimension === 'prism')
 const isGrokAccount = computed(() => props.account?.platform === 'grok')
 const openAITestModeOptions = computed(() => [
   { value: 'default', label: t('admin.accounts.openai.testModeDefault') },
-  { value: 'compact', label: t('admin.accounts.openai.testModeCompact') }
+  ...(!isPrismShadow.value ? [{ value: 'compact', label: t('admin.accounts.openai.testModeCompact') }] : [])
 ])
 const grokTestModeOptions = computed(() => [
   { value: 'text', label: t('admin.accounts.grok.testModeText') },

@@ -7,4 +7,4 @@ WORKDIR /app/backend
 COPY backend/ ./
 RUN --mount=type=cache,id=sub2api-gomod,target=/go/pkg/mod \
     --mount=type=cache,id=sub2api-gobuild,target=/root/.cache/go-build \
-    ["go", "test", "./internal/service", "./internal/repository", "./internal/handler/admin", "./pkg/pluginapi/v1", "-run", "Plugin|Update|Prism", "-count=1", "-timeout=5m"]
+    ["go", "test", "./internal/service", "./internal/repository", "./internal/handler/admin", "./pkg/pluginapi/v1", "-run", "Plugin|Update|Prism|StateProbe|ProbeOpenAICodexState", "-count=1", "-timeout=5m"]

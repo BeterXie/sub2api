@@ -420,11 +420,23 @@ func (s *AccountTestService) TestAccountConnection(c *gin.Context, accountID int
 	}
 
 	if account.IsOpenAI() {
+		modelID = strings.TrimSpace(modelID)
+		if modelID == "" && accountHasPrismBrowser(account) {
+			for _, candidate := range PrismBrowserSupportedModels() {
+				if account.IsPrismBrowserEnabledForModel(candidate) {
+					modelID = candidate
+					break
+				}
+			}
+		}
 		if account.IsPrismBrowserEnabledForModel(modelID) {
 			if normalizeAccountTestMode(mode) != AccountTestModeDefault || testOpts.ImageDataURL != "" || testOpts.AudioDataURL != "" {
 				return s.sendErrorAndEnd(c, "Prism supports the default text test only")
 			}
 			return s.testPrismBrowserConnection(c, account, modelID, prompt)
+		}
+		if account.IsPrismShadow() {
+			return s.sendErrorAndEnd(c, "This model is unavailable on the Prism shadow account; native OpenAI fallback is disabled")
 		}
 		return s.testOpenAIAccountConnection(c, account, modelID, prompt, normalizeAccountTestMode(mode))
 	}
@@ -468,7 +480,12 @@ func (s *AccountTestService) testPrismBrowserConnection(c *gin.Context, account 
 	c.Writer.Header().Set("Cache-Control", "no-cache")
 	c.Writer.Header().Set("X-Accel-Buffering", "no")
 	s.sendEvent(c, TestEvent{Type: "test_start", Model: modelID})
-	body, err := json.Marshal(map[string]any{"model": modelID, "input": prompt, "stream": false})
+	s.sendEvent(c, TestEvent{Type: "status", Text: "正在通过 Prism 通道测试连接"})
+	payload := map[string]any{"model": modelID, "input": prompt, "stream": false}
+	if options, ok := pelicanTestOptionsFromContext(c.Request.Context()); ok && options.reasoningEffort != "" {
+		payload["reasoning"] = map[string]any{"effort": options.reasoningEffort}
+	}
+	body, err := json.Marshal(payload)
 	if err != nil {
 		return s.sendErrorAndEnd(c, "Invalid Prism test request")
 	}

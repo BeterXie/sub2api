@@ -90,6 +90,12 @@ function mountModal(account: Record<string, unknown> = {
 }
 
 describe('AccountTestModal', () => {
+  it('does not offer native Compact tests for Prism shadows', async () => {
+    getAvailableModels.mockResolvedValue([{ id: 'gpt-6.1-sol', display_name: 'GPT 6.1 Sol' }])
+    const wrapper = mountModal({ id: 42, name: 'Prism shadow', platform: 'openai', type: 'oauth', status: 'active', parent_account_id: 4, quota_dimension: 'prism' })
+    expect((wrapper.vm as any).openAITestModeOptions.map((option: { value: string }) => option.value)).toEqual(['default'])
+    wrapper.unmount()
+  })
   beforeEach(() => {
     getAvailableModels.mockResolvedValue([
       { id: 'gemini-2.0-flash', display_name: 'Gemini 2.0 Flash' },

@@ -9,7 +9,7 @@
           </div>
           <div>
             <div class="font-semibold text-gray-900 dark:text-gray-100">{{ account.name }}</div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">{{ account.platform }} · {{ t('admin.accounts.pelicanTest.subtitle') }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">{{ isPrismShadow ? 'Prism' : account.platform }} · {{ t('admin.accounts.pelicanTest.subtitle') }}</div>
           </div>
         </div>
         <span v-if="testMode === 'question'" class="whitespace-nowrap rounded-full bg-white px-2.5 py-1 text-xs font-medium text-amber-700 shadow-sm dark:bg-dark-800 dark:text-amber-300">
@@ -188,6 +188,7 @@
       <ScheduledTestsPanel v-if="show && account && activeTab === 'schedule'" :key="account.id" :show="true" embedded
         :account-id="account.id" :default-model="modelId" :model-options="[{ value: modelId, label: modelId }]"
         :pelican-config="{ question_kind: questionKind, prompt, reasoning_effort: reasoningEffort, parallel_count: Number(parallelCount) }"
+        :allow-state-probe="!isPrismShadow"
         :disabled="running" @preview="previewScheduled" @history="scheduledRecords = $event" />
       <div v-else-if="activeTab === 'history'" class="space-y-2">
         <button v-for="result in scheduledRecords" :key="`scheduled-${result.id}`" type="button"
@@ -300,7 +301,6 @@ const PROBE_RESULT_LIMIT = 5
 const PROBE_FAILURE_KINDS = new Set(['unsupported', 'account_error', 'rate_limited', 'model_unsupported', 'upstream_error', 'network_error', 'stream_error', 'no_ticket', 'cancelled'])
 
 type TestMode = 'question' | 'probe'
-const testModes: TestMode[] = ['question', 'probe']
 
 type RunStatus = 'running' | 'success' | 'error'
 interface TestRun {
@@ -331,11 +331,13 @@ interface TestRecord {
 
 const props = defineProps<{ show: boolean; account: Account | null; accounts?: AccountListItem[] }>()
 const emit = defineEmits<{ (event: 'close'): void }>()
+const isPrismShadow = computed(() => props.account?.platform === 'openai' && Boolean(props.account.parent_account_id) && props.account.quota_dimension === 'prism')
+const testModes = computed<TestMode[]>(() => isPrismShadow.value ? ['question'] : ['question', 'probe'])
 
 const questionKind = ref<IntelligenceQuestion>('candy')
 const prompt = ref(questionPrompt('candy'))
 // Claude accounts cannot serve the OpenAI default.
-const defaultModel = computed(() => props.account?.platform === 'anthropic' ? 'claude-opus-5-5' : 'gpt-6-astra')
+const defaultModel = computed(() => props.account?.platform === 'anthropic' ? 'claude-opus-5-5' : isPrismShadow.value ? 'gpt-6.1-sol' : 'gpt-6-astra')
 const modelId = ref(defaultModel.value)
 const reasoningEffort = ref('medium')
 const parallelCount = ref<string | number>(1)
@@ -365,11 +367,11 @@ const reasoningOptions = computed(() => [
 ])
 const canStart = computed(() => Boolean(props.account && prompt.value.trim() && modelId.value.trim() && normalizeCount() > 0))
 const hasDownloadable = computed(() => runs.value.some((run) => Boolean(run.output)))
-const probeSupported = computed(() => props.account?.platform === 'openai' && (props.account.type === 'oauth' || props.account.type === 'setup-token'))
+const probeSupported = computed(() => !isPrismShadow.value && props.account?.platform === 'openai' && (props.account.type === 'oauth' || props.account.type === 'setup-token'))
 const canStartProbe = computed(() => Boolean(props.account && probeSupported.value))
 
 function selectMode(mode: TestMode) {
-  if (running.value) return
+  if (running.value || !testModes.value.includes(mode)) return
   testMode.value = mode
 }
 

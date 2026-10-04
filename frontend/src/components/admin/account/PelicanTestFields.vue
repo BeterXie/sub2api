@@ -23,17 +23,18 @@ import Input from '@/components/common/Input.vue'
 import Select from '@/components/common/Select.vue'
 import TextArea from '@/components/common/TextArea.vue'
 import type { PelicanTestConfig } from '@/types'
-const props = defineProps<{ modelValue: PelicanTestConfig }>()
+const props = withDefaults(defineProps<{ modelValue: PelicanTestConfig; allowStateProbe?: boolean }>(), { allowStateProbe: true })
 const emit = defineEmits<{ 'update:modelValue': [value: PelicanTestConfig] }>()
 const { t } = useI18n()
 const isProbe = computed(() => props.modelValue.question_kind === STATE_PROBE_QUESTION)
 const reasoningOptions = computed(() => ['low', 'medium', 'high'].map(value => ({ value, label: t(`admin.accounts.pelicanTest.reasoning${value[0].toUpperCase()}${value.slice(1)}`) })))
 const questionOptions = computed(() => [
   ...['candy', 'pelican'].map(value => ({ value, label: t(`admin.accounts.pelicanTest.${value}Question`) })),
-  { value: STATE_PROBE_QUESTION, label: t('admin.accounts.pelicanTest.stateProbeQuestion') }
+  ...(props.allowStateProbe ? [{ value: STATE_PROBE_QUESTION, label: t('admin.accounts.pelicanTest.stateProbeQuestion') }] : [])
 ])
 function selectQuestion(value: string | number | boolean | null) {
   if (value === STATE_PROBE_QUESTION) {
+    if (!props.allowStateProbe) return
     // 探针不需要题目；同一账号同一时刻只能跑一次探针，并行固定为 1。
     emit('update:modelValue', { ...props.modelValue, question_kind: STATE_PROBE_QUESTION, prompt: '', parallel_count: 1, reasoning_effort: props.modelValue.reasoning_effort || 'medium' })
     return

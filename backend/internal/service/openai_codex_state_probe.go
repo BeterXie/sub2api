@@ -297,7 +297,7 @@ func openAICodexStateVerdictReason(verdict OpenAICodexStateVerdict) string {
 }
 
 // openAICodexStateProbeUnsupportedReason 返回空串表示该账号可以跑探针。
-// 凭证影子账号可以跑：令牌和 chatgpt-account-id 都会解析到母账号。
+// Codex 凭证影子账号可以跑；Prism 影子账号不使用 Codex 门票。
 func openAICodexStateProbeUnsupportedReason(account *Account, requestedModel string, ignoreBPS bool) string {
 	switch {
 	case account == nil:
@@ -308,6 +308,8 @@ func openAICodexStateProbeUnsupportedReason(account *Account, requestedModel str
 		return "测试数据账号不向上游发真实请求，探针不适用"
 	case account.IsOpenAIAgentIdentity():
 		return "Agent Identity 账号不使用门票，探针不适用"
+	case account.IsPrismShadow() || account.IsPrismBrowserEnabledForModel(requestedModel):
+		return "Prism 通道不使用 Codex 门票，探针不适用"
 	case !ignoreBPS && account.IsExcelBPSEnabledForModel(requestedModel):
 		return "该账号的这个模型走 Excel/BPS 通道，不经过门票，探针不适用"
 	}

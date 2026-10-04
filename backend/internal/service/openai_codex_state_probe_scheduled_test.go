@@ -162,6 +162,7 @@ func TestStateProbeQualityPlanSkipsJudge(t *testing.T) {
 }
 
 func TestStateProbeScheduleSkipsUnsupportedAccounts(t *testing.T) {
+	parentID := int64(4)
 	for _, tc := range []struct {
 		name    string
 		account *Account
@@ -171,6 +172,8 @@ func TestStateProbeScheduleSkipsUnsupportedAccounts(t *testing.T) {
 		{name: "synthetic", account: &Account{Platform: PlatformOpenAI, Type: AccountTypeOAuth, Extra: map[string]any{"synthetic_ui_test": true}}},
 		{name: "agent identity", account: &Account{Platform: PlatformOpenAI, Type: AccountTypeOAuth, Credentials: map[string]any{"auth_mode": "agentIdentity"}}},
 		{name: "bps", account: &Account{Platform: PlatformOpenAI, Type: AccountTypeOAuth, Extra: map[string]any{"openai_excel_bps": true}}},
+		{name: "prism", account: &Account{Platform: PlatformOpenAI, Type: AccountTypeOAuth, Extra: map[string]any{"openai_prism_browser": true}}},
+		{name: "prism shadow", account: &Account{Platform: PlatformOpenAI, Type: AccountTypeOAuth, ParentAccountID: &parentID, QuotaDimension: QuotaDimensionPrism}},
 		{name: "deleted"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

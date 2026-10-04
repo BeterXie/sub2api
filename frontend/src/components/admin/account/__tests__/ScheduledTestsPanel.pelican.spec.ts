@@ -13,6 +13,19 @@ function mountPanel(pelican = true) {
 describe('shared scheduled test plans for Pelican', () => {
   beforeEach(() => { vi.useFakeTimers(); vi.mocked(adminAPI.scheduledTests.listByAccount).mockResolvedValue([]); vi.mocked(adminAPI.scheduledTests.listResults).mockResolvedValue([]) })
   afterEach(() => { vi.clearAllMocks(); vi.useRealTimers() })
+  it('passes Prism probe restrictions to both new and edited plans', async () => {
+    vi.mocked(adminAPI.scheduledTests.listByAccount).mockResolvedValue([plan] as any)
+    const wrapper = mountPanel(); await flushPromises()
+    await wrapper.setProps({ allowStateProbe: false })
+    const vm = wrapper.vm as any
+    vm.showAddForm = true
+    vm.startEdit(plan)
+    await flushPromises()
+    const fields = wrapper.findAllComponents({ name: 'PelicanTestFields' })
+    expect(fields).toHaveLength(2)
+    for (const field of fields) expect(field.props('allowStateProbe')).toBe(false)
+    wrapper.unmount()
+  })
   it('uses existing cron, retention, enabled and auto-recovery controls', async () => {
     vi.mocked(adminAPI.scheduledTests.create).mockResolvedValue(plan as any)
     const wrapper = mountPanel(); await flushPromises()

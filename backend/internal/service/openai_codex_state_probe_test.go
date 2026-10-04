@@ -239,8 +239,14 @@ func TestProbeOpenAICodexStateRejectsUnsupportedAccounts(t *testing.T) {
 	agent.Credentials[openAIAuthModeCredentialKey] = OpenAIAuthModeAgentIdentity
 	bps := stateProbeAccount()
 	bps.Extra = map[string]any{"openai_excel_bps": true}
+	prism := stateProbeAccount()
+	prism.Extra = map[string]any{"openai_prism_browser": true}
+	prismShadow := stateProbeAccount()
+	parentID := int64(4)
+	prismShadow.ParentAccountID = &parentID
+	prismShadow.QuotaDimension = QuotaDimensionPrism
 
-	for name, account := range map[string]*Account{"nil": nil, "apikey": apiKey, "synthetic": synthetic, "agent": agent, "bps": bps} {
+	for name, account := range map[string]*Account{"nil": nil, "apikey": apiKey, "synthetic": synthetic, "agent": agent, "bps": bps, "prism": prism, "prism shadow": prismShadow} {
 		t.Run(name, func(t *testing.T) {
 			result, upstream := runStateProbe(t, account)
 			require.Equal(t, OpenAICodexStateInconclusive, result.Verdict)
@@ -248,6 +254,12 @@ func TestProbeOpenAICodexStateRejectsUnsupportedAccounts(t *testing.T) {
 			require.Empty(t, upstream.calls)
 		})
 	}
+}
+
+func TestPrismStateProbeCannotBypassRoutingForBPSRecovery(t *testing.T) {
+	account := stateProbeAccount()
+	account.Extra = map[string]any{"openai_prism_browser": true, "openai_excel_bps": true}
+	require.Contains(t, openAICodexStateProbeUnsupportedReason(account, "gpt-6-astra:low", true), "Prism")
 }
 
 func TestAccountTestServiceStateProbeIsExclusivePerAccount(t *testing.T) {

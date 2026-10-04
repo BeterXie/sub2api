@@ -32,7 +32,7 @@ func (a *Account) IsPrismBrowserEnabledForModel(requestedModel string) bool {
 }
 
 func (a *Account) isPrismBrowserUpstreamModelEnabled(upstream string) bool {
-	upstream = strings.TrimSpace(upstream)
+	upstream, _ = prismBrowserModel(strings.TrimSpace(upstream))
 	if !accountHasPrismBrowser(a) || !isPrismBrowserModel(upstream) {
 		return false
 	}
@@ -43,14 +43,18 @@ func (a *Account) isPrismBrowserUpstreamModelEnabled(upstream string) bool {
 	switch models := raw.(type) {
 	case []string:
 		for _, model := range models {
-			if strings.TrimSpace(model) == upstream {
+			model, _ = prismBrowserModel(strings.TrimSpace(model))
+			if model == upstream {
 				return true
 			}
 		}
 	case []any:
 		for _, value := range models {
-			if model, ok := value.(string); ok && strings.TrimSpace(model) == upstream {
-				return true
+			if model, ok := value.(string); ok {
+				model, _ = prismBrowserModel(strings.TrimSpace(model))
+				if model == upstream {
+					return true
+				}
 			}
 		}
 	}

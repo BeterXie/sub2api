@@ -9,6 +9,15 @@ function render(modelValue: Record<string, unknown> = config) {
   return mount(PelicanTestFields, { props: { modelValue: modelValue as any }, global: { stubs: { Select: SelectStub, TextArea: true, Input: true } } })
 }
 describe('PelicanTestFields question kinds', () => {
+  it('does not offer or dispatch native state probes when unavailable', async () => {
+    const wrapper = render()
+    await wrapper.setProps({ allowStateProbe: false })
+    const question = wrapper.findAllComponents(SelectStub)[0]
+    expect(question.props('options').map((o: { value: string }) => o.value)).toEqual(['candy', 'pelican'])
+    question.vm.$emit('update:modelValue', 'state_probe')
+    expect(wrapper.emitted('update:modelValue')).toBeUndefined()
+    wrapper.unmount()
+  })
   it('offers the state probe and switches to a prompt-free single run', async () => {
     const wrapper = render()
     expect(wrapper.find('text-area-stub').exists()).toBe(true)

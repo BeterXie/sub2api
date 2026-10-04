@@ -231,6 +231,18 @@ describe('IQTestModal state probe mode', () => {
     wrapper.unmount()
   })
 
+  it('keeps Prism shadows on question tests and blocks the native probe', async () => {
+    const wrapper = mountModal({ parent_account_id: 4, quota_dimension: 'prism' })
+    expect((wrapper.vm as any).modelId).toBe('gpt-6.1-sol')
+    expect(wrapper.text()).toContain('Prism')
+    expect(wrapper.find('[data-testid="mode-probe"]').exists()).toBe(false)
+    ;(wrapper.vm as any).selectMode('probe')
+    await (wrapper.vm as any).startProbe()
+    expect((wrapper.vm as any).testMode).toBe('question')
+    expect(probeOpenAICodexState).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
   it('switches to the probe and calls the state-probe API with the chosen model', async () => {
     probeOpenAICodexState.mockResolvedValueOnce(probeResult())
     const wrapper = mountModal()

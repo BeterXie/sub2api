@@ -112,7 +112,7 @@
             </div>
           </div>
         </div>
-        <PelicanTestFields v-if="pelicanConfig" v-model="newPelican" class="mt-3" />
+        <PelicanTestFields v-if="pelicanConfig" v-model="newPelican" :allow-state-probe="allowStateProbe" class="mt-3" />
         <div class="mt-3 flex justify-end gap-2">
           <button
             @click="showAddForm = false; resetNewPlan()"
@@ -331,7 +331,7 @@
                 </div>
               </div>
             </div>
-            <PelicanTestFields v-if="pelicanConfig" v-model="editPelican" class="mt-3" />
+            <PelicanTestFields v-if="pelicanConfig" v-model="editPelican" :allow-state-probe="allowStateProbe" class="mt-3" />
             <div class="mt-3 flex justify-end gap-2">
               <button
                 @click="cancelEdit"
@@ -517,6 +517,7 @@ const props = defineProps<{
   modelOptions: SelectOption[]
   embedded?: boolean
   pelicanConfig?: PelicanTestConfig
+  allowStateProbe?: boolean
   defaultModel?: string
   disabled?: boolean
 }>()

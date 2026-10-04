@@ -15,6 +15,8 @@ func TestPrismBrowserModelScope(t *testing.T) {
 		want       bool
 	}{
 		{"legacy Sol", nil, false, "gpt-6.1-sol", true},
+		{"legacy reasoning suffix", nil, false, "gpt-6-luna:low", true},
+		{"legacy Astra alias", nil, false, "gpt-6-astra:ultra", true},
 		{"legacy audio stays native", nil, false, "gpt-4o-audio-preview", false},
 		{"selected", []any{"gpt-6.1-sol"}, true, "gpt-6.1-sol", true},
 		{"unselected", []any{"gpt-6.1-sol"}, true, "gpt-5.6-sol", false},
@@ -24,6 +26,9 @@ func TestPrismBrowserModelScope(t *testing.T) {
 		{"wildcard never widens", []string{"*"}, true, "gpt-6.1-sol", false},
 		{"unsupported cannot be selected", []string{"gpt-4o-audio-preview"}, true, "gpt-4o-audio-preview", false},
 		{"explicit alias", []string{"gpt-6.1-sol"}, true, "my-sol", true},
+		{"reasoning suffix", []string{"gpt-6-luna"}, true, "gpt-6-luna:low", true},
+		{"reasoning suffix preserves native scope", []string{"gpt-6.1-sol"}, true, "gpt-6-luna:low", false},
+		{"Astra alias", []string{"gpt-6-astra"}, true, "gpt-6-astra:low", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			_, a := prismTestService("")
@@ -51,6 +56,7 @@ func TestPrismScopePreservesNativeWebSocketModels(t *testing.T) {
 		require.True(t, s.isOpenAIAccountTransportCompatible(a, OpenAIUpstreamTransportResponsesWebsocketV2Ingress, model))
 	}
 	require.False(t, s.isOpenAIAccountTransportCompatible(a, OpenAIUpstreamTransportResponsesWebsocketV2Ingress, "gpt-6.1-sol"))
+	require.False(t, s.isOpenAIAccountTransportCompatible(a, OpenAIUpstreamTransportResponsesWebsocketV2Ingress, "gpt-6.1-sol:low"))
 	before := openAITurnRouteFingerprint(a)
 	a.Extra[PrismBrowserModelsKey] = []string{}
 	require.NotEqual(t, before, openAITurnRouteFingerprint(a))

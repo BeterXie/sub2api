@@ -460,6 +460,110 @@ func TestPrismBrowserAccountTestExplainsAdapterRefusal(t *testing.T) {
 	}
 }
 
+func TestPrismShadowAccountTestsNeverFallBackToNative(t *testing.T) {
+	for _, tc := range []struct {
+		name, model, mode, wantModel string
+		scope                        []string
+		disabled                     bool
+	}{
+		{name: "default model", wantModel: "gpt-6.1-sol"},
+		{name: "default respects scope", scope: []string{"gpt-5.6-terra"}, wantModel: "gpt-5.6-terra"},
+		{name: "unsupported model", model: "gpt-5.4"},
+		{name: "outside scope", model: "gpt-6.1-sol", scope: []string{"gpt-5.6-terra"}},
+		{name: "empty scope", scope: []string{}},
+		{name: "native compact", model: "gpt-6.1-sol", mode: "compact"},
+		{name: "disabled adapter", model: "gpt-6.1-sol", disabled: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			var calls int
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				calls++
+				body, err := io.ReadAll(r.Body)
+				require.NoError(t, err)
+				require.Equal(t, tc.wantModel, gjson.GetBytes(body, "model").String())
+				require.Equal(t, "fixture-oauth", r.Header.Get("X-Prism-OAuth-Token"))
+				_, _ = io.WriteString(w, `{"status":"completed","output":[{"content":[{"text":"OK"}]}]}`)
+			}))
+			defer server.Close()
+			gateway, parent := prismTestService(server.URL)
+			parent.ID = 4
+			shadow := &Account{ID: 42, Platform: PlatformOpenAI, Type: AccountTypeOAuth,
+				ParentAccountID: &parent.ID, QuotaDimension: QuotaDimensionPrism, Extra: map[string]any{}}
+			if tc.scope != nil {
+				shadow.Extra[PrismBrowserModelsKey] = tc.scope
+			}
+			repo := schedulerTestOpenAIAccountRepo{accounts: []Account{*parent, *shadow}}
+			native := &stateProbeUpstream{}
+			gateway.accountRepo, gateway.httpUpstream = repo, native
+			gateway.cfg.Gateway.PrismBrowser.Enabled = !tc.disabled
+			svc := &AccountTestService{accountRepo: repo, openaiGatewayService: gateway}
+			rec := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(rec)
+			c.Request = httptest.NewRequest(http.MethodPost, "/test", nil)
+			err := svc.TestAccountConnection(c, shadow.ID, tc.model, "hi", tc.mode)
+			if tc.wantModel != "" {
+				require.NoError(t, err)
+				require.Equal(t, 1, calls)
+				require.Contains(t, rec.Body.String(), "Prism")
+				require.Contains(t, rec.Body.String(), `"success":true`)
+			} else {
+				require.Error(t, err)
+				require.Zero(t, calls)
+				require.Contains(t, rec.Body.String(), "Prism")
+			}
+			require.Empty(t, native.calls, "a Prism shadow test must never contact the parent's Codex upstream")
+		})
+	}
+}
+
+func TestPrismBrowserIQTestPreservesReasoningSelection(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		require.Equal(t, "gpt-6.1-sol", gjson.GetBytes(body, "model").String())
+		require.Equal(t, "high", gjson.GetBytes(body, "reasoning.effort").String())
+		require.Equal(t, "candy question", gjson.GetBytes(body, "input").String())
+		_, _ = io.WriteString(w, `{"status":"completed","output":[{"content":[{"text":"29"}]}]}`)
+	}))
+	defer server.Close()
+	gateway, account := prismTestService(server.URL)
+	svc := &AccountTestService{
+		accountRepo: schedulerTestOpenAIAccountRepo{accounts: []Account{*account}}, openaiGatewayService: gateway,
+	}
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/pelican-test", nil)
+	require.NoError(t, svc.TestPelicanAccountConnection(c, account.ID, "gpt-6-astra:low", "candy question", "high"))
+	require.Contains(t, rec.Body.String(), `"text":"29"`)
+}
+
+func TestPrismBrowserScheduledTestRoutesModelAndEffort(t *testing.T) {
+	for _, tc := range []struct{ request, model, effort string }{
+		{"gpt-6-luna:low", "gpt-6-luna", "low"},
+		{"gpt-6-astra:ultra", "gpt-6.1-sol", "xhigh"},
+	} {
+		t.Run(tc.request, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				body, err := io.ReadAll(r.Body)
+				require.NoError(t, err)
+				require.Equal(t, tc.model, gjson.GetBytes(body, "model").String())
+				require.Equal(t, tc.effort, gjson.GetBytes(body, "reasoning.effort").String())
+				_, _ = io.WriteString(w, `{"id":"resp_fixture","status":"completed","model":"`+tc.model+`","output":[{"content":[{"text":"OK"}]}]}`)
+			}))
+			defer server.Close()
+			gateway, account := prismTestService(server.URL)
+			svc := &AccountTestService{
+				accountRepo:          schedulerTestOpenAIAccountRepo{accounts: []Account{*account}},
+				openaiGatewayService: gateway,
+			}
+			result, err := svc.RunTestBackground(context.Background(), account.ID, tc.request)
+			require.NoError(t, err)
+			require.Equal(t, "success", result.Status)
+			require.Equal(t, "OK", result.ResponseText)
+		})
+	}
+}
+
 // A WebSocket session placed on a Prism account is closed right after selection,
 // so the scheduler must keep such sessions on the other accounts, as it does for
 // Excel BPS models. HTTP requests still reach the Prism account.
