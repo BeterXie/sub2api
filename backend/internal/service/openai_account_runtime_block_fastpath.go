@@ -230,6 +230,12 @@ func (s *OpenAIGatewayService) markOpenAIOAuth429RateLimited(ctx context.Context
 	if account.IsShadow() {
 		return
 	}
+	if accountHasPrismFallback(account) {
+		// The persisted OpenAI rate limit still selects Prism until reset. A
+		// process-wide account block would incorrectly block both channels.
+		s.openaiOAuth429RetryStartedAt.Delete(account.ID)
+		return
+	}
 	s.recordOpenAIOAuth429()
 	disposition, resetAt := classifyOpenAIOAuth429(headers, responseBody)
 	if disposition == openAIOAuth429Transient && s.openAIOAuth429RetryWindowActive(account) {

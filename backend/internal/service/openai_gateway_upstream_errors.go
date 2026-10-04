@@ -497,15 +497,24 @@ func openAIUpstreamErrorBodyReadLimitForConfig(cfg *config.Config) int64 {
 }
 
 func (s *OpenAIGatewayService) readUpstreamErrorBody(resp *http.Response) []byte {
+	body, _ := s.readUpstreamErrorBodyChecked(resp)
+	return body
+}
+
+func (s *OpenAIGatewayService) readUpstreamErrorBodyChecked(resp *http.Response) ([]byte, error) {
 	if resp == nil || resp.Body == nil {
-		return nil
+		return nil, io.ErrUnexpectedEOF
 	}
 	cfg := (*config.Config)(nil)
 	if s != nil {
 		cfg = s.cfg
 	}
-	body, _ := io.ReadAll(io.LimitReader(resp.Body, openAIUpstreamErrorBodyReadLimitForConfig(cfg)))
-	return body
+	limit := openAIUpstreamErrorBodyReadLimitForConfig(cfg)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, limit+1))
+	if int64(len(body)) > limit {
+		return body[:limit], io.ErrShortBuffer
+	}
+	return body, err
 }
 
 func (s *OpenAIGatewayService) handleFailoverSideEffects(ctx context.Context, resp *http.Response, account *Account, responseBody []byte, canonicalModel ...string) bool {

@@ -1,8 +1,11 @@
 <template>
   <div ref="rootRef" v-if="showUsageWindows">
+    <span v-if="account.parent_account_id != null && account.quota_dimension === 'prism'" class="text-xs text-gray-500 dark:text-gray-400" data-testid="prism-quota-unavailable">
+      {{ t('admin.accounts.prismUsageUnavailable') }}
+    </span>
     <!-- Anthropic OAuth and Setup Token accounts: fetch real usage data -->
     <template
-      v-if="
+      v-else-if="
         account.platform === 'anthropic' &&
         (account.type === 'oauth' || account.type === 'setup-token')
       "
@@ -1434,6 +1437,7 @@ const syncManagedUsageState = () => {
 }
 
 const loadUsage = async (options?: { source?: 'passive' | 'active'; bypassCache?: boolean }) => {
+  if (props.account.parent_account_id != null && props.account.quota_dimension === 'prism') return
   if (!shouldFetchUsage.value) return
   if (isBatchManaged.value) {
     requestParentBatchUsage({ force: options?.bypassCache === true })

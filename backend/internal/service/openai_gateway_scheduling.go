@@ -406,6 +406,9 @@ func openAICompatibleAccountEligibilityFailureReasonBeforeProfit(ctx context.Con
 	if account.Platform != platform || !account.IsOpenAICompatible() {
 		return "platform_mismatch"
 	}
+	if requireCompact && accountHasPrismFallback(account) && account.IsRateLimited() {
+		return "not_schedulable"
+	}
 	if !account.IsSchedulableForModelWithContext(ctx, requestedModel) {
 		if account.IsSchedulable() {
 			return "model_rate_limited"
@@ -413,7 +416,8 @@ func openAICompatibleAccountEligibilityFailureReasonBeforeProfit(ctx context.Con
 		return "not_schedulable"
 	}
 	if account.IsOpenAI() {
-		if paused, reason := shouldAutoPauseOpenAIAccountByQuota(ctx, account); paused {
+		if paused, reason := shouldAutoPauseOpenAIAccountByQuota(ctx, account); paused &&
+			(requireCompact || !prismFallbackSupportsModel(account, requestedModel)) {
 			// Debug level: this fires per-candidate on the scheduling hot path, so Info
 			// would amplify into log spam once several accounts cross the threshold.
 			slog.Debug("account_auto_paused_by_quota",

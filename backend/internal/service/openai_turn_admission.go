@@ -188,7 +188,7 @@ func openAITurnRouteFingerprint(a *Account) [32]byte {
 	for _, key := range []string{
 		codexFingerprintSeedExtraKey, codexFingerprintModeExtraKey,
 		"openai_passthrough", "openai_oauth_passthrough", "openai_excel_bps", "openai_excel_bps_models", "openai_excel_bps_mihomo",
-		"openai_prism_browser", PrismBrowserModelsKey,
+		"openai_prism_browser", PrismBrowserModelsKey, "openai_prism_fallback",
 		"openai_oauth_responses_websockets_v2_mode", "openai_apikey_responses_websockets_v2_mode",
 		"openai_oauth_responses_websockets_v2_enabled", "openai_apikey_responses_websockets_v2_enabled",
 		"responses_websockets_v2_enabled", "openai_ws_enabled", "openai_ws_force_http",
@@ -218,12 +218,12 @@ func openAITurnRouteFingerprint(a *Account) [32]byte {
 		routeCredentials[key] = value
 	}
 	b, _ := json.Marshal(struct {
-		Platform, Type string
-		Parent, Proxy  *int64
-		Credentials    map[string]any
-		RouteExtra     map[string]any
-		ProxyURL       string
-	}{a.Platform, a.Type, a.ParentAccountID, a.ProxyID, routeCredentials, routeExtra, proxyURL})
+		Platform, Type, QuotaDimension string
+		Parent, Proxy                  *int64
+		Credentials                    map[string]any
+		RouteExtra                     map[string]any
+		ProxyURL                       string
+	}{a.Platform, a.Type, a.QuotaDimensionOrDefault(), a.ParentAccountID, a.ProxyID, routeCredentials, routeExtra, proxyURL})
 	return sha256.Sum256(b)
 }
 
@@ -359,6 +359,9 @@ func (s *OpenAIGatewayService) admitOpenAITurnWithGroup(
 	if !latest.IsOpenAI() {
 		return latest, nil
 	}
+	if latest.IsRateLimited() && !s.prismFallbackEnabled(latest, outboundModel) {
+		return nil, denyOpenAITurn("account_rate_limited")
+	}
 	if openAITurnRouteFingerprint(latest) != openAITurnRouteFingerprint(selected) {
 		return nil, denyOpenAITurn("account_binding_changed")
 	}
@@ -370,7 +373,9 @@ func (s *OpenAIGatewayService) admitOpenAITurnWithGroup(
 			latest.isRateLimitActiveForKey(openAIImageGenerationRateLimitKey))) {
 		return nil, denyOpenAITurn("model_rate_limited")
 	}
-	if s.openAICodexTicketBlocksAccount(latest, outboundModel) {
+	fallbackQuota := s.prismFallbackEnabled(latest, outboundModel) &&
+		prismFallbackQuotaBlocked(s.withOpenAIQuotaAutoPauseContext(ctx), latest, outboundModel)
+	if !fallbackQuota && s.openAICodexTicketBlocksAccount(latest, outboundModel) {
 		return nil, denyOpenAITicket()
 	}
 	return latest, nil
@@ -397,7 +402,7 @@ func (s *OpenAIGatewayService) bindOpenAIWSHandshake(account *Account, model str
 }
 
 func (s *OpenAIGatewayService) checkOpenAIWSBinding(account *Account, model string, b *openAIWSTurnBinding) error {
-	if account.isPrismBrowserUpstreamModelEnabled(model) {
+	if account.isPrismBrowserUpstreamModelEnabled(model) || accountHasPrismFallback(account) {
 		return denyOpenAITurn("prism_requires_http")
 	}
 	if account.isExcelBPSUpstreamModelEnabled(model) {

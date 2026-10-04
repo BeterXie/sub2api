@@ -190,6 +190,9 @@ func (s *AccountTestService) SetOpenAIGatewayService(gateway *OpenAIGatewayServi
 // It only fills picker-only gaps (local display-name fallbacks, OAuth image choices)
 // on its own copy; the shared catalog and its cache stay untouched.
 func (s *AccountTestService) FetchOpenAIAccountModels(ctx context.Context, account *Account) ([]openai.Model, error) {
+	if accountHasPrismBrowser(account) {
+		return prismBrowserModelCatalog(), nil
+	}
 	if s == nil || s.openaiGatewayService == nil {
 		return nil, errors.New("OpenAI model discovery service is unavailable")
 	}
@@ -455,7 +458,7 @@ func (s *AccountTestService) testPrismBrowserConnection(c *gin.Context, account 
 	}
 	modelID = strings.TrimSpace(modelID)
 	if modelID == "" {
-		modelID = "gpt-5.6-sol"
+		modelID = "gpt-6.1-sol"
 	}
 	modelID = account.GetMappedModel(modelID)
 	if prompt == "" {
@@ -871,6 +874,9 @@ func (s *AccountTestService) testOpenAIAccountConnection(c *gin.Context, account
 	if account.IsExcelBPSEnabled() && s.openaiGatewayService != nil && !isOpenAIImageModel(account.GetMappedModel(strings.TrimSpace(modelID))) {
 		return s.testExcelBPSAccountConnection(c, account, modelID, prompt)
 	}
+	if accountHasPrismFallback(account) && s.openaiGatewayService != nil && mode == AccountTestModeDefault {
+		return s.testExcelBPSAccountConnection(c, account, modelID, prompt)
+	}
 
 	// Default to openai.DefaultTestModel for OpenAI testing
 	testModelID := modelID
@@ -1066,9 +1072,16 @@ func (s *AccountTestService) testOpenAIAccountConnection(c *gin.Context, account
 }
 
 func (s *AccountTestService) testExcelBPSAccountConnection(c *gin.Context, account *Account, modelID, prompt string) error {
+	channel := "Excel BPS"
+	if accountHasPrismFallback(account) {
+		channel = "OpenAI/Prism"
+	}
 	model := strings.TrimSpace(modelID)
 	if model == "" {
 		model = openai.DefaultTestModel
+		if accountHasPrismFallback(account) {
+			model = "gpt-6-astra"
+		}
 	}
 	model = account.GetMappedModel(model)
 	prompt = promptOrDefault(prompt)
@@ -1076,7 +1089,7 @@ func (s *AccountTestService) testExcelBPSAccountConnection(c *gin.Context, accou
 
 	body, err := buildExcelBPSAccountTestBody(model, prompt)
 	if err != nil {
-		return s.sendErrorAndEnd(c, "Failed to create Excel BPS test payload")
+		return s.sendErrorAndEnd(c, "Failed to create "+channel+" test payload")
 	}
 
 	probe := httptest.NewRecorder()
@@ -1123,13 +1136,13 @@ func (s *AccountTestService) testExcelBPSAccountConnection(c *gin.Context, accou
 		}
 	}
 	if result == nil || result.ClientDisconnect {
-		return s.sendErrorAndEnd(c, "Excel BPS test response was interrupted")
+		return s.sendErrorAndEnd(c, channel+" test response was interrupted")
 	}
 	if !completed {
-		return s.sendErrorAndEnd(c, "Excel BPS test response ended before completion")
+		return s.sendErrorAndEnd(c, channel+" test response ended before completion")
 	}
 	if strings.TrimSpace(answer.String()) == "" {
-		return s.sendErrorAndEnd(c, "Excel BPS returned empty output")
+		return s.sendErrorAndEnd(c, channel+" returned empty output")
 	}
 	s.sendEvent(c, TestEvent{Type: "test_complete", Success: true})
 	return nil
@@ -1138,6 +1151,7 @@ func (s *AccountTestService) testExcelBPSAccountConnection(c *gin.Context, accou
 func buildExcelBPSAccountTestBody(model, prompt string) ([]byte, error) {
 	return json.Marshal(map[string]any{
 		"model": model, "stream": true, "store": false,
+		"instructions": "Answer the user's message.",
 		"input": []any{map[string]any{"type": "message", "role": "user", "content": []any{
 			map[string]any{"type": "input_text", "text": promptOrDefault(prompt)},
 		}}},

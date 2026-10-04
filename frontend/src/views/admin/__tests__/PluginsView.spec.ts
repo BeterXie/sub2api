@@ -8,6 +8,8 @@ const {
   uploadPlugin,
   enablePlugin,
   savePluginConfig,
+  listPluginAccounts,
+  testPlugin,
   createUISession,
   stepUpRun,
 } = vi.hoisted(() => ({
@@ -15,6 +17,8 @@ const {
   uploadPlugin: vi.fn(),
   enablePlugin: vi.fn(),
   savePluginConfig: vi.fn(),
+  listPluginAccounts: vi.fn(),
+  testPlugin: vi.fn(),
   createUISession: vi.fn(),
   stepUpRun: vi.fn((action: () => Promise<unknown>) => action()),
 }))
@@ -28,8 +32,9 @@ vi.mock('@/api/admin', () => ({
       disable: vi.fn(),
       remove: vi.fn(),
       getConfig: vi.fn().mockResolvedValue({}),
+      accounts: listPluginAccounts,
       saveConfig: savePluginConfig,
-      test: vi.fn().mockResolvedValue({ success: true, message: 'ok', latency_ms: 1 }),
+      test: testPlugin,
       createUISession,
     },
   },
@@ -109,8 +114,9 @@ const plugin = {
   runtime_message: '',
 }
 
-function mountView() {
+function mountView(attachTo?: HTMLElement) {
   return mount(PluginsView, {
+    attachTo,
     global: {
       stubs: {
         AppLayout: { template: '<div><slot /></div>' },
@@ -130,6 +136,8 @@ describe('管理员插件页二次验证', () => {
     uploadPlugin.mockResolvedValue(plugin)
     enablePlugin.mockResolvedValue(plugin)
     savePluginConfig.mockResolvedValue({ enabled: true })
+    listPluginAccounts.mockResolvedValue([{ id: 2, name: 'OAuth account', platform: 'openai', account_type: 'oauth', status: 'active', schedulable: true }])
+    testPlugin.mockResolvedValue({ success: true, message: 'ok', latency_ms: 1 })
     createUISession.mockResolvedValue({
       url: '/api/v1/plugin-ui/token/index.html#bridge_token=bridge',
       bridge_token: 'bridge',
@@ -165,5 +173,68 @@ describe('管理员插件页二次验证', () => {
 
     expect(stepUpRun).toHaveBeenCalledTimes(1)
     expect(uploadPlugin).toHaveBeenCalledTimes(1)
+  })
+
+  async function openPluginUI() {
+    const wrapper = mountView(document.body)
+    await flushPromises()
+    const button = wrapper.findAll('button').find((item) => item.text().includes('admin.plugins.configure'))
+    await button!.trigger('click')
+    await flushPromises()
+    const frame = wrapper.get('iframe').element as HTMLIFrameElement
+    const postMessage = vi.spyOn(frame.contentWindow!, 'postMessage')
+    return { wrapper, frame, postMessage }
+  }
+
+  function sendBridgeMessage(frame: HTMLIFrameElement, type: string) {
+    window.dispatchEvent(new MessageEvent('message', {
+      source: frame.contentWindow,
+      origin: 'null',
+      data: { source: 'sub2api-plugin-ui', bridge_token: 'bridge', request_id: 'test-request', type },
+    }))
+  }
+
+  it('插件配置页可以读取账号选项，不触发二次验证', async () => {
+    const { wrapper, frame, postMessage } = await openPluginUI()
+    sendBridgeMessage(frame, 'accounts.list')
+    await flushPromises()
+
+    expect(listPluginAccounts).toHaveBeenCalledWith(7)
+    expect(stepUpRun).not.toHaveBeenCalled()
+    expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({
+      ok: true, accounts: expect.arrayContaining([expect.objectContaining({ id: 2 })]),
+    }), '*')
+    wrapper.unmount()
+  })
+
+  it('诊断失败仍向插件交付每个账号的详细状态', async () => {
+    const result = { success: false, message: 'Login required', latency_ms: 1, status_json: '{"accounts":[{"account_id":2,"status":"login_required"}]}' }
+    testPlugin.mockResolvedValue(result)
+    const { wrapper, frame, postMessage } = await openPluginUI()
+    sendBridgeMessage(frame, 'config.test')
+    await flushPromises()
+
+    expect(stepUpRun).toHaveBeenCalledTimes(1)
+    expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({ ok: true, result }), '*')
+    wrapper.unmount()
+  })
+
+  it('账号初始化超过普通桥接等待时间后仍交付结果', async () => {
+    const { wrapper, frame, postMessage } = await openPluginUI()
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    let complete!: (value: unknown) => void
+    testPlugin.mockImplementation(() => new Promise((resolve) => { complete = resolve }))
+    const result = { success: true, message: 'OAuth ready', latency_ms: 60_000 }
+    try {
+      sendBridgeMessage(frame, 'config.test')
+      await flushPromises()
+      await vi.advanceTimersByTimeAsync(60_000)
+      complete(result)
+      await flushPromises()
+      expect(postMessage).toHaveBeenCalledWith(expect.objectContaining({ ok: true, result }), '*')
+    } finally {
+      wrapper.unmount()
+      vi.useRealTimers()
+    }
   })
 })

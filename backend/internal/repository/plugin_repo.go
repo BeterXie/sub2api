@@ -205,12 +205,20 @@ func (r *pluginRepository) UpdateState(ctx context.Context, id int64, state, las
 	return nil
 }
 
-func (r *pluginRepository) UpdateConfig(ctx context.Context, id int64, encrypted, expectedBinarySHA256 string) error {
+func (r *pluginRepository) UpdateConfig(ctx context.Context, id int64, encrypted string, routing *service.PluginAccountRouting, expectedBinarySHA256, expectedConfigEncrypted string) error {
+	var routingJSON any
+	if routing != nil {
+		raw, err := json.Marshal(routing)
+		if err != nil {
+			return err
+		}
+		routingJSON = string(raw)
+	}
 	result, err := r.db.ExecContext(ctx, `
 		UPDATE sub2api_plugin_installations
-		SET config_encrypted = $2, updated_at = NOW()
-		WHERE id = $1 AND binary_sha256 = $3
-	`, id, encrypted, expectedBinarySHA256)
+		SET config_encrypted = $2, account_routing = $3::jsonb, updated_at = NOW()
+		WHERE id = $1 AND binary_sha256 = $4 AND config_encrypted = $5
+	`, id, encrypted, routingJSON, expectedBinarySHA256, expectedConfigEncrypted)
 	if err != nil {
 		return err
 	}
@@ -284,7 +292,7 @@ const pluginSelectSQL = `
 	SELECT id, plugin_key, name, version, description, author, manifest,
 	       artifact_path, install_path, binary_path, binary_sha256,
 	       signature_status, state, config_encrypted, last_error,
-	       installed_by, installed_at, enabled_at, updated_at
+	       installed_by, installed_at, enabled_at, updated_at, account_routing
 	FROM sub2api_plugin_installations`
 
 type pluginScanner interface {
@@ -294,17 +302,23 @@ type pluginScanner interface {
 func scanPlugin(scanner pluginScanner) (*service.PluginInstallation, error) {
 	plugin := &service.PluginInstallation{}
 	var manifestJSON []byte
+	var routingJSON []byte
 	if err := scanner.Scan(
 		&plugin.ID, &plugin.PluginKey, &plugin.Name, &plugin.Version, &plugin.Description,
 		&plugin.Author, &manifestJSON, &plugin.ArtifactPath, &plugin.InstallPath,
 		&plugin.BinaryPath, &plugin.BinarySHA256, &plugin.SignatureStatus, &plugin.State,
 		&plugin.ConfigEncrypted, &plugin.LastError, &plugin.InstalledBy, &plugin.InstalledAt,
-		&plugin.EnabledAt, &plugin.UpdatedAt,
+		&plugin.EnabledAt, &plugin.UpdatedAt, &routingJSON,
 	); err != nil {
 		return nil, err
 	}
 	if err := json.Unmarshal(manifestJSON, &plugin.Manifest); err != nil {
 		return nil, fmt.Errorf("解析插件清单: %w", err)
+	}
+	if len(routingJSON) > 0 {
+		if err := json.Unmarshal(routingJSON, &plugin.AccountRouting); err != nil {
+			return nil, fmt.Errorf("parse plugin account routing: %w", err)
+		}
 	}
 	return plugin, nil
 }

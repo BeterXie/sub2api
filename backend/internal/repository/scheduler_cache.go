@@ -1072,6 +1072,8 @@ func filterSchedulerExtra(extra map[string]any) map[string]any {
 		"astra_model_empty_mapping",
 		"openai_passthrough",
 		"openai_oauth_passthrough",
+		"openai_prism_browser",
+		"openai_prism_fallback",
 		"openai_excel_bps",
 		"openai_excel_bps_auto_disable_on_403",
 		service.ExcelBPSAutoRecoverOn403Key,

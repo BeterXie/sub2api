@@ -13,7 +13,99 @@ import (
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 )
+
+func TestPrismBrowserNativeMappingAndAccountProxy(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		require.NoError(t, err)
+		require.Equal(t, "gpt-6.1-sol", gjson.GetBytes(body, "model").String())
+		require.Equal(t, "xhigh", gjson.GetBytes(body, "reasoning.effort").String())
+		require.Equal(t, "say OK", gjson.GetBytes(body, "input").String())
+		require.Equal(t, "http://user:pass@proxy.invalid:3128", r.Header.Get("X-Prism-Proxy"))
+		require.Equal(t, "fixture-oauth", r.Header.Get("X-Prism-OAuth-Token"))
+		_, _ = io.WriteString(w, `{"id":"resp_fixture","status":"completed","model":"gpt-6.1-sol","usage":null,"output":[{"content":[{"text":"OK"}]}]}`)
+	}))
+	defer server.Close()
+	s, account := prismTestService(server.URL)
+	account.Proxy = &Proxy{Protocol: "http", Host: "proxy.invalid", Port: 3128, Username: "user", Password: "pass"}
+	rec := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(rec)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/responses", nil)
+	c.Request.Header.Set("X-Prism-OAuth-Token", "forged")
+	c.Request.Header.Set("X-Prism-Proxy", "http://forged.invalid")
+	result, err := s.forwardPrismBrowser(context.Background(), c, account,
+		[]byte(`{"model":"gpt-6-astra","input":"say OK","reasoning":{"effort":"ultra"}}`), time.Now())
+	require.NoError(t, err)
+	require.Equal(t, http.StatusOK, rec.Code)
+	require.Equal(t, "gpt-6-astra", result.Model)
+	require.Equal(t, "gpt-6.1-sol", result.UpstreamModel)
+	require.True(t, result.UsageUnavailable)
+}
+
+func TestPrismBrowserEffortMappingKeepsExplicitEffort(t *testing.T) {
+	for _, tc := range []struct{ body, model, effort string }{
+		{`{"model":"gpt-6-astra:ultra"}`, "gpt-6.1-sol", "xhigh"},
+		{`{"model":"gpt-6-astra:ultra","reasoning":{"effort":"low"}}`, "gpt-6.1-sol", "low"},
+		{`{"model":"gpt-5.6-sol","reasoning_effort":"max"}`, "gpt-5.6-sol", "xhigh"},
+		{`{"model":"gpt-6-luna","reasoning":{"effort":"high"}}`, "gpt-6-luna", "high"},
+	} {
+		mapped, err := prismBrowserMappedRequest([]byte(tc.body))
+		require.NoError(t, err)
+		require.Equal(t, tc.model, gjson.GetBytes(mapped, "model").String())
+		effort := gjson.GetBytes(mapped, "reasoning_effort").String()
+		if effort == "" {
+			effort = gjson.GetBytes(mapped, "reasoning.effort").String()
+		}
+		require.Equal(t, tc.effort, effort)
+	}
+}
+
+func TestPrismBrowserSelectedAccountCatalogAndScheduling(t *testing.T) {
+	s, account := prismTestService("http://127.0.0.1:1")
+	response, err := s.FetchOpenAIModelsList(context.Background(), account)
+	require.NoError(t, err)
+	var list struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	require.NoError(t, json.Unmarshal(response.Body, &list))
+	require.Len(t, list.Data, 5)
+	for _, id := range []string{"gpt-6.1-sol", "gpt-6-astra", "gpt-6-astra:ultra", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-6-luna"} {
+		require.True(t, account.IsModelSupported(id), id)
+	}
+	for _, id := range []string{"gpt-5.4", "gpt-image-2", "unknown"} {
+		require.False(t, account.IsModelSupported(id), id)
+	}
+	models, err := (&AccountTestService{}).FetchOpenAIAccountModels(context.Background(), account)
+	require.NoError(t, err)
+	require.Equal(t, "gpt-6.1-sol", models[0].ID)
+	delete(account.Extra, "openai_prism_browser")
+	require.True(t, account.IsModelSupported("gpt-5.4"), "unchecking Prism restores native model selection")
+}
+
+func TestPrismBrowserTextDeltasMustMatchTheCompletedOutput(t *testing.T) {
+	const item = `{"id":"msg_fixture","type":"message","status":"completed","content":[{"type":"output_text","text":"OK"}]}`
+	const prefix = "data: {\"type\":\"response.output_item.added\",\"output_index\":0,\"item\":{\"id\":\"msg_fixture\",\"type\":\"message\",\"status\":\"in_progress\",\"content\":[]}}\n\n"
+	const suffix = "data: {\"type\":\"response.output_item.done\",\"output_index\":0,\"item\":" + item + "}\n\ndata: {\"type\":\"response.completed\",\"response\":{\"id\":\"resp_fixture\",\"status\":\"completed\",\"model\":\"gpt-6.1-sol\",\"output\":[" + item + "]}}\n\n"
+	for _, tc := range []struct {
+		delta, itemID string
+		valid         bool
+	}{
+		{"OK", "msg_fixture", true}, {"O", "msg_fixture", false}, {"wrong", "msg_fixture", false}, {"OK", "foreign", false},
+	} {
+		event, err := json.Marshal(map[string]any{"type": "response.output_text.delta", "output_index": 0, "content_index": 0, "item_id": tc.itemID, "delta": tc.delta})
+		require.NoError(t, err)
+		_, err = prismBrowserTerminal([]byte(prefix+"data: "+string(event)+"\n\n"+suffix), "gpt-6.1-sol", true)
+		if tc.valid {
+			require.NoError(t, err)
+		} else {
+			require.Error(t, err)
+		}
+	}
+}
 
 func TestPrismBrowserResponsesURL(t *testing.T) {
 	tests := []struct {
@@ -215,6 +307,7 @@ func TestPrismBrowserForwardTerminalAndUsage(t *testing.T) {
 	const terminal = `{"id":"resp_fixture","status":"completed","model":"gpt-5.6-sol","usage":null,"output":[{"content":[{"text":"21"}]}]}`
 	for _, stream := range []bool{false, true} {
 		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			w.Header().Set("Server-Timing", "prism_verify;dur=120.0, prism_prepare;dur=50.0")
 			if stream {
 				_, _ = io.WriteString(w, "event: response.completed\ndata: {\"type\":\"response.completed\",\"response\":"+terminal+"}\n\n")
 			} else {
@@ -229,10 +322,18 @@ func TestPrismBrowserForwardTerminalAndUsage(t *testing.T) {
 		if stream {
 			body = strings.Replace(body, "false", "true", 1)
 		}
-		result, err := s.forwardPrismBrowser(context.Background(), c, account, []byte(body), time.Now())
+		result, err := s.forwardPrismBrowser(context.Background(), c, account, []byte(body), time.Now().Add(-25*time.Millisecond))
 		server.Close()
 		if err != nil || w.Code != http.StatusOK || result == nil || !result.UsageUnavailable || result.ResponseID != "resp_fixture" {
 			t.Fatalf("unexpected result: result=%+v status=%d err=%v", result, w.Code, err)
+		}
+		require.Equal(t, "prism_verify;dur=120.0, prism_prepare;dur=50.0", w.Header().Get("Server-Timing"))
+		if stream {
+			require.NotNil(t, result.FirstTokenMs)
+			require.GreaterOrEqual(t, *result.FirstTokenMs, 25)
+			require.LessOrEqual(t, int64(*result.FirstTokenMs), result.Duration.Milliseconds())
+		} else {
+			require.Nil(t, result.FirstTokenMs)
 		}
 		if err := s.RecordUsage(context.Background(), &OpenAIRecordUsageInput{Result: result}); err == nil {
 			t.Fatal("unknown usage must not enter billing as zero tokens")

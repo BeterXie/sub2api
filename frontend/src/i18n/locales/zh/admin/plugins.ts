@@ -45,6 +45,6 @@ export default {
     fileRequired: '请选择 .s2plugin 文件',
     bridgeRejected: '插件 UI 消息校验失败',
     onlyOpenAI: '初期能力：仅 OpenAI OAuth 出站传输',
-    noAccountCoupling: '作用域为平台与账号类型，不修改账号数据，也不需要在账号页逐个开启。'
+    noAccountCoupling: '账号范围由插件配置决定。'
   }
 }

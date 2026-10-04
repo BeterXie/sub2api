@@ -69,6 +69,14 @@ message ValidateConfigResponse {
   bool valid = 1;
   string message = 2;
   bytes normalized_config_json = 3;
+  // When present, only these accounts use the transport. An empty message
+  // routes no accounts; omission retains the capability-wide binding.
+  // The host persists this scope atomically with the validated config.
+  AccountRouting account_routing = 4;
+}
+
+message AccountRouting {
+  repeated int64 account_ids = 1;
 }
 
 message ApplyConfigRequest {

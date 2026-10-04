@@ -37,7 +37,7 @@
         data-testid="openai-prism-browser-oauth-settings"
       >
         <label class="flex items-center gap-2 text-sm">
-          <input v-model="prismBrowserEnabled" type="checkbox" data-testid="openai-prism-browser-oauth-toggle" />
+          <input v-model="prismBrowserEnabled" type="checkbox" data-testid="openai-prism-browser-oauth-toggle" @change="prismBrowserEnabled && (prismFallbackEnabled = false)" />
           <span>{{ t('admin.accounts.openai.prismBrowser') }}</span>
         </label>
         <p class="input-hint">{{ t('admin.accounts.openai.prismBrowserDesc') }}</p>
@@ -52,6 +52,11 @@
           <p class="input-hint">{{ t('admin.accounts.openai.prismBrowserModelsHint') }}</p>
           <p class="mt-2 text-xs text-primary-600 dark:text-primary-400">{{ t('admin.accounts.openai.prismBrowserManagedEndpoint') }}</p>
         </fieldset>
+        <label class="mt-3 flex items-center gap-2 text-sm">
+          <input v-model="prismFallbackEnabled" type="checkbox" data-testid="openai-prism-fallback-oauth-toggle" @change="prismFallbackEnabled && (prismBrowserEnabled = false)" />
+          <span>{{ t('admin.accounts.openai.prismFallback') }}</span>
+        </label>
+        <p class="input-hint">{{ t('admin.accounts.openai.prismFallbackDesc') }}</p>
       </div>
 
       <!-- API Key fields (only for apikey type) -->
@@ -3585,6 +3590,7 @@ const editApiKey = ref('')
 const prismBrowserEnabled = ref(false)
 const prismSupportedModels = ['gpt-6.1-sol', 'gpt-5.6-sol', 'gpt-5.6-terra', 'gpt-6-luna']
 const prismBrowserModels = ref<string[]>([...prismSupportedModels])
+const prismFallbackEnabled = ref(false)
 
 // ── 国产供应商（Kimi / Zhipu / DeepSeek）account_mode / api_protocol 编辑 ──
 // account_mode 决定额度/余额监控路径，api_protocol 决定转发端点与格式；
@@ -4473,6 +4479,7 @@ const syncFormFromAccount = (newAccount: Account | null) => {
   excelBPS403TargetGroupID.value = ''
   prismBrowserEnabled.value = false
   prismBrowserModels.value = [...prismSupportedModels]
+  prismFallbackEnabled.value = false
   copilotSDKEnabled.value = false
   openaiPassthroughEnabled.value = false
   openaiFlattenNamespacesEnabled.value = false
@@ -4499,6 +4506,7 @@ const syncFormFromAccount = (newAccount: Account | null) => {
         ? extra.openai_prism_browser_models.filter((model): model is string => typeof model === 'string' && prismSupportedModels.includes(model))
         : []
     }
+    prismFallbackEnabled.value = newAccount.type === 'oauth' && !prismBrowserEnabled.value && extra?.openai_prism_fallback === true
     excelBPSEnabled.value = newAccount.type === 'oauth' && extra?.openai_excel_bps === true
     excelBPSMode.value = extra?.openai_excel_bps_config_mode === 'defaults' ? 'defaults' : 'initial'
     excelBPSAllModels.value = excelBPSEnabled.value && !Object.prototype.hasOwnProperty.call(extra ?? {}, 'openai_excel_bps_models')
@@ -6153,6 +6161,8 @@ const handleSubmit = async () => {
           delete newExtra.openai_prism_browser
           delete newExtra.openai_prism_browser_models
         }
+        if (prismFallbackEnabled.value && !prismBrowserEnabled.value) newExtra.openai_prism_fallback = true
+        else delete newExtra.openai_prism_fallback
       }
 		if (props.account.type === 'apikey') {
         if (!openAITextGenerationCapabilityEnabled.value || openAIResponsesMode.value === 'auto') {

@@ -42,6 +42,7 @@ UI 到宿主：
 |---|---|---|
 | `sub2api.plugin.ready` | 无 | 无响应 |
 | `config.load` | 无 | `config` |
+| `accounts.list` | 无 | `accounts`（清单能力范围内的账号选项） |
 | `config.save` | `config` 对象 | 规范化后的 `config` |
 | `config.test` | 无 | `result` |
 | `plugin.status` | 无 | `result`（`Health`：`{healthy, message, status_json}`） |
@@ -49,6 +50,13 @@ UI 到宿主：
 | `ui.notify` | `level`、`message` | 无响应 |
 
 `config.test` 在 v1 中测试已保存配置（需二次验证，可产生副作用）。UI 若要测试当前表单，应先调用 `config.save`。
+
+`accounts.list` 是只读方法，不需二次验证。账号选项只包含 `id`、`name`、
+`platform`、`account_type`、`status` 和 `schedulable`，不包含凭据。
+
+`ok` 表示 Bridge 请求是否完成。`config.test` 的业务诊断失败仍返回
+`ok: true`，并以 `result.success: false` 表达；UI 应继续展示
+`result.message` 和 `result.status_json` 中的账号状态。
 
 `plugin.status` 是只读运行时状态通道：无副作用、免二次验证、不弹宿主提示，供状态面板轮询。它映射到插件 `Health`，`result.status_json` 是插件自定义的不透明 JSON 快照。带状态展示的插件应使用它，而不是把 `config.test` 当作状态轮询。
 

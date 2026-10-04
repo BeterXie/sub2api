@@ -545,10 +545,11 @@ func (h *OpenAIOAuthHandler) RefreshQuota(c *gin.Context) {
 
 // CreateShadowRequest is the request body for CreateShadow.
 type CreateShadowRequest struct {
-	Name        string  `json:"name"`
-	Priority    int     `json:"priority"`
-	Concurrency int     `json:"concurrency"`
-	GroupIDs    []int64 `json:"group_ids"`
+	QuotaDimension string  `json:"quota_dimension"`
+	Name           string  `json:"name"`
+	Priority       int     `json:"priority"`
+	Concurrency    int     `json:"concurrency"`
+	GroupIDs       []int64 `json:"group_ids"`
 }
 
 // CreateShadow creates a spark-dimension shadow account for a parent OpenAI OAuth account.
@@ -567,10 +568,11 @@ func (h *OpenAIOAuthHandler) CreateShadow(c *gin.Context) {
 	}
 
 	shadow, err := h.adminService.CreateShadow(c.Request.Context(), parentID, service.ShadowOptions{
-		Name:        req.Name,
-		Priority:    req.Priority,
-		Concurrency: req.Concurrency,
-		GroupIDs:    req.GroupIDs,
+		QuotaDimension: req.QuotaDimension,
+		Name:           req.Name,
+		Priority:       req.Priority,
+		Concurrency:    req.Concurrency,
+		GroupIDs:       req.GroupIDs,
 	})
 	if err != nil {
 		response.ErrorFrom(c, err)

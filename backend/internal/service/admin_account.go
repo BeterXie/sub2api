@@ -1513,23 +1513,44 @@ func (s *adminServiceImpl) RevertAccountProxyFallback(ctx context.Context, id in
 	return s.propagateProxyToShadows(ctx, id, account.ProxyID)
 }
 
-// CreateShadow 为指定 OpenAI OAuth 母账号创建 spark 维度影子账号（一母一影）。
+// CreateShadow creates one credential shadow per parent and transport dimension.
 // 安全不变量：Credentials 恒不含 auth token（仅 model_mapping，守卫 isAllowedSparkShadowCredentialsUpdate 放行）。
 func (s *adminServiceImpl) CreateShadow(ctx context.Context, parentID int64, opts ShadowOptions) (*Account, error) {
+	dimension := strings.TrimSpace(opts.QuotaDimension)
+	if dimension == "" {
+		dimension = QuotaDimensionSpark
+	}
+	if dimension != QuotaDimensionSpark && dimension != QuotaDimensionPrism {
+		return nil, infraerrors.New(http.StatusBadRequest, "INVALID_SHADOW_DIMENSION", "Only Spark and Prism shadows are supported")
+	}
+	label := "Spark"
+	if dimension == QuotaDimensionPrism {
+		label = "Prism"
+	}
+	errorPrefix := strings.ToUpper(dimension) + "_SHADOW_"
+	hasDimension := func(accounts []*Account) bool {
+		for _, account := range accounts {
+			if account.QuotaDimensionOrDefault() == dimension {
+				return true
+			}
+		}
+		return false
+	}
 	// 1. 加载母账号并校验平台/类型
 	parent, err := s.accountRepo.GetByID(ctx, parentID)
 	if err != nil {
 		return nil, fmt.Errorf("get parent account: %w", err)
 	}
-	if !parent.IsOpenAIOAuth() {
-		return nil, infraerrors.New(http.StatusBadRequest, "SPARK_SHADOW_INVALID_PARENT",
-			"spark shadow requires an OpenAI OAuth parent account")
+	if parent == nil || !parent.IsOpenAIOAuth() || (dimension == QuotaDimensionPrism &&
+		(parent.IsOpenAIAgentIdentity() || parent.IsOpenAIPersonalAccessToken())) {
+		return nil, infraerrors.New(http.StatusBadRequest, errorPrefix+"INVALID_PARENT",
+			label+" shadow requires an OpenAI OAuth parent account")
 	}
 	// G6:母账号本身不能是影子,否则会建出二级影子——resolveCredentialAccount 只解一层,
 	// 会解析到无凭据的一级影子,进入坏调度/上游失败。
 	if parent.IsCredentialShadow() {
-		return nil, infraerrors.New(http.StatusBadRequest, "SPARK_SHADOW_PARENT_IS_SHADOW",
-			"spark shadow parent must be a real account, not another spark shadow")
+		return nil, infraerrors.New(http.StatusBadRequest, errorPrefix+"PARENT_IS_SHADOW",
+			label+" shadow parent must be a real account, not another shadow")
 	}
 
 	// 2. 一母一影校验
@@ -1537,9 +1558,9 @@ func (s *adminServiceImpl) CreateShadow(ctx context.Context, parentID int64, opt
 	if err != nil {
 		return nil, fmt.Errorf("check existing spark shadows: %w", err)
 	}
-	if len(shadows) > 0 {
-		return nil, infraerrors.New(http.StatusConflict, "SPARK_SHADOW_ALREADY_EXISTS",
-			"parent account already has a spark shadow account")
+	if hasDimension(shadows) {
+		return nil, infraerrors.New(http.StatusConflict, errorPrefix+"ALREADY_EXISTS",
+			"parent account already has a "+label+" shadow account")
 	}
 
 	// 3. 解析分组。未指定 GroupIDs 时:优先**继承母账号当前分组**(影子与母同路由域,母在自定义
@@ -1575,7 +1596,7 @@ func (s *adminServiceImpl) CreateShadow(ctx context.Context, parentID int64, opt
 	// (外审 E/P2);并 rune 安全截断到 ent MaxLen(100)。
 	name := strings.TrimSpace(opts.Name)
 	if name == "" {
-		name = parent.Name + " (Spark)"
+		name = parent.Name + " (" + label + ")"
 	}
 	if runes := []rune(name); len(runes) > 100 {
 		name = string(runes[:100])
@@ -1593,29 +1614,38 @@ func (s *adminServiceImpl) CreateShadow(ctx context.Context, parentID int64, opt
 	if priority <= 0 {
 		priority = parent.Priority
 	}
+	mapping := defaultSparkShadowModelMapping()
+	extra := map[string]any{openAILongContextBillingEnabledKey: parent.IsOpenAILongContextBillingEnabled()}
+	if dimension == QuotaDimensionPrism {
+		mapping = defaultPrismShadowModelMapping()
+		extra = map[string]any{"openai_prism_browser": true}
+		if opts.Concurrency <= 0 {
+			concurrency = 2 // Two independent projects; one turn per sandbox.
+		} else if concurrency > 2 {
+			concurrency = 2
+		}
+	}
 	shadow := &Account{
 		Name:            name,
 		Platform:        PlatformOpenAI,
 		Type:            AccountTypeOAuth,
 		Status:          StatusActive,
-		Credentials:     map[string]any{"model_mapping": defaultSparkShadowModelMapping()},
+		Credentials:     map[string]any{"model_mapping": mapping},
 		ParentAccountID: &parentID,
-		QuotaDimension:  QuotaDimensionSpark,
+		QuotaDimension:  dimension,
 		ProxyID:         parent.ProxyID,
 		Priority:        priority,
 		Concurrency:     concurrency,
 		Schedulable:     true,
-		Extra: map[string]any{
-			openAILongContextBillingEnabledKey: parent.IsOpenAILongContextBillingEnabled(),
-		},
+		Extra:           extra,
 	}
 
 	// 5. 持久化（Create 填充 shadow.ID）。并发竞态:预查(步骤2)放行后另一请求抢先建成,本次会撞
 	// 一母一影唯一索引。复查确认确为"已存在"竞态时返回结构化 409 而非裸 500——外审 A/P1。
 	if err := s.accountRepo.Create(ctx, shadow); err != nil {
-		if existing, qerr := s.accountRepo.ListShadowsByParent(ctx, parentID); qerr == nil && len(existing) > 0 {
-			return nil, infraerrors.New(http.StatusConflict, "SPARK_SHADOW_ALREADY_EXISTS",
-				"parent account already has a spark shadow account")
+		if existing, qerr := s.accountRepo.ListShadowsByParent(ctx, parentID); qerr == nil && hasDimension(existing) {
+			return nil, infraerrors.New(http.StatusConflict, errorPrefix+"ALREADY_EXISTS",
+				"parent account already has a "+label+" shadow account")
 		}
 		return nil, fmt.Errorf("create spark shadow: %w", err)
 	}
@@ -1635,6 +1665,18 @@ func (s *adminServiceImpl) CreateShadow(ctx context.Context, parentID int64, opt
 		shadow.GroupIDs = groupIDs
 	}
 
+	if dimension == QuotaDimensionPrism {
+		// Keep the parent as the OpenAI entry. Patch only channel flags so a
+		// concurrent quota or token update is preserved.
+		if err := s.accountRepo.UpdateExtra(ctx, parentID, map[string]any{
+			"openai_prism_browser": false, "openai_prism_fallback": false,
+		}); err != nil {
+			if delErr := s.accountRepo.Delete(context.WithoutCancel(ctx), shadow.ID); delErr != nil {
+				slog.Error("prism_shadow_parent_route_rollback_failed", "shadow_id", shadow.ID, "delete_err", delErr)
+			}
+			return nil, fmt.Errorf("restore parent OpenAI route: %w", err)
+		}
+	}
 	return shadow, nil
 }
 

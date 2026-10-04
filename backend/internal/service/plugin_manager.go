@@ -37,6 +37,8 @@ type pluginRoute struct {
 	runtime        *pluginRuntime
 	rolloutPercent int
 	unavailable    string
+	// nil uses the capability binding; a non-nil empty map routes nobody.
+	accountIDs map[int64]struct{}
 }
 
 // PluginManager 管理插件安装、配置、进程生命周期和 OpenAI OAuth 能力绑定。
@@ -271,7 +273,11 @@ func (m *PluginManager) reconcileOnce(ctx context.Context) error {
 	installations, err := m.repo.List(ctx)
 	if err != nil {
 		// 无法读取权威绑定状态时不能假设插件未启用，否则会把 OAuth 请求静默回落到旧直连路径。
-		m.publishUnavailableRoute(0, 100, "插件启用状态暂时无法读取")
+		if current := m.route.Load(); current != nil {
+			m.publishUnavailableRoute(current.pluginID, current.rolloutPercent, current.accountIDs, "插件启用状态暂时无法读取")
+		} else {
+			m.publishUnavailableRoute(0, 100, nil, "插件启用状态暂时无法读取")
+		}
 		return fmt.Errorf("读取插件启用状态: %w", err)
 	}
 	m.cleanupStaleLocalInstallations(installations)
@@ -282,7 +288,7 @@ func (m *PluginManager) reconcileOnce(ctx context.Context) error {
 		}
 		if enabled != nil {
 			err := errors.New("检测到多个 OpenAI OAuth 出站插件同时启用")
-			m.publishUnavailableRoute(enabled.ID, 100, err.Error())
+			m.publishUnavailableRoute(enabled.ID, 100, nil, err.Error())
 			return err
 		}
 		enabled = installation
@@ -307,9 +313,15 @@ func (m *PluginManager) reconcileOnce(ctx context.Context) error {
 	}
 
 	rollout := bindingRollout(enabled.Bindings)
+	accountIDs, scopeErr := pluginRoutingAccountIDs(enabled.AccountRouting)
+	if scopeErr != nil {
+		m.publishUnavailableRoute(enabled.ID, rollout, map[int64]struct{}{}, "读取插件账号范围失败: "+scopeErr.Error())
+		return scopeErr
+	}
 	current := m.route.Load()
 	if current != nil && current.pluginID == enabled.ID && current.runtime != nil &&
 		!current.runtime.client.Exited() && current.rolloutPercent == rollout &&
+		equalPluginAccountIDs(current.accountIDs, accountIDs) &&
 		current.runtime.installation.BinarySHA256 == enabled.BinarySHA256 &&
 		current.runtime.installation.ConfigEncrypted == enabled.ConfigEncrypted {
 		healthCtx, cancel := context.WithTimeout(ctx, pluginHealthTimeout)
@@ -328,19 +340,19 @@ func (m *PluginManager) reconcileOnce(ctx context.Context) error {
 	}
 	if enabled.State == PluginStateStarting && !m.startingStateExpired(enabled) {
 		if current == nil {
-			m.route.Store(&pluginRoute{pluginID: enabled.ID, rolloutPercent: rollout, unavailable: "插件正在其他实例中启动"})
+			m.route.Store(&pluginRoute{pluginID: enabled.ID, rolloutPercent: rollout, accountIDs: clonePluginAccountIDs(accountIDs), unavailable: "插件正在其他实例中启动"})
 		}
 		return nil
 	}
 
 	local, err := m.ensureLocalInstallation(ctx, enabled)
 	if err != nil {
-		m.publishUnavailableRoute(enabled.ID, rollout, err.Error())
+		m.publishUnavailableRoute(enabled.ID, rollout, accountIDs, err.Error())
 		return err
 	}
 	runtime, err := m.prepareRuntime(ctx, local, true)
 	if err != nil {
-		m.publishUnavailableRoute(enabled.ID, rollout, err.Error())
+		m.publishUnavailableRoute(enabled.ID, rollout, accountIDs, err.Error())
 		return err
 	}
 
@@ -379,7 +391,7 @@ func (m *PluginManager) reconcileOnce(ctx context.Context) error {
 		}
 	}
 	m.runtimes[enabled.ID] = runtime
-	m.route.Store(&pluginRoute{pluginID: enabled.ID, runtime: runtime, rolloutPercent: rollout})
+	m.route.Store(&pluginRoute{pluginID: enabled.ID, runtime: runtime, rolloutPercent: rollout, accountIDs: clonePluginAccountIDs(accountIDs)})
 	m.mu.Unlock()
 	for _, candidate := range stale {
 		candidate.drain(10 * time.Second)
@@ -415,7 +427,7 @@ func (m *PluginManager) detachAllRuntimes() []*pluginRuntime {
 	return runtimes
 }
 
-func (m *PluginManager) publishUnavailableRoute(pluginID int64, rollout int, message string) {
+func (m *PluginManager) publishUnavailableRoute(pluginID int64, rollout int, accountIDs map[int64]struct{}, message string) {
 	m.mu.Lock()
 	stale := make([]*pluginRuntime, 0, len(m.runtimes))
 	for id, runtime := range m.runtimes {
@@ -423,7 +435,12 @@ func (m *PluginManager) publishUnavailableRoute(pluginID int64, rollout int, mes
 		stale = append(stale, runtime)
 		delete(m.runtimes, id)
 	}
-	m.route.Store(&pluginRoute{pluginID: pluginID, rolloutPercent: rollout, unavailable: message})
+	m.route.Store(&pluginRoute{
+		pluginID:       pluginID,
+		rolloutPercent: rollout,
+		accountIDs:     clonePluginAccountIDs(accountIDs),
+		unavailable:    message,
+	})
 	m.mu.Unlock()
 	for _, runtime := range stale {
 		runtime.drain(10 * time.Second)
@@ -589,6 +606,13 @@ func (m *PluginManager) Enable(ctx context.Context, id int64, acceptUntested boo
 	if err != nil {
 		return nil, err
 	}
+	accountIDs, err := pluginRoutingAccountIDs(installation.AccountRouting)
+	if err != nil {
+		return nil, fmt.Errorf("读取插件账号范围失败: %w", err)
+	}
+	if accountIDs != nil && len(accountIDs) == 0 {
+		return nil, errors.New("请先在插件配置中选中至少一个账号")
+	}
 	originalBindings := append([]PluginBinding(nil), installation.Bindings...)
 	for index := range installation.Bindings {
 		installation.Bindings[index].Enabled = true
@@ -603,7 +627,12 @@ func (m *PluginManager) Enable(ctx context.Context, id int64, acceptUntested boo
 		stateErr := m.repo.UpdateState(stateCtx, id, PluginStateError, err.Error(), nil, installation.BinarySHA256, PluginStateStarting)
 		cancel()
 		if hasEnabledOpenAIBinding(originalBindings) {
-			m.route.Store(&pluginRoute{pluginID: id, rolloutPercent: bindingRollout(originalBindings), unavailable: err.Error()})
+			m.route.Store(&pluginRoute{
+				pluginID:       id,
+				rolloutPercent: bindingRollout(originalBindings),
+				accountIDs:     clonePluginAccountIDs(accountIDs),
+				unavailable:    err.Error(),
+			})
 		}
 		return nil, errors.Join(err, stateErr)
 	}
@@ -619,7 +648,7 @@ func (m *PluginManager) Enable(ctx context.Context, id int64, acceptUntested boo
 		return nil, errors.Join(err, stateErr)
 	}
 	m.mu.Lock()
-	m.publishRuntimeLocked(installation, runtime)
+	m.publishRuntimeLocked(installation, runtime, accountIDs)
 	m.mu.Unlock()
 	result, err := m.repo.GetByID(ctx, id)
 	if err != nil {
@@ -694,6 +723,17 @@ func (m *PluginManager) GetConfig(ctx context.Context, id int64) (json.RawMessag
 	return m.decryptConfig(installation)
 }
 
+func (m *PluginManager) ListAccounts(ctx context.Context, id int64) ([]PluginAccountInfo, error) {
+	installation, err := m.repo.GetByID(ctx, id)
+	if err != nil {
+		return nil, err
+	}
+	if m.accountDirectory == nil {
+		return nil, errors.New("plugin account directory is unavailable")
+	}
+	return m.accountDirectory.ListPluginAccounts(ctx, pluginAccountScopeFromManifest(installation.Manifest), PlatformOpenAI, AccountTypeOAuth)
+}
+
 func (m *PluginManager) SaveConfig(ctx context.Context, id int64, raw json.RawMessage) (json.RawMessage, error) {
 	m.operationMu.Lock()
 	defer m.operationMu.Unlock()
@@ -746,6 +786,13 @@ func (m *PluginManager) SaveConfig(ctx context.Context, id int64, raw json.RawMe
 			return nil, err
 		}
 	}
+	accountIDs, err := pluginRoutingAccountIDs(runtime.accountRouting)
+	if err != nil {
+		if temporary {
+			return nil, err
+		}
+		return nil, errors.Join(err, m.restoreRuntimeConfig(id, runtime, previousConfig))
+	}
 	encrypted, err := m.encryptor.Encrypt(string(canonical))
 	if err != nil {
 		if !temporary {
@@ -753,7 +800,7 @@ func (m *PluginManager) SaveConfig(ctx context.Context, id int64, raw json.RawMe
 		}
 		return nil, fmt.Errorf("加密插件配置: %w", err)
 	}
-	if err := m.repo.UpdateConfig(ctx, id, encrypted, installation.BinarySHA256); err != nil {
+	if err := m.repo.UpdateConfig(ctx, id, encrypted, runtime.accountRouting, installation.BinarySHA256, installation.ConfigEncrypted); err != nil {
 		if !temporary {
 			err = errors.Join(err, m.restoreRuntimeConfig(id, runtime, previousConfig))
 		}
@@ -761,6 +808,14 @@ func (m *PluginManager) SaveConfig(ctx context.Context, id int64, raw json.RawMe
 	}
 	if !temporary {
 		runtime.installation.ConfigEncrypted = encrypted
+		runtime.installation.AccountRouting = runtime.accountRouting
+		m.mu.Lock()
+		if route := m.route.Load(); route != nil && route.pluginID == id {
+			updated := *route
+			updated.accountIDs = clonePluginAccountIDs(accountIDs)
+			m.route.Store(&updated)
+		}
+		m.mu.Unlock()
 	}
 	return canonical, nil
 }
@@ -811,7 +866,9 @@ func (m *PluginManager) Test(ctx context.Context, id int64) (*pluginv1.TestConfi
 	if temporary {
 		defer runtime.kill()
 	}
-	testCtx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	// Browser-backed initialization can include login, project preparation and
+	// sandbox warmup; it must not inherit a short transport health timeout.
+	testCtx, cancel := context.WithTimeout(ctx, 180*time.Second)
 	defer cancel()
 	if err := runtime.validateAndApplyConfig(testCtx, configJSON); err != nil {
 		return nil, err
@@ -945,11 +1002,11 @@ func (m *PluginManager) ReadUIAsset(ctx context.Context, id int64, relative stri
 }
 
 func (m *PluginManager) RoundTripOpenAIOAuth(ctx context.Context, request *http.Request, proxyURL string, account *Account) (*http.Response, bool, error) {
-	if !m.ShouldRouteOpenAIOAuth(account) {
+	if m == nil {
 		return nil, false, nil
 	}
 	route := m.route.Load()
-	if route == nil {
+	if !matchesPluginRoute(route, account) {
 		return nil, false, nil
 	}
 	if route.runtime == nil {
@@ -981,11 +1038,23 @@ func (m *PluginManager) RoundTripOpenAIOAuth(ctx context.Context, request *http.
 // ShouldRouteOpenAIOAuth 判断该账号是否命中当前 OpenAI OAuth 插件绑定。
 // WebSocket 入口用它把命中的账号切换到 HTTP Bridge，避免绕过 v1 HTTP 插件协议。
 func (m *PluginManager) ShouldRouteOpenAIOAuth(account *Account) bool {
-	if m == nil || account == nil || account.Platform != PlatformOpenAI || account.Type != AccountTypeOAuth {
+	if m == nil {
 		return false
 	}
-	route := m.route.Load()
-	return route != nil && route.rolloutPercent > 0 && int(stablePluginBucket(account.ID)) < route.rolloutPercent
+	return matchesPluginRoute(m.route.Load(), account)
+}
+
+func matchesPluginRoute(route *pluginRoute, account *Account) bool {
+	if route == nil || route.rolloutPercent <= 0 || account == nil ||
+		account.Platform != PlatformOpenAI || account.Type != AccountTypeOAuth {
+		return false
+	}
+	if route.accountIDs != nil {
+		if _, ok := route.accountIDs[account.ID]; !ok {
+			return false
+		}
+	}
+	return int(stablePluginBucket(account.ID)) < route.rolloutPercent
 }
 
 func (m *PluginManager) markRuntimeUnavailable(failedRoute *pluginRoute, message string) error {
@@ -1002,6 +1071,7 @@ func (m *PluginManager) markRuntimeUnavailable(failedRoute *pluginRoute, message
 	m.route.Store(&pluginRoute{
 		pluginID:       failedRoute.pluginID,
 		rolloutPercent: failedRoute.rolloutPercent,
+		accountIDs:     clonePluginAccountIDs(failedRoute.accountIDs),
 		unavailable:    message,
 	})
 	m.mu.Unlock()
@@ -1023,10 +1093,18 @@ func (m *PluginManager) prepareRuntime(ctx context.Context, installation *Plugin
 		runtime.kill()
 		return nil, err
 	}
+	if validateConfig {
+		desired, scopeErr := pluginRoutingAccountIDs(installation.AccountRouting)
+		applied, appliedErr := pluginRoutingAccountIDs(runtime.accountRouting)
+		if scopeErr != nil || appliedErr != nil || !equalPluginAccountIDs(desired, applied) {
+			runtime.kill()
+			return nil, errors.New("插件账号范围已变化，请先重新保存配置")
+		}
+	}
 	return runtime, nil
 }
 
-func (m *PluginManager) publishRuntimeLocked(installation *PluginInstallation, runtime *pluginRuntime) {
+func (m *PluginManager) publishRuntimeLocked(installation *PluginInstallation, runtime *pluginRuntime, accountIDs map[int64]struct{}) {
 	if old := m.runtimes[installation.ID]; old != nil {
 		old.kill()
 	}
@@ -1035,6 +1113,7 @@ func (m *PluginManager) publishRuntimeLocked(installation *PluginInstallation, r
 		pluginID:       installation.ID,
 		runtime:        runtime,
 		rolloutPercent: bindingRollout(installation.Bindings),
+		accountIDs:     clonePluginAccountIDs(accountIDs),
 	})
 }
 
@@ -1116,6 +1195,49 @@ func (m *PluginManager) decryptConfig(installation *PluginInstallation) (json.Ra
 		return nil, errors.New("已保存的插件配置不是有效 JSON")
 	}
 	return json.RawMessage(plaintext), nil
+}
+
+func pluginRoutingAccountIDs(routing *PluginAccountRouting) (map[int64]struct{}, error) {
+	if routing == nil {
+		return nil, nil
+	}
+	if len(routing.AccountIDs) > 10000 {
+		return nil, errors.New("plugin account scope exceeds 10000 entries")
+	}
+	ids := make(map[int64]struct{}, len(routing.AccountIDs))
+	for _, id := range routing.AccountIDs {
+		if id <= 0 {
+			return nil, errors.New("plugin account scope contains an invalid account ID")
+		}
+		ids[id] = struct{}{}
+	}
+	return ids, nil
+}
+
+func clonePluginAccountIDs(accountIDs map[int64]struct{}) map[int64]struct{} {
+	if accountIDs == nil {
+		return nil
+	}
+	clone := make(map[int64]struct{}, len(accountIDs))
+	for id := range accountIDs {
+		clone[id] = struct{}{}
+	}
+	return clone
+}
+
+func equalPluginAccountIDs(left, right map[int64]struct{}) bool {
+	if left == nil || right == nil {
+		return left == nil && right == nil
+	}
+	if len(left) != len(right) {
+		return false
+	}
+	for id := range left {
+		if _, ok := right[id]; !ok {
+			return false
+		}
+	}
+	return true
 }
 
 func (m *PluginManager) removeManagedPath(target string) error {

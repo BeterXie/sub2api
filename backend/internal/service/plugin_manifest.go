@@ -88,30 +88,36 @@ type PluginCompatibility struct {
 }
 
 type PluginInstallation struct {
-	ID              int64               `json:"id"`
-	PluginKey       string              `json:"plugin_key"`
-	Name            string              `json:"name"`
-	Version         string              `json:"version"`
-	Description     string              `json:"description"`
-	Author          string              `json:"author"`
-	Manifest        PluginManifest      `json:"manifest"`
-	ArtifactData    []byte              `json:"-"`
-	ArtifactPath    string              `json:"-"`
-	InstallPath     string              `json:"-"`
-	BinaryPath      string              `json:"-"`
-	BinarySHA256    string              `json:"binary_sha256"`
-	SignatureStatus string              `json:"signature_status"`
-	State           string              `json:"state"`
-	ConfigEncrypted string              `json:"-"`
-	LastError       string              `json:"last_error"`
-	InstalledBy     *int64              `json:"installed_by"`
-	InstalledAt     time.Time           `json:"installed_at"`
-	EnabledAt       *time.Time          `json:"enabled_at"`
-	UpdatedAt       time.Time           `json:"updated_at"`
-	Bindings        []PluginBinding     `json:"bindings"`
-	Compatibility   PluginCompatibility `json:"compatibility"`
-	RuntimeHealthy  bool                `json:"runtime_healthy"`
-	RuntimeMessage  string              `json:"runtime_message"`
+	ID              int64                 `json:"id"`
+	PluginKey       string                `json:"plugin_key"`
+	Name            string                `json:"name"`
+	Version         string                `json:"version"`
+	Description     string                `json:"description"`
+	Author          string                `json:"author"`
+	Manifest        PluginManifest        `json:"manifest"`
+	ArtifactData    []byte                `json:"-"`
+	ArtifactPath    string                `json:"-"`
+	InstallPath     string                `json:"-"`
+	BinaryPath      string                `json:"-"`
+	BinarySHA256    string                `json:"binary_sha256"`
+	SignatureStatus string                `json:"signature_status"`
+	State           string                `json:"state"`
+	ConfigEncrypted string                `json:"-"`
+	AccountRouting  *PluginAccountRouting `json:"account_routing"`
+	LastError       string                `json:"last_error"`
+	InstalledBy     *int64                `json:"installed_by"`
+	InstalledAt     time.Time             `json:"installed_at"`
+	EnabledAt       *time.Time            `json:"enabled_at"`
+	UpdatedAt       time.Time             `json:"updated_at"`
+	Bindings        []PluginBinding       `json:"bindings"`
+	Compatibility   PluginCompatibility   `json:"compatibility"`
+	RuntimeHealthy  bool                  `json:"runtime_healthy"`
+	RuntimeMessage  string                `json:"runtime_message"`
+}
+
+// A nil routing scope uses the capability binding; an empty list routes nobody.
+type PluginAccountRouting struct {
+	AccountIDs []int64 `json:"account_ids"`
 }
 
 type PluginBinding struct {
@@ -136,7 +142,7 @@ type PluginRepository interface {
 	BeginEnable(ctx context.Context, id int64, binarySHA256, expectedState string) error
 	MarkRuntimeHealthy(ctx context.Context, id int64, binarySHA256, configEncrypted string) error
 	UpdateState(ctx context.Context, id int64, state, lastError string, enabledAt *time.Time, expectedBinarySHA256, expectedState string) error
-	UpdateConfig(ctx context.Context, id int64, encrypted, expectedBinarySHA256 string) error
+	UpdateConfig(ctx context.Context, id int64, encrypted string, routing *PluginAccountRouting, expectedBinarySHA256, expectedConfigEncrypted string) error
 	UpdateBindingsAndState(ctx context.Context, pluginID int64, bindings []PluginBinding, state, lastError string, enabledAt *time.Time, expectedState, expectedBinarySHA256 string) error
 }
 

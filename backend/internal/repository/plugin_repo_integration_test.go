@@ -39,6 +39,10 @@ func TestPluginRepositoryLifecycleIsAtomicAndOptimistic(t *testing.T) {
 	artifact, err := repo.GetArtifact(ctx, installed.ID)
 	require.NoError(t, err)
 	require.Equal(t, first.ArtifactData, artifact)
+	require.NoError(t, repo.UpdateConfig(ctx, installed.ID, "encrypted-config", &service.PluginAccountRouting{AccountIDs: []int64{2, 4}}, first.BinarySHA256, ""))
+	scoped, err := repo.GetByID(ctx, installed.ID)
+	require.NoError(t, err)
+	require.Equal(t, []int64{2, 4}, scoped.AccountRouting.AccountIDs)
 
 	require.NoError(t, repo.BeginEnable(ctx, installed.ID, first.BinarySHA256, service.PluginStateDisabled))
 	bindings[0].Enabled = true

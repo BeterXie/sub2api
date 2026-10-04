@@ -16,6 +16,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/pkg/openai"
 	"github.com/gin-gonic/gin"
 	"github.com/tidwall/gjson"
 	"github.com/tidwall/sjson"
@@ -43,6 +44,78 @@ func IsPrismBrowserAttempt(c *gin.Context, accountID int64) bool {
 	return ids[accountID]
 }
 
+func prismBrowserModelCatalog() []openai.Model {
+	var models []openai.Model
+	for _, id := range []string{"gpt-6.1-sol", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-6-luna", "gpt-6-astra"} {
+		name := openaiCodexDisplayName(id)
+		if id == "gpt-6-astra" {
+			name = "GPT-6 Astra → GPT-6.1 Sol"
+		}
+		models = append(models, openai.Model{ID: id, Object: "model", Type: "model", DisplayName: name})
+	}
+	return models
+}
+
+func defaultPrismShadowModelMapping() map[string]any {
+	mapping := make(map[string]any)
+	for _, model := range prismBrowserModelCatalog() {
+		mapping[model.ID] = model.ID
+	}
+	return mapping
+}
+
+// These aliases are transport rules, shared by routing and terminal validation.
+// A response still reports the actual Prism model, including Astra's Sol mapping.
+func prismBrowserModel(model string) (string, string) {
+	model = strings.TrimSpace(model)
+	model, effort, _ := strings.Cut(model, ":")
+	switch model {
+	case "gpt-6-astra", "prism-astra":
+		model = "gpt-6.1-sol"
+	case "prism-sol":
+		model = "gpt-5.6-sol"
+	case "prism-terra":
+		model = "gpt-5.6-terra"
+	}
+	return model, effort
+}
+
+func prismBrowserSupportsModel(model string) bool {
+	model, _ = prismBrowserModel(model)
+	switch model {
+	case "gpt-6.1-sol", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-6-luna":
+		return true
+	}
+	return false
+}
+
+func prismBrowserMappedRequest(body []byte) ([]byte, error) {
+	model := gjson.GetBytes(body, "model").String()
+	mapped, suffixEffort := prismBrowserModel(model)
+	var err error
+	if mapped != model {
+		body, err = sjson.SetBytes(body, "model", mapped)
+		if err != nil {
+			return nil, err
+		}
+	}
+	effortPath := "reasoning.effort"
+	effort := gjson.GetBytes(body, effortPath).String()
+	if topLevel := gjson.GetBytes(body, "reasoning_effort").String(); topLevel != "" {
+		effortPath, effort = "reasoning_effort", topLevel
+	}
+	if effort == "" {
+		effort = suffixEffort
+	}
+	if effort == "max" || effort == "ultra" {
+		effort = "xhigh"
+	}
+	if effort != "" && effort != gjson.GetBytes(body, effortPath).String() {
+		body, err = sjson.SetBytes(body, effortPath, effort)
+	}
+	return body, err
+}
+
 func prismBrowserTerminal(body []byte, model string, stream bool) (string, error) {
 	terminal := body
 	var itemEvents []gjson.Result
@@ -63,7 +136,7 @@ func prismBrowserTerminal(body []byte, model string, stream bool) (string, error
 			switch gjson.GetBytes(data, "type").String() {
 			case "response.created", "response.in_progress":
 			case "response.content_part.added", "response.content_part.done", "response.output_text.done",
-				"response.function_call_arguments.done", "response.custom_tool_call_input.done":
+				"response.function_call_arguments.done", "response.custom_tool_call_input.done", "response.output_text.delta":
 				detailEvents = append(detailEvents, gjson.ParseBytes(data))
 			case "response.output_item.added", "response.output_item.done":
 				itemEvents = append(itemEvents, gjson.ParseBytes(data))
@@ -152,6 +225,7 @@ func prismBrowserTerminal(body []byte, model string, stream bool) (string, error
 		}
 	}
 	details := make(map[string]bool)
+	deltas := make(map[string]string)
 	for _, event := range detailEvents {
 		index, kind := event.Get("output_index"), event.Get("type").String()
 		if index.Type != gjson.Number || index.Int() < 0 || index.Float() != float64(index.Int()) || index.Int() >= int64(len(items)) {
@@ -162,7 +236,7 @@ func prismBrowserTerminal(body []byte, model string, stream bool) (string, error
 			return "", errors.New("prism adapter returned a foreign item detail")
 		}
 		key := fmt.Sprintf("%s:%d:%d", kind, index.Int(), event.Get("content_index").Int())
-		if details[key] {
+		if kind != "response.output_text.delta" && details[key] {
 			return "", errors.New("prism adapter repeated an item detail")
 		}
 		details[key] = true
@@ -182,10 +256,28 @@ func prismBrowserTerminal(body []byte, model string, stream bool) (string, error
 				return "", errors.New("prism adapter returned an invalid content index")
 			}
 			part := content[contentIndex.Int()]
+			if kind == "response.output_text.delta" {
+				if event.Get("delta").Type != gjson.String {
+					return "", errors.New("prism adapter returned an invalid text delta")
+				}
+				deltas[key] += event.Get("delta").String()
+				if !strings.HasPrefix(part.Get("text").String(), deltas[key]) {
+					return "", errors.New("prism adapter returned conflicting text deltas")
+				}
+				continue
+			}
 			if (kind == "response.output_text.done" && event.Get("text").String() != part.Get("text").String()) ||
 				(kind == "response.content_part.done" && event.Get("part.text").String() != part.Get("text").String()) ||
 				(kind == "response.content_part.added" && event.Get("part.text").String() != "") {
 				return "", errors.New("prism adapter returned conflicting text content")
+			}
+		}
+	}
+	for index, item := range items {
+		for contentIndex, part := range item.Get("content").Array() {
+			key := fmt.Sprintf("response.output_text.delta:%d:%d", index, contentIndex)
+			if delta, present := deltas[key]; present && delta != part.Get("text").String() {
+				return "", errors.New("prism adapter returned incomplete text deltas")
 			}
 		}
 	}
@@ -296,6 +388,12 @@ func (s *OpenAIGatewayService) forwardPrismBrowser(ctx context.Context, c *gin.C
 		fail(http.StatusBadRequest, "invalid_request_error", err.Error())
 		return nil, err
 	}
+	body, err = prismBrowserMappedRequest(body)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"type": "invalid_request_error", "message": "Invalid Prism request"}})
+		return nil, err
+	}
+	upstreamModel = gjson.GetBytes(body, "model").String()
 	responseBody, upstreamHeaders, status, err := s.callPrismBrowserForCaller(ctx, account, body, sessionID, prismBrowserCallerID(c, account.ID))
 	if err != nil {
 		fail(http.StatusBadGateway, "prism_unavailable", "Prism adapter unavailable; request was not replayed")
@@ -324,6 +422,16 @@ func (s *OpenAIGatewayService) forwardPrismBrowser(ctx context.Context, c *gin.C
 	}
 	SetActualOpenAIUpstreamEndpoint(c, "/v1/responses")
 	c.Header("X-Prism-Usage", "unavailable")
+	if timing := upstreamHeaders.Get("Server-Timing"); timing != "" {
+		c.Header("Server-Timing", timing)
+	}
+	var firstTokenMs *int
+	if stream {
+		// Prism returns text at completion. Record when the validated output is
+		// released to the client, including preparation and terminal validation.
+		ms := int(time.Since(started).Milliseconds())
+		firstTokenMs = &ms
+	}
 	c.Data(http.StatusOK, contentType, responseBody)
 	return &OpenAIForwardResult{
 		RequestID:        responseID,
@@ -333,6 +441,7 @@ func (s *OpenAIGatewayService) forwardPrismBrowser(ctx context.Context, c *gin.C
 		UpstreamModel:    upstreamModel,
 		Stream:           stream,
 		Duration:         time.Since(started),
+		FirstTokenMs:     firstTokenMs,
 		UsageUnavailable: true,
 	}, nil
 }
@@ -348,7 +457,7 @@ func (s *OpenAIGatewayService) callPrismBrowserWithSession(ctx context.Context, 
 }
 
 func (s *OpenAIGatewayService) callPrismBrowserForCaller(ctx context.Context, account *Account, body []byte, sessionID, callerID string) ([]byte, http.Header, int, error) {
-	if !accountUsesPrismBrowser(account, s.cfg) {
+	if !accountUsesPrismBrowser(account, s.cfg) && !s.prismFallbackEnabled(account, gjson.GetBytes(body, "model").String()) {
 		return nil, nil, 0, errors.New("prism adapter is disabled; native fallback is prohibited")
 	}
 	endpoint, err := prismBrowserAdapterURL(s.cfg.Gateway.PrismBrowser.BaseURL)
@@ -359,12 +468,34 @@ func (s *OpenAIGatewayService) callPrismBrowserForCaller(ctx context.Context, ac
 	if key == "" {
 		return nil, nil, 0, errors.New("prism adapter key is not configured")
 	}
-	token, _, err := s.GetAccessToken(ctx, account)
+	credentialAccount, err := resolveCredentialAccount(ctx, s.accountRepo, account)
+	if err != nil {
+		return nil, nil, 0, err
+	}
+	token, _, err := s.GetAccessToken(ctx, credentialAccount)
 	if err != nil {
 		return nil, nil, 0, err
 	}
 	if token == "" || strings.ContainsAny(token, "\r\n") {
 		return nil, nil, 0, errors.New("invalid Prism OAuth token")
+	}
+	proxy := credentialAccount.Proxy
+	if proxy == nil && credentialAccount.ProxyID != nil {
+		if s.proxyRepo == nil {
+			return nil, nil, 0, errors.New("Prism account proxy is unavailable")
+		}
+		proxy, err = s.proxyRepo.GetByID(ctx, *credentialAccount.ProxyID)
+		if err != nil || proxy == nil {
+			return nil, nil, 0, errors.New("Prism account proxy is unavailable")
+		}
+	}
+	proxyURL := ""
+	if proxy != nil {
+		proxyURL = proxy.URL()
+	}
+	body, err = prismBrowserMappedRequest(body)
+	if err != nil {
+		return nil, nil, 0, errors.New("invalid Prism request")
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
@@ -372,8 +503,11 @@ func (s *OpenAIGatewayService) callPrismBrowserForCaller(ctx context.Context, ac
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+key)
-	req.Header.Set("X-Prism-Account-ID", strconv.FormatInt(account.ID, 10))
+	req.Header.Set("X-Prism-Account-ID", strconv.FormatInt(credentialAccount.ID, 10))
 	req.Header.Set("X-Prism-OAuth-Token", token)
+	// Only the local adapter receives the proxy configuration. This HTTP hop
+	// itself stays on loopback and never uses the account's outbound proxy.
+	req.Header.Set("X-Prism-Proxy", proxyURL)
 	if sessionID != "" {
 		req.Header.Set("X-Prism-Session-ID", sessionID)
 	}

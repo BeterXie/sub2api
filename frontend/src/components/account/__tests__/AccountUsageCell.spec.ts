@@ -74,6 +74,20 @@ function makeOllamaUsage(accountId: number, overrides: Partial<NonNullable<Accou
   }
 }
 
+it('shows unavailable Prism quota without querying or displaying OpenAI quota', async () => {
+  const wrapper = mount(AccountUsageCell, {
+    props: {
+      account: makeAccount({ platform: 'openai', parent_account_id: 4, quota_dimension: 'prism',
+        extra: { codex_5h_used_percent: 100, codex_7d_used_percent: 100 } }),
+    },
+  })
+  await flushPromises()
+  expect(wrapper.get('[data-testid="prism-quota-unavailable"]').text()).toContain('admin.accounts.prismUsageUnavailable')
+  expect(wrapper.text()).not.toContain('100%')
+  expect(getUsage).not.toHaveBeenCalled()
+  wrapper.unmount()
+})
+
 function makeOpenCodeGoUsage(accountId: number, overrides: Partial<NonNullable<Account['opencode_go_usage']>> = {}) {
   return {
     account_id: accountId,

@@ -141,6 +141,35 @@ describe('EditAccountModal Prism OAuth switch', () => {
     await flushPromises()
     expect(wrapper.find('[data-testid="openai-prism-browser-oauth-toggle"]').exists()).toBe(false)
   })
+
+  it('enables automatic fallback and removes the direct Prism selection', async () => {
+    const wrapper = mountModal(buildOAuthAccount({ extra: { openai_prism_browser: true, fixture_flag: true } }))
+    await flushPromises()
+    await wrapper.get('[data-testid="openai-prism-fallback-oauth-toggle"]').setValue(true)
+    expect((wrapper.get('[data-testid="openai-prism-browser-oauth-toggle"]').element as HTMLInputElement).checked).toBe(false)
+    await submit(wrapper)
+    const extra = mocks.updateAccount.mock.calls[0][1].extra
+    expect(extra).toMatchObject({ openai_prism_fallback: true, fixture_flag: true })
+    expect(extra.openai_prism_browser).toBeUndefined()
+  })
+
+  it('loads automatic fallback, switches to direct Prism and removes fallback', async () => {
+    const wrapper = mountModal(buildOAuthAccount({ extra: { openai_prism_fallback: true } }))
+    await flushPromises()
+    expect((wrapper.get('[data-testid="openai-prism-fallback-oauth-toggle"]').element as HTMLInputElement).checked).toBe(true)
+    await wrapper.get('[data-testid="openai-prism-browser-oauth-toggle"]').setValue(true)
+    await submit(wrapper)
+    expect(mocks.updateAccount.mock.calls[0][1].extra.openai_prism_browser).toBe(true)
+    expect(mocks.updateAccount.mock.calls[0][1].extra.openai_prism_fallback).toBeUndefined()
+  })
+
+  it('removes automatic fallback when unchecked', async () => {
+    const wrapper = mountModal(buildOAuthAccount({ extra: { openai_prism_fallback: true } }))
+    await flushPromises()
+    await wrapper.get('[data-testid="openai-prism-fallback-oauth-toggle"]').setValue(false)
+    await submit(wrapper)
+    expect(mocks.updateAccount.mock.calls[0][1].extra.openai_prism_fallback).toBeUndefined()
+  })
 })
 
 describe('EditAccountModal auto BPS switch', () => {

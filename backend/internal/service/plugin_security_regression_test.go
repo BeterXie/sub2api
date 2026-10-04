@@ -111,14 +111,18 @@ func TestPluginReconcileFailsClosedWhenDesiredStateCannotBeRead(t *testing.T) {
 
 type normalizingPluginClient struct {
 	pluginv1.TransportPluginClient
-	normalized []byte
-	applied    []byte
+	normalized  []byte
+	applied     []byte
+	routing     *pluginv1.AccountRouting
+	validations map[string]*pluginv1.ValidateConfigResponse
 }
 
 type pluginConfigRepository struct {
 	PluginRepository
 	installation *PluginInstallation
 	encrypted    string
+	routing      *PluginAccountRouting
+	updateErr    error
 }
 
 func (r *pluginConfigRepository) GetByID(context.Context, int64) (*PluginInstallation, error) {
@@ -126,16 +130,23 @@ func (r *pluginConfigRepository) GetByID(context.Context, int64) (*PluginInstall
 	return &copy, nil
 }
 
-func (r *pluginConfigRepository) UpdateConfig(_ context.Context, _ int64, encrypted, expectedBinarySHA256 string) error {
+func (r *pluginConfigRepository) UpdateConfig(_ context.Context, _ int64, encrypted string, routing *PluginAccountRouting, expectedBinarySHA256, expectedConfigEncrypted string) error {
 	if expectedBinarySHA256 != r.installation.BinarySHA256 {
 		return ErrPluginStateChanged
 	}
+	if r.updateErr != nil {
+		return r.updateErr
+	}
 	r.encrypted = encrypted
+	r.routing = routing
 	return nil
 }
 
-func (c *normalizingPluginClient) ValidateConfig(context.Context, *pluginv1.ValidateConfigRequest, ...grpc.CallOption) (*pluginv1.ValidateConfigResponse, error) {
-	return &pluginv1.ValidateConfigResponse{Valid: true, NormalizedConfigJson: c.normalized}, nil
+func (c *normalizingPluginClient) ValidateConfig(_ context.Context, req *pluginv1.ValidateConfigRequest, _ ...grpc.CallOption) (*pluginv1.ValidateConfigResponse, error) {
+	if result := c.validations[string(req.ConfigJson)]; result != nil {
+		return result, nil
+	}
+	return &pluginv1.ValidateConfigResponse{Valid: true, NormalizedConfigJson: c.normalized, AccountRouting: c.routing}, nil
 }
 
 func (c *normalizingPluginClient) ApplyConfig(_ context.Context, request *pluginv1.ApplyConfigRequest, _ ...grpc.CallOption) (*pluginv1.ApplyConfigResponse, error) {
@@ -177,6 +188,52 @@ func TestPluginManagerPersistsPluginNormalizedConfig(t *testing.T) {
 	plaintext, err := (pluginTokenEncryptor{}).Decrypt(repo.encrypted)
 	require.NoError(t, err)
 	require.JSONEq(t, string(saved), plaintext)
+}
+
+func TestPluginManagerSaveConfigPublishesAndPersistsAccountScope(t *testing.T) {
+	installation := &PluginInstallation{ID: 9, BinarySHA256: strings.Repeat("a", 64)}
+	repo := &pluginConfigRepository{installation: installation}
+	client := &normalizingPluginClient{normalized: []byte(`{"option":true}`)}
+	runtime := &pluginRuntime{installation: installation, api: client}
+	manager := &PluginManager{repo: repo, encryptor: pluginTokenEncryptor{}, runtimes: map[int64]*pluginRuntime{9: runtime}}
+	manager.route.Store(&pluginRoute{pluginID: 9, runtime: runtime, rolloutPercent: 100})
+	for _, ids := range [][]int64{{2}, {4}, {}} {
+		client.routing = &pluginv1.AccountRouting{AccountIds: ids}
+		_, err := manager.SaveConfig(context.Background(), 9, []byte(`{"input":true}`))
+		require.NoError(t, err)
+		require.NotNil(t, repo.routing)
+		require.Equal(t, ids, repo.routing.AccountIDs)
+		require.Equal(t, len(ids) == 1 && ids[0] == 2, manager.ShouldRouteOpenAIOAuth(&Account{ID: 2, Platform: PlatformOpenAI, Type: AccountTypeOAuth}))
+		require.Equal(t, len(ids) == 1 && ids[0] == 4, manager.ShouldRouteOpenAIOAuth(&Account{ID: 4, Platform: PlatformOpenAI, Type: AccountTypeOAuth}))
+	}
+}
+
+func TestPluginManagerFailedConfigSaveRestoresRuntimeAndScope(t *testing.T) {
+	oldConfig := `{"old":true}`
+	newConfig := `{"new":true}`
+	installation := &PluginInstallation{ID: 9, BinarySHA256: strings.Repeat("a", 64), ConfigEncrypted: "ENC:" + oldConfig, AccountRouting: &PluginAccountRouting{AccountIDs: []int64{2}}}
+	repo := &pluginConfigRepository{installation: installation, updateErr: ErrPluginStateChanged}
+	client := &normalizingPluginClient{validations: map[string]*pluginv1.ValidateConfigResponse{
+		oldConfig: {Valid: true, NormalizedConfigJson: []byte(oldConfig), AccountRouting: &pluginv1.AccountRouting{AccountIds: []int64{2}}},
+		newConfig: {Valid: true, NormalizedConfigJson: []byte(newConfig), AccountRouting: &pluginv1.AccountRouting{AccountIds: []int64{4}}},
+	}}
+	runtime := &pluginRuntime{installation: installation, api: client}
+	manager := &PluginManager{repo: repo, encryptor: pluginTokenEncryptor{}, runtimes: map[int64]*pluginRuntime{9: runtime}}
+	manager.route.Store(&pluginRoute{pluginID: 9, runtime: runtime, rolloutPercent: 100, accountIDs: map[int64]struct{}{2: {}}})
+	_, err := manager.SaveConfig(context.Background(), 9, []byte(newConfig))
+	require.ErrorIs(t, err, ErrPluginStateChanged)
+	require.JSONEq(t, oldConfig, string(client.applied))
+	require.Equal(t, []int64{2}, runtime.accountRouting.AccountIDs)
+	require.True(t, manager.ShouldRouteOpenAIOAuth(&Account{ID: 2, Platform: PlatformOpenAI, Type: AccountTypeOAuth}))
+	require.False(t, manager.ShouldRouteOpenAIOAuth(&Account{ID: 4, Platform: PlatformOpenAI, Type: AccountTypeOAuth}))
+}
+
+func TestPluginReconcileDatabaseFailurePreservesSelectedScope(t *testing.T) {
+	manager := &PluginManager{repo: &pluginTokenRepository{listErr: errors.New("database unavailable")}, runtimes: make(map[int64]*pluginRuntime)}
+	manager.route.Store(&pluginRoute{pluginID: 9, rolloutPercent: 100, accountIDs: map[int64]struct{}{2: {}}})
+	require.Error(t, manager.reconcileOnce(context.Background()))
+	require.True(t, manager.ShouldRouteOpenAIOAuth(&Account{ID: 2, Platform: PlatformOpenAI, Type: AccountTypeOAuth}))
+	require.False(t, manager.ShouldRouteOpenAIOAuth(&Account{ID: 4, Platform: PlatformOpenAI, Type: AccountTypeOAuth}))
 }
 
 func TestPluginRequestSentErrorDoesNotFailOver(t *testing.T) {

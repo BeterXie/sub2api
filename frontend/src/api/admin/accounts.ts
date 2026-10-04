@@ -1028,6 +1028,14 @@ export async function createSparkShadow(parentId: number, payload: SparkShadowCr
   return data
 }
 
+export async function createPrismShadow(parentId: number, payload: SparkShadowCreatePayload): Promise<Account> {
+  const { data } = await apiClient.post<Account>(`/admin/accounts/${parentId}/shadow`, {
+    ...payload,
+    quota_dimension: 'prism'
+  })
+  return data
+}
+
 export async function getUpstreamBillingProbeSettings(): Promise<UpstreamBillingProbeSettings> {
   const { data } = await apiClient.get<UpstreamBillingProbeSettings>('/admin/accounts/upstream-billing-probe/settings')
   return data
@@ -1447,6 +1455,7 @@ export const accountsAPI = {
   refreshOpenAIQuota,
   resetOpenAIQuota,
   createSparkShadow,
+  createPrismShadow,
   getUpstreamBillingProbeSettings,
   updateUpstreamBillingProbeSettings,
   setUpstreamBillingProbeEnabled,

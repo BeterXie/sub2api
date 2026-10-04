@@ -442,10 +442,11 @@ type CreateAccountInput struct {
 // ShadowOptions is the input for CreateShadow.
 // The shadow holds no credentials — the scheduler transparently delegates to the parent account's tokens.
 type ShadowOptions struct {
-	Name        string
-	Priority    int
-	Concurrency int
-	GroupIDs    []int64
+	QuotaDimension string
+	Name           string
+	Priority       int
+	Concurrency    int
+	GroupIDs       []int64
 }
 
 type UpdateAccountInput struct {

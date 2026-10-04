@@ -26,13 +26,14 @@ import (
 )
 
 type pluginRuntime struct {
-	installation *PluginInstallation
-	client       *hcplugin.Client
-	api          pluginv1.TransportPluginClient
-	inFlight     atomic.Int64
-	draining     atomic.Bool
-	done         chan struct{}
-	doneOnce     sync.Once
+	installation   *PluginInstallation
+	client         *hcplugin.Client
+	api            pluginv1.TransportPluginClient
+	accountRouting *PluginAccountRouting
+	inFlight       atomic.Int64
+	draining       atomic.Bool
+	done           chan struct{}
+	doneOnce       sync.Once
 }
 
 func startPluginRuntime(ctx context.Context, installation *PluginInstallation, startTimeout time.Duration, socketDir string, hostServices pluginv1.HostServiceServer) (*pluginRuntime, error) {
@@ -185,6 +186,24 @@ func (r *pluginRuntime) validateAndApplyNormalizedConfig(ctx context.Context, co
 	if err != nil {
 		return nil, fmt.Errorf("序列化插件规范化配置: %w", err)
 	}
+	var routing *PluginAccountRouting
+	if validation.AccountRouting != nil {
+		ids := validation.AccountRouting.AccountIds
+		if len(ids) > 10000 {
+			return nil, errors.New("plugin account scope exceeds 10000 entries")
+		}
+		routing = &PluginAccountRouting{AccountIDs: make([]int64, 0, len(ids))}
+		seen := make(map[int64]struct{}, len(ids))
+		for _, id := range ids {
+			if id <= 0 {
+				return nil, errors.New("plugin account scope contains an invalid account ID")
+			}
+			if _, ok := seen[id]; !ok {
+				routing.AccountIDs = append(routing.AccountIDs, id)
+				seen[id] = struct{}{}
+			}
+		}
+	}
 	applied, err := r.api.ApplyConfig(ctx, &pluginv1.ApplyConfigRequest{ConfigJson: configJSON})
 	if err != nil {
 		return nil, fmt.Errorf("应用插件配置失败: %w", err)
@@ -192,6 +211,7 @@ func (r *pluginRuntime) validateAndApplyNormalizedConfig(ctx context.Context, co
 	if !applied.Applied {
 		return nil, fmt.Errorf("插件拒绝应用配置: %s", applied.Message)
 	}
+	r.accountRouting = routing
 	return configJSON, nil
 }
 

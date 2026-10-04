@@ -813,6 +813,9 @@ func (s *OpenAIGatewayService) openAICodexTicketBlocksAccount(account *Account, 
 	if account.isPrismBrowserUpstreamModelEnabled(outboundModel) {
 		return false
 	}
+	if s.prismFallbackEnabled(account, outboundModel) && prismFallbackQuotaBlocked(context.Background(), account, outboundModel) {
+		return false
+	}
 	if s == nil || !isOpenAICodexTicketAccount(account, outboundModel) || !s.openAICodexTicketEnabled() {
 		return false
 	}

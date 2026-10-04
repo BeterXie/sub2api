@@ -415,9 +415,14 @@ func (s *OpenAIGatewayService) forwardOpenAIPassthrough(
 		if resp.StatusCode >= 400 {
 			// Peek only to identify an invalid task. Restore the body so the existing
 			// passthrough error handling sees the same response after recovery fails.
-			probeBody := s.readUpstreamErrorBody(resp)
+			probeBody, errorBodyReadErr := s.readUpstreamErrorBodyChecked(resp)
 			_ = resp.Body.Close()
 			resp.Body = io.NopCloser(bytes.NewReader(probeBody))
+			if errorBodyReadErr == nil {
+				if fallbackResult, fallbackErr, handled := s.tryPrismFallbackAfterRejection(ctx, c, account, canonicalImageIntentBody, resp, probeBody, startTime); handled {
+					return fallbackResult, fallbackErr
+				}
+			}
 			if account.IsCopilotSDKEnabled() {
 				// In particular, 409 means a lost/foreign pending SDK turn, not a
 				// reason to fail over or rewrite fields and retry the request.

@@ -145,6 +145,9 @@ COPY --from=backend-builder --chown=sub2api:sub2api /app/backend/resources /app/
 # Create data directory
 RUN mkdir -p /app/data && chown sub2api:sub2api /app/data
 
+# Online updates create temporary files beside the executable.
+RUN ["chown", "sub2api:sub2api", "/app"]
+
 # Copy entrypoint script (fixes volume permissions then drops to sub2api)
 COPY deploy/docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh

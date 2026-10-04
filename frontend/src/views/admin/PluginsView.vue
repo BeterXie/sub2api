@@ -560,10 +560,10 @@ function handlePluginFrameLoad(): void {
   uiLoading.value = false;
 }
 
-function registerBridgeRequest(requestID: string): void {
+function registerBridgeRequest(requestID: string, timeoutMs = 45_000): void {
   const timeout = window.setTimeout(() => {
     pendingBridgeRequests.delete(requestID);
-  }, 30_000);
+  }, timeoutMs);
   pendingBridgeRequests.set(requestID, timeout);
 }
 
@@ -612,10 +612,11 @@ async function handleBridgeMessage(event: MessageEvent): Promise<void> {
     message.type === "config.load" ||
     message.type === "config.save" ||
     message.type === "config.test" ||
+    message.type === "accounts.list" ||
     message.type === "plugin.status";
   if (expectsResponse) {
     if (!requestID || pendingBridgeRequests.has(requestID)) return;
-    registerBridgeRequest(requestID);
+    registerBridgeRequest(requestID, message.type === "config.test" ? 195_000 : 45_000);
   }
 
   try {
@@ -626,6 +627,11 @@ async function handleBridgeMessage(event: MessageEvent): Promise<void> {
       case "config.load": {
         const config = await adminAPI.plugins.getConfig(configPlugin.value.id);
         postBridgeResult(message, { ok: true, config });
+        break;
+      }
+      case "accounts.list": {
+        const accounts = await adminAPI.plugins.accounts(configPlugin.value.id);
+        postBridgeResult(message, { ok: true, accounts });
         break;
       }
       case "config.save": {
@@ -650,7 +656,7 @@ async function handleBridgeMessage(event: MessageEvent): Promise<void> {
         const result = await pluginStepUp.run(() =>
           adminAPI.plugins.test(configPlugin.value!.id),
         );
-        postBridgeResult(message, { ok: result.success, result });
+        postBridgeResult(message, { ok: true, result });
         // A successful result is delivered back to the plugin UI, which owns how it
         // presents it (inline status, or an explicit ui.notify). Only force a host
         // toast on failure so genuine errors are never silently dropped — plugins

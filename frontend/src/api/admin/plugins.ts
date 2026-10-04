@@ -66,6 +66,7 @@ export interface PluginInstallation {
   enabled_at?: string
   updated_at: string
   bindings: PluginBinding[]
+  account_routing?: { account_ids: number[] } | null
   compatibility: PluginCompatibility
   runtime_healthy: boolean
   runtime_message: string
@@ -132,6 +133,20 @@ export async function getConfig(id: number): Promise<Record<string, unknown>> {
   return data
 }
 
+export interface PluginAccountChoice {
+  id: number
+  name: string
+  platform: string
+  account_type: string
+  status: string
+  schedulable: boolean
+}
+
+export async function accounts(id: number): Promise<PluginAccountChoice[]> {
+  const { data } = await apiClient.get<PluginAccountChoice[]>(`/admin/plugins/${id}/accounts`)
+  return data
+}
+
 export async function saveConfig(
   id: number,
   config: Record<string, unknown>
@@ -141,7 +156,7 @@ export async function saveConfig(
 }
 
 export async function test(id: number): Promise<PluginTestResult> {
-  const { data } = await apiClient.post<PluginTestResult>(`/admin/plugins/${id}/test`)
+  const { data } = await apiClient.post<PluginTestResult>(`/admin/plugins/${id}/test`, undefined, { timeout: 195_000 })
   return data
 }
 
@@ -162,6 +177,7 @@ export default {
   disable,
   remove,
   getConfig,
+  accounts,
   saveConfig,
   test,
   status,

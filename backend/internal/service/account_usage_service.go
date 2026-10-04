@@ -716,6 +716,10 @@ func (s *AccountUsageService) getOpenAIUsage(ctx context.Context, account *Accou
 	if account == nil {
 		return usage, nil
 	}
+	if account.IsPrismShadow() {
+		// Prism does not expose the parent's OpenAI or Spark quota windows.
+		return usage, nil
+	}
 
 	applyExtraToUsage(usage, account.Extra, now)
 

@@ -473,6 +473,9 @@ func (s *OpenAIQuotaService) prepareUpstreamCall(ctx context.Context, accountID 
 	if account.Type != AccountTypeOAuth {
 		return "", "", "", false, infraerrors.New(http.StatusBadRequest, "OPENAI_QUOTA_INVALID_TYPE", "account is not an OAuth account")
 	}
+	if account.IsPrismShadow() {
+		return "", "", "", false, infraerrors.New(http.StatusConflict, "PRISM_QUOTA_UNAVAILABLE", "Prism does not expose OpenAI quota windows; query the parent account for OpenAI quota")
+	}
 
 	// Spark shadow accounts do not hold their own credentials; resolve to the
 	// parent account so that chatgpt_account_id / access_token / proxy all come

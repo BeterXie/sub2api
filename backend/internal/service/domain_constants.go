@@ -785,6 +785,7 @@ func SettingKeyAuthSourcePlatformQuotas(source string) string {
 const (
 	QuotaDimensionGlobal = "global"
 	QuotaDimensionSpark  = "spark"
+	QuotaDimensionPrism  = "prism"
 )
 
 // AdminAPIKeyPrefix is the prefix for admin API keys (distinct from user "sk-" keys).

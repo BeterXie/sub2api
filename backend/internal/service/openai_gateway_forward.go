@@ -25,8 +25,11 @@ func accountUsesPrismBrowser(account *Account, cfg *config.Config) bool {
 }
 
 func accountHasPrismBrowser(account *Account) bool {
-	if account == nil || account.Platform != PlatformOpenAI || account.Type != AccountTypeOAuth || account.IsShadow() {
+	if account == nil || account.Platform != PlatformOpenAI || account.Type != AccountTypeOAuth {
 		return false
+	}
+	if account.IsShadow() {
+		return account.IsPrismShadow()
 	}
 	enabled, _ := account.Extra["openai_prism_browser"].(bool)
 	return enabled
@@ -113,6 +116,11 @@ func (s *OpenAIGatewayService) Forward(ctx context.Context, c *gin.Context, acco
 	if account.IsPrismBrowserEnabledForModel(modelForBPS) {
 		return s.forwardPrismBrowser(ctx, c, account, body, startTime)
 	}
+	if !isOpenAIResponsesCompactPath(c) && s.prismFallbackEnabled(account, modelForBPS) &&
+		prismFallbackQuotaBlocked(s.withOpenAIQuotaAutoPauseContext(ctx), account, modelForBPS) {
+		c.Header("X-Sub2API-Prism-Fallback", "openai_quota_cooldown")
+		return s.forwardPrismBrowser(ctx, c, account, body, startTime)
+	}
 	if c.GetBool(bpsAccountProbeRequiredContextKey) &&
 		(!account.IsExcelBPSEnabledForModel(modelForBPS) || account.excelBPSNativeFallbackReason(body) != "") {
 		return nil, errors.New("bps probe path is unavailable")
@@ -193,6 +201,12 @@ func (s *OpenAIGatewayService) Forward(ctx context.Context, c *gin.Context, acco
 	wsDecision := s.getOpenAIWSProtocolResolver().Resolve(account)
 	// HTTP SSE may opt into the native WS pool on ordinary OAuth accounts.
 	wsDecision = s.resolveOpenAIHTTPWSSSEDecision(c, account, body, wsDecision)
+	if accountHasPrismFallback(account) {
+		// Keep HTTP ingress on HTTP so a definite quota rejection can be handled
+		// before any response bytes are committed to the client.
+		wsDecision.Transport = OpenAIUpstreamTransportHTTPSSE
+		wsDecision.Reason = "prism_fallback_requires_http"
+	}
 	accelerateHTTPSSE := wsDecision.Reason == openAIOAuthWSSSEAccelerationReason
 	anchorCtx, anchorFinish, anchorErr := s.prepareCodexWSAnchor(ctx, c, account, body)
 	if anchorErr != nil {
@@ -1247,9 +1261,14 @@ func (s *OpenAIGatewayService) Forward(ctx context.Context, c *gin.Context, acco
 
 		// Handle error response
 		if resp.StatusCode >= 400 {
-			respBody := s.readUpstreamErrorBody(resp)
+			respBody, errorBodyReadErr := s.readUpstreamErrorBodyChecked(resp)
 			_ = resp.Body.Close()
 			resp.Body = io.NopCloser(bytes.NewReader(respBody))
+			if errorBodyReadErr == nil {
+				if fallbackResult, fallbackErr, handled := s.tryPrismFallbackAfterRejection(ctx, c, account, canonicalImageIntentBody, resp, respBody, startTime); handled {
+					return fallbackResult, fallbackErr
+				}
+			}
 
 			upstreamMsg := strings.TrimSpace(extractUpstreamErrorMessage(respBody))
 			upstreamMsg = sanitizeUpstreamErrorMessage(upstreamMsg)

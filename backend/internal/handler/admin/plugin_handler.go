@@ -141,6 +141,27 @@ func (h *PluginHandler) GetConfig(c *gin.Context) {
 	c.Data(http.StatusOK, "application/json; charset=utf-8", configJSON)
 }
 
+func (h *PluginHandler) ListAccounts(c *gin.Context) {
+	id, ok := pluginIDParam(c)
+	if !ok {
+		return
+	}
+	accounts, err := h.manager.ListAccounts(c.Request.Context(), id)
+	if err != nil {
+		response.ErrorFrom(c, err)
+		return
+	}
+	items := make([]gin.H, 0, len(accounts))
+	for _, account := range accounts {
+		items = append(items, gin.H{
+			"id": account.ID, "name": account.Name, "platform": account.Platform,
+			"account_type": account.AccountType, "status": account.Status,
+			"schedulable": account.Schedulable,
+		})
+	}
+	response.Success(c, items)
+}
+
 func (h *PluginHandler) SaveConfig(c *gin.Context) {
 	id, ok := pluginIDParam(c)
 	if !ok {

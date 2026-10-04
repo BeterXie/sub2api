@@ -2283,7 +2283,7 @@ func (r *accountRepository) schedulableAccountsQuery(now time.Time) *dbent.Accou
 			tempUnschedulablePredicate(),
 			notExpiredPredicate(now),
 			dbaccount.Or(dbaccount.OverloadUntilIsNil(), dbaccount.OverloadUntilLTE(now)),
-			dbaccount.Or(dbaccount.RateLimitResetAtIsNil(), dbaccount.RateLimitResetAtLTE(now)),
+			prismFallbackRateLimitPredicate(now),
 		).
 		Order(dbent.Asc(dbaccount.FieldPriority))
 }
@@ -2341,7 +2341,10 @@ func (r *accountRepository) ListSchedulableCapacityByGroupIDs(ctx context.Contex
 			AND (a.temp_unschedulable_until IS NULL OR a.temp_unschedulable_until <= $3)
 			AND (a.expires_at IS NULL OR a.expires_at > $3 OR a.auto_pause_on_expired = FALSE)
 			AND (a.overload_until IS NULL OR a.overload_until <= $3)
-			AND (a.rate_limit_reset_at IS NULL OR a.rate_limit_reset_at <= $3)
+			AND (a.rate_limit_reset_at IS NULL OR a.rate_limit_reset_at <= $3 OR
+				(a.platform = 'openai' AND a.type = 'oauth' AND a.parent_account_id IS NULL
+				AND a.extra @> '{"openai_prism_fallback":true}'::jsonb
+				AND NOT COALESCE(a.extra @> '{"openai_prism_browser":true}'::jsonb, false)))
 		ORDER BY ag.group_id ASC, ag.priority ASC, a.priority ASC, a.id ASC
 	`, pq.Array(groupIDs), service.StatusActive, time.Now())
 	if err != nil {
@@ -2389,7 +2392,7 @@ func (r *accountRepository) ListSchedulableByPlatform(ctx context.Context, platf
 			tempUnschedulablePredicate(),
 			notExpiredPredicate(now),
 			dbaccount.Or(dbaccount.OverloadUntilIsNil(), dbaccount.OverloadUntilLTE(now)),
-			dbaccount.Or(dbaccount.RateLimitResetAtIsNil(), dbaccount.RateLimitResetAtLTE(now)),
+			prismFallbackRateLimitPredicate(now),
 		).
 		Order(dbent.Asc(dbaccount.FieldPriority)).
 		All(ctx)
@@ -2423,7 +2426,7 @@ func (r *accountRepository) ListSchedulableByPlatforms(ctx context.Context, plat
 			tempUnschedulablePredicate(),
 			notExpiredPredicate(now),
 			dbaccount.Or(dbaccount.OverloadUntilIsNil(), dbaccount.OverloadUntilLTE(now)),
-			dbaccount.Or(dbaccount.RateLimitResetAtIsNil(), dbaccount.RateLimitResetAtLTE(now)),
+			prismFallbackRateLimitPredicate(now),
 		).
 		Order(dbent.Asc(dbaccount.FieldPriority)).
 		All(ctx)
@@ -2444,7 +2447,7 @@ func (r *accountRepository) ListSchedulableUngroupedByPlatform(ctx context.Conte
 			tempUnschedulablePredicate(),
 			notExpiredPredicate(now),
 			dbaccount.Or(dbaccount.OverloadUntilIsNil(), dbaccount.OverloadUntilLTE(now)),
-			dbaccount.Or(dbaccount.RateLimitResetAtIsNil(), dbaccount.RateLimitResetAtLTE(now)),
+			prismFallbackRateLimitPredicate(now),
 		).
 		Order(dbent.Asc(dbaccount.FieldPriority)).
 		All(ctx)
@@ -2468,7 +2471,7 @@ func (r *accountRepository) ListSchedulableUngroupedByPlatforms(ctx context.Cont
 			tempUnschedulablePredicate(),
 			notExpiredPredicate(now),
 			dbaccount.Or(dbaccount.OverloadUntilIsNil(), dbaccount.OverloadUntilLTE(now)),
-			dbaccount.Or(dbaccount.RateLimitResetAtIsNil(), dbaccount.RateLimitResetAtLTE(now)),
+			prismFallbackRateLimitPredicate(now),
 		).
 		Order(dbent.Asc(dbaccount.FieldPriority)).
 		All(ctx)
@@ -3620,7 +3623,7 @@ func (r *accountRepository) queryAccountsByGroup(ctx context.Context, groupID in
 				tempUnschedulablePredicate(),
 				notExpiredPredicate(now),
 				dbaccount.Or(dbaccount.OverloadUntilIsNil(), dbaccount.OverloadUntilLTE(now)),
-				dbaccount.Or(dbaccount.RateLimitResetAtIsNil(), dbaccount.RateLimitResetAtLTE(now)),
+				prismFallbackRateLimitPredicate(now),
 			)
 		}
 	}
@@ -3720,6 +3723,26 @@ func (r *accountRepository) accountsToService(ctx context.Context, accounts []*d
 	}
 
 	return outAccounts, nil
+}
+
+// OpenAI quota cooldowns must keep opt-in fallback accounts in the candidate
+// pool. Model/capability filtering remains in the service after hydration.
+func prismFallbackRateLimitPredicate(now time.Time) dbpredicate.Account {
+	jsonFlag := func(key string) dbpredicate.Account {
+		return func(s *entsql.Selector) {
+			s.Where(sqljson.ValueEQ(s.C(dbaccount.FieldExtra), true, sqljson.Path(key)))
+		}
+	}
+	return dbaccount.Or(
+		dbaccount.RateLimitResetAtIsNil(), dbaccount.RateLimitResetAtLTE(now),
+		dbaccount.And(dbaccount.PlatformEQ(service.PlatformOpenAI), dbaccount.TypeEQ(service.AccountTypeOAuth),
+			dbaccount.ParentAccountIDIsNil(), jsonFlag("openai_prism_fallback"),
+			func(s *entsql.Selector) {
+				s.Where(entsql.Or(entsql.Not(sqljson.HasKey(s.C(dbaccount.FieldExtra), sqljson.Path("openai_prism_browser"))),
+					sqljson.ValueIsNull(s.C(dbaccount.FieldExtra), sqljson.Path("openai_prism_browser")),
+					entsql.Not(sqljson.ValueEQ(s.C(dbaccount.FieldExtra), true, sqljson.Path("openai_prism_browser")))))
+			}),
+	)
 }
 
 func tempUnschedulablePredicate() dbpredicate.Account {
@@ -4366,13 +4389,12 @@ func (r *accountRepository) RevertProxyFallback(ctx context.Context, accountID i
 	return nil
 }
 
-// ListShadowsByParent 返回指定父账号的影子账号；当前实现仅查 quota_dimension='spark'（唯一预设）。
-// 同时过滤 parent_account_id 和 quota_dimension='spark'，防止未来其它 linked 维度被误伤。
-// ⚠️ 新增影子维度时：须更新此函数（或新增维度专用列举），并检查所有调用点（级联删除/一母一影校验/type 守卫），否则会静默漏掉新维度。
+// ListShadowsByParent includes every credential-linked dimension for lifecycle
+// operations. Creation checks uniqueness within the requested dimension.
 // 软删除行由 SoftDeleteMixin 拦截器自动排除，无需手写 deleted_at IS NULL。
 func (r *accountRepository) ListShadowsByParent(ctx context.Context, parentID int64) ([]*service.Account, error) {
 	rows, err := r.client.Account.Query().
-		Where(dbaccount.ParentAccountIDEQ(parentID), dbaccount.QuotaDimensionEQ(dbaccount.QuotaDimensionSpark)).
+		Where(dbaccount.ParentAccountIDEQ(parentID)).
 		All(ctx)
 	if err != nil {
 		return nil, err

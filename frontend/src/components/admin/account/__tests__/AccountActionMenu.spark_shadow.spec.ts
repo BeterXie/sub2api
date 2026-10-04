@@ -49,6 +49,30 @@ const getBodyText = () => document.body.textContent ?? ''
 const getBodyButtons = () => Array.from(document.body.querySelectorAll('button'))
 
 describe('AccountActionMenu — spark shadow 按钮可见性', () => {
+  it('creates a Prism shadow from an OAuth parent', async () => {
+    const account = makeAccount({ parent_account_id: null })
+    const wrapper = mount(AccountActionMenu, {
+      props: { show: true, account, anchorRect },
+      attachTo: document.body,
+    })
+    document.body.querySelector<HTMLButtonElement>('[data-testid="create-prism-shadow"]')!.click()
+    await wrapper.vm.$nextTick()
+    expect(wrapper.emitted('create-prism-shadow')?.[0][0]).toMatchObject({ id: account.id })
+    expect(wrapper.emitted('close')).toBeTruthy()
+    wrapper.unmount()
+  })
+
+  it.each([
+    { parent_account_id: 42, quota_dimension: 'prism' },
+    { parent_account_id: null, type: 'apikey' },
+  ] as Partial<Account>[])('does not create Prism shadows from unsupported accounts', (overrides) => {
+    const wrapper = mount(AccountActionMenu, {
+      props: { show: true, account: makeAccount(overrides), anchorRect },
+      attachTo: document.body,
+    })
+    expect(document.body.querySelector('[data-testid="create-prism-shadow"]')).toBeNull()
+    wrapper.unmount()
+  })
   it('普通账号显示「复制账号」按钮', () => {
     const account = makeAccount({ platform: 'anthropic', type: 'apikey', parent_account_id: null })
     const wrapper = mount(AccountActionMenu, {

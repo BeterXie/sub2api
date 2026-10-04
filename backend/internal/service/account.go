@@ -216,7 +216,7 @@ func (a *Account) IsSchedulable() bool {
 	if a.OverloadUntil != nil && now.Before(*a.OverloadUntil) {
 		return false
 	}
-	if a.RateLimitResetAt != nil && now.Before(*a.RateLimitResetAt) {
+	if a.RateLimitResetAt != nil && now.Before(*a.RateLimitResetAt) && !accountHasPrismFallback(a) {
 		return false
 	}
 	if a.TempUnschedulableUntil != nil && now.Before(*a.TempUnschedulableUntil) {
@@ -933,6 +933,9 @@ func (a *Account) IsModelSupported(requestedModel string) bool {
 		}
 	}
 
+	if accountHasPrismBrowser(a) {
+		return prismBrowserSupportsModel(requestedModel)
+	}
 	// 透传模式仅替换认证、模型语义完全交由上游决定，因此放行所有模型。
 	// 该短路必须在 model_mapping 判定之前：账号从"白名单模式"切换到透传后，
 	// credentials 里常残留旧的非空 model_mapping，若不在此放行，透传账号会被
@@ -3555,8 +3558,12 @@ func parseExtraInt(value any) int {
 	return 0
 }
 
-// IsShadow 报告账号是否为影子账号（parent_account_id 非空；当前唯一预设是 spark 维度）。
+// IsShadow reports a linked account whose credentials are owned by its parent.
 func (a *Account) IsShadow() bool { return a != nil && a.ParentAccountID != nil }
+
+func (a *Account) IsPrismShadow() bool {
+	return a.IsShadow() && a.QuotaDimension == QuotaDimensionPrism
+}
 
 // RPMAccountID returns the counter owner for per-minute limits. Credential
 // shadows intentionally share their parent account's upstream quota.
@@ -3564,7 +3571,7 @@ func (a *Account) RPMAccountID() int64 {
 	if a == nil {
 		return 0
 	}
-	if a.IsOpenAIOAuth() && a.ParentAccountID != nil && *a.ParentAccountID > 0 {
+	if a.IsOpenAIOAuth() && !a.IsPrismShadow() && a.ParentAccountID != nil && *a.ParentAccountID > 0 {
 		return *a.ParentAccountID
 	}
 	return a.ID

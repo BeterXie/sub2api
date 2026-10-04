@@ -78,6 +78,62 @@ func TestPluginManagerRoutingSelectsOnlyEligibleOpenAIOAuthAccounts(t *testing.T
 	assert.False(t, manager.ShouldRouteOpenAIOAuth(nil))
 }
 
+func TestPluginManagerRoutingUsesConfiguredAccountScope(t *testing.T) {
+	manager := &PluginManager{}
+	manager.route.Store(&pluginRoute{
+		pluginID:       1,
+		rolloutPercent: 100,
+		accountIDs:     map[int64]struct{}{10: {}},
+	})
+
+	assert.True(t, manager.ShouldRouteOpenAIOAuth(&Account{ID: 10, Platform: PlatformOpenAI, Type: AccountTypeOAuth}))
+	assert.False(t, manager.ShouldRouteOpenAIOAuth(&Account{ID: 11, Platform: PlatformOpenAI, Type: AccountTypeOAuth}))
+}
+
+func TestPluginAccountRoutingDistinguishesGlobalEmptyAndSelected(t *testing.T) {
+	global, err := pluginRoutingAccountIDs(nil)
+	require.NoError(t, err)
+	assert.Nil(t, global)
+	empty, err := pluginRoutingAccountIDs(&PluginAccountRouting{})
+	require.NoError(t, err)
+	assert.NotNil(t, empty)
+	assert.Empty(t, empty)
+	accountIDs, err := pluginRoutingAccountIDs(&PluginAccountRouting{AccountIDs: []int64{10, 10}})
+	require.NoError(t, err)
+	assert.Equal(t, map[int64]struct{}{10: {}}, accountIDs)
+}
+
+func TestPluginAccountRoutingRejectsInvalidAccountID(t *testing.T) {
+	_, err := pluginRoutingAccountIDs(&PluginAccountRouting{AccountIDs: []int64{0}})
+	assert.ErrorContains(t, err, "invalid account ID")
+}
+
+func TestOpenAIGatewayUnselectedOAuthKeepsNativeTransport(t *testing.T) {
+	manager := &PluginManager{}
+	manager.route.Store(&pluginRoute{pluginID: 1, rolloutPercent: 100, accountIDs: map[int64]struct{}{2: {}}, unavailable: "fixture"})
+	upstream := &pluginRoutingHTTPUpstream{}
+	gateway := &OpenAIGatewayService{pluginManager: manager, httpUpstream: upstream}
+	request, err := http.NewRequest(http.MethodPost, "https://example.com/v1/responses", nil)
+	require.NoError(t, err)
+	response, err := gateway.doOpenAIUpstream(request, "", &Account{ID: 4, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Concurrency: 1})
+	require.NoError(t, err)
+	require.NotNil(t, response)
+	_ = response.Body.Close()
+	assert.Equal(t, 1, upstream.doCalls)
+	_, err = gateway.doOpenAIUpstream(request, "", &Account{ID: 2, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Concurrency: 1})
+	require.ErrorContains(t, err, "插件不可用")
+	assert.Equal(t, 1, upstream.doCalls)
+}
+
+func TestPluginAccountScopeSurvivesRuntimeFailure(t *testing.T) {
+	manager := &PluginManager{runtimes: make(map[int64]*pluginRuntime)}
+	route := &pluginRoute{pluginID: 1, rolloutPercent: 100, accountIDs: map[int64]struct{}{2: {}}}
+	manager.route.Store(route)
+	require.NoError(t, manager.markRuntimeUnavailable(route, "fixture"))
+	assert.True(t, manager.ShouldRouteOpenAIOAuth(&Account{ID: 2, Platform: PlatformOpenAI, Type: AccountTypeOAuth}))
+	assert.False(t, manager.ShouldRouteOpenAIOAuth(&Account{ID: 4, Platform: PlatformOpenAI, Type: AccountTypeOAuth}))
+}
+
 func TestOpenAIGatewayPluginRoutingPreservesAPIKeyAndFailsClosedForOAuth(t *testing.T) {
 	manager := &PluginManager{}
 	manager.route.Store(&pluginRoute{pluginID: 1, rolloutPercent: 100, unavailable: "测试不可用"})

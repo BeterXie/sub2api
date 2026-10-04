@@ -167,6 +167,29 @@ describe('AccountTestModal', () => {
     wrapper.unmount()
   })
 
+  it('uses the Prism catalog and offers only its supported test mode', async () => {
+    getAvailableModelsMock.mockResolvedValue([
+      { id: 'gpt-6.1-sol', display_name: 'GPT-6.1 Sol' },
+      { id: 'gpt-6-astra', display_name: 'GPT-6 Astra → GPT-6.1 Sol' }
+    ])
+    const account = buildAccount()
+    account.extra = { openai_prism_browser: true }
+    const wrapper = mount(AccountTestModal, {
+      props: { show: false, account },
+      global: { stubs: { BaseDialog: BaseDialogStub, Select: SelectStub, TextArea: TextAreaStub, Icon: true } }
+    })
+    await wrapper.setProps({ show: true })
+    await flushPromises()
+    expect(wrapper.find('option[value="gpt-6.1-sol"]').exists()).toBe(true)
+    expect(wrapper.find('option[value="compact"]').exists()).toBe(false)
+    expect(wrapper.find('option[value="bps_tools"]').exists()).toBe(false)
+    await (wrapper.vm as any).startTest()
+    await flushPromises()
+    const [, options] = (global.fetch as any).mock.calls[0]
+    expect(JSON.parse(options.body)).toMatchObject({ model_id: 'gpt-6.1-sol', mode: 'default' })
+    wrapper.unmount()
+  })
+
   it('renders Chat Completions path status from test SSE', async () => {
     const encoder = new TextEncoder()
     const chunks = [
