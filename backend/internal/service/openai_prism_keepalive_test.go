@@ -26,6 +26,78 @@ func readPrismKeepalive(t *testing.T, reader *bufio.Reader) {
 	require.Equal(t, "\n", line)
 }
 
+func TestPrismAccountTestKeepaliveDuringBufferedResult(t *testing.T) {
+	for _, tc := range []struct {
+		name, response string
+		status         int
+		wantError      bool
+	}{
+		{"completed", prismFallbackFixtureResponse, 200, false},
+		{"unknown_outcome", `{"error":{"type":"prism_pending_turn","message":"outcome unknown"}}`, 409, true},
+		{"unfinished", `{"status":"in_progress"}`, 200, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			gate := make(chan struct{})
+			var release sync.Once
+			var attempts atomic.Int32
+			adapter := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				attempts.Add(1)
+				select {
+				case <-gate:
+				case <-r.Context().Done():
+					return
+				}
+				w.WriteHeader(tc.status)
+				_, _ = io.WriteString(w, tc.response)
+			}))
+			t.Cleanup(func() { release.Do(func() { close(gate) }); adapter.Close() })
+			gatewayService, account := prismTestService(adapter.URL)
+			gatewayService.cfg.Gateway.StreamKeepaliveInterval = 1
+			service := &AccountTestService{openaiGatewayService: gatewayService}
+			completed := make(chan error, 1)
+			router := gin.New()
+			router.POST("/pelican-test", func(c *gin.Context) {
+				completed <- service.testPrismBrowserConnection(c, account, "gpt-6.1-sol", "draw a pelican")
+			})
+			gateway := httptest.NewServer(router)
+			t.Cleanup(gateway.Close)
+			client := &http.Client{Timeout: 8 * time.Second}
+			response, err := client.Post(gateway.URL+"/pelican-test", "application/json", strings.NewReader(`{}`))
+			require.NoError(t, err)
+			defer response.Body.Close()
+			require.Equal(t, "text/event-stream", response.Header.Get("Content-Type"))
+			reader := bufio.NewReader(response.Body)
+			for _, eventType := range []string{"test_start", "status"} {
+				line, err := reader.ReadString('\n')
+				require.NoError(t, err)
+				require.Contains(t, line, `"type":"`+eventType+`"`)
+				line, err = reader.ReadString('\n')
+				require.NoError(t, err)
+				require.Equal(t, "\n", line)
+			}
+			readPrismKeepalive(t, reader)
+			release.Do(func() { close(gate) })
+			body, err := io.ReadAll(reader)
+			require.NoError(t, err)
+			testErr := <-completed
+			require.EqualValues(t, 1, attempts.Load(), "a test must not replay an unknown request")
+			if tc.wantError {
+				require.Error(t, testErr)
+				require.Equal(t, 1, strings.Count(string(body), `"type":"error"`))
+				require.NotContains(t, string(body), `"type":"content"`)
+				require.NotContains(t, string(body), `"type":"test_complete"`)
+			} else {
+				require.NoError(t, testErr)
+				require.Equal(t, 1, strings.Count(string(body), `"type":"content"`))
+				require.Equal(t, 1, strings.Count(string(body), `"type":"test_complete"`))
+				output, message := parseTestSSEOutput(string(body))
+				require.Equal(t, "OK", output)
+				require.Empty(t, message)
+			}
+		})
+	}
+}
+
 func TestPrismBrowserStreamKeepaliveBeforeBufferedResult(t *testing.T) {
 	tool := prismToolResponse("function_call")
 	delete(tool["output"].([]any)[0].(map[string]any), "namespace")

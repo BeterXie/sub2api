@@ -489,7 +489,15 @@ func (s *AccountTestService) testPrismBrowserConnection(c *gin.Context, account 
 	if err != nil {
 		return s.sendErrorAndEnd(c, "Invalid Prism test request")
 	}
+	// The admin test stream waits for a unary adapter result, just like the
+	// public Prism gateway. Keep its connection alive after the status events.
+	stopKeepalive := func() {}
+	if s.openaiGatewayService.cfg != nil {
+		stopKeepalive = startOpenAISSEKeepalive(c, time.Duration(s.openaiGatewayService.cfg.Gateway.StreamKeepaliveInterval)*time.Second)
+	}
+	defer stopKeepalive()
 	response, _, status, err := s.openaiGatewayService.callPrismBrowser(c.Request.Context(), account, body)
+	stopKeepalive()
 	if err != nil {
 		return s.sendErrorAndEnd(c, fmt.Sprintf("Prism adapter request failed: %s", err.Error()))
 	}
