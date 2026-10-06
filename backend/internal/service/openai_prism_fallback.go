@@ -41,7 +41,7 @@ func prismFallbackQuotaBlocked(ctx context.Context, account *Account, model stri
 }
 
 func (s *OpenAIGatewayService) prismFallbackEnabled(account *Account, model string) bool {
-	return s != nil && s.cfg != nil && s.cfg.Gateway.PrismBrowser.Enabled && prismFallbackSupportsModel(account, model)
+	return prismFallbackSupportsModel(account, model) && s.prismBrowserRuntime(context.Background()).Enabled
 }
 
 // Only a completed HTTP rejection proves that the OpenAI turn was not accepted.
