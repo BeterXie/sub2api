@@ -32,8 +32,9 @@ type openAICompactSSEKeepalive struct {
 	// bytes 是心跳已写出的注释字节数。心跳不构成语义响应，handler 的
 	// "Forward 期间是否已写响应"判定（failover 放弃换号的依据）必须扣除
 	// 这部分字节，见 OpenAICompactKeepaliveAdjustedWrittenSize。
-	bytes int
-	stop  chan struct{}
+	bytes   int
+	stop    chan struct{}
+	payload func() []byte
 }
 
 // StartOpenAICompactSSEKeepalive 为已标记 body-signal 客户端流式的 compact
@@ -56,13 +57,20 @@ func StartOpenAICompactSSEKeepalive(c *gin.Context, interval time.Duration) func
 // 心跳字节由 OpenAICompactKeepaliveAdjustedWrittenSize 统一排除，因此不会污染
 // "是否已向客户端写出语义响应"的 failover 判定（见 #3887）。
 func startOpenAISSEKeepalive(c *gin.Context, interval time.Duration) func() {
+	return startOpenAISSEKeepalivePayload(c, interval, nil)
+}
+
+// The payload is generated under the heartbeat lock. Its bytes are excluded
+// from model output just like comments, including across admission failover.
+func startOpenAISSEKeepalivePayload(c *gin.Context, interval time.Duration, payload func() []byte) func() {
 	if c == nil || c.Writer == nil || interval <= 0 {
 		return func() {}
 	}
 	originalWriter := c.Writer
 	k := &openAICompactSSEKeepalive{
-		writer: originalWriter,
-		stop:   make(chan struct{}),
+		writer:  originalWriter,
+		stop:    make(chan struct{}),
+		payload: payload,
 	}
 	// A buffered Prism attempt can stop its heartbeat and return a safe
 	// capacity rejection before the handler selects another account. Keep
@@ -132,7 +140,11 @@ func (k *openAICompactSSEKeepalive) beat() bool {
 		k.writer.WriteHeader(http.StatusOK)
 		k.started = true
 	}
-	n, err := k.writer.Write([]byte(": keepalive\n\n"))
+	data := []byte(": keepalive\n\n")
+	if k.payload != nil {
+		data = k.payload()
+	}
+	n, err := k.writer.Write(data)
 	k.bytes += n
 	if err != nil {
 		k.stopped = true

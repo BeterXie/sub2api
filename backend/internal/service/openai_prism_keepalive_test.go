@@ -14,6 +14,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 )
 
 func readPrismKeepalive(t *testing.T, reader *bufio.Reader) {
@@ -24,6 +25,25 @@ func readPrismKeepalive(t *testing.T, reader *bufio.Reader) {
 	line, err = reader.ReadString('\n')
 	require.NoError(t, err)
 	require.Equal(t, "\n", line)
+}
+
+func readPrismEventHeartbeat(t *testing.T, reader *bufio.Reader) {
+	t.Helper()
+	for {
+		line, err := reader.ReadString('\n')
+		require.NoError(t, err)
+		if !strings.HasPrefix(line, "data:") {
+			continue
+		}
+		data := strings.TrimSpace(strings.TrimPrefix(line, "data:"))
+		if gjson.Get(data, "type").String() == "response.reasoning_summary_text.delta" {
+			require.Equal(t, "", gjson.Get(data, "delta").String())
+			line, err = reader.ReadString('\n')
+			require.NoError(t, err)
+			require.Equal(t, "\n", line)
+			return
+		}
+	}
 }
 
 func TestPrismAccountTestKeepaliveDuringBufferedResult(t *testing.T) {
@@ -114,6 +134,7 @@ func TestPrismBrowserStreamKeepaliveBeforeBufferedResult(t *testing.T) {
 		{"tool", toolRequest, "", 200, toolResponse},
 		{"undeclared_tool", textRequest, "invalid_prism_response", 200, toolResponse},
 		{"unknown_outcome", textRequest, "prism_pending_turn", 409, []byte(`{"error":{"type":"prism_pending_turn","message":"outcome unknown"}}`)},
+		{"non_json_error", textRequest, "prism_adapter_error", 502, []byte("upstream unavailable")},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			gate := make(chan struct{})
@@ -152,7 +173,7 @@ func TestPrismBrowserStreamKeepaliveBeforeBufferedResult(t *testing.T) {
 			require.Equal(t, "text/event-stream", response.Header.Get("Content-Type"))
 			require.Equal(t, "no", response.Header.Get("X-Accel-Buffering"))
 			reader := bufio.NewReader(response.Body)
-			readPrismKeepalive(t, reader)
+			readPrismEventHeartbeat(t, reader)
 			release.Do(func() { close(gate) })
 			body, err := io.ReadAll(reader)
 			require.NoError(t, err)
@@ -165,7 +186,7 @@ func TestPrismBrowserStreamKeepaliveBeforeBufferedResult(t *testing.T) {
 				require.NotContains(t, string(body), "response.failed")
 				require.GreaterOrEqual(t, *result.result.FirstTokenMs, 1000, "comments must not count as a first model token")
 				if tc.name == "tool" {
-					require.Equal(t, 1, strings.Count(string(body), `"type":"response.output_item.done"`))
+					require.Equal(t, 2, strings.Count(string(body), `"type":"response.output_item.done"`))
 					require.Contains(t, string(body), `"call_id":"call_prism_fixture"`)
 				}
 			} else {
@@ -245,7 +266,7 @@ func TestPrismBrowserKeepaliveSurvivesCapacityFailover(t *testing.T) {
 	require.NoError(t, err)
 	defer response.Body.Close()
 	reader := bufio.NewReader(response.Body)
-	readPrismKeepalive(t, reader)
+	readPrismEventHeartbeat(t, reader)
 	require.Equal(t, 0, <-admitted)
 	releases[0].Do(func() { close(gates[0]) })
 	select {
@@ -254,7 +275,7 @@ func TestPrismBrowserKeepaliveSurvivesCapacityFailover(t *testing.T) {
 	case <-time.After(4 * time.Second):
 		t.Fatal("capacity rejection did not permit another account attempt")
 	}
-	readPrismKeepalive(t, reader)
+	readPrismEventHeartbeat(t, reader)
 	releases[1].Do(func() { close(gates[1]) })
 	body, err := io.ReadAll(reader)
 	require.NoError(t, err)

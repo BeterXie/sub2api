@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
+	"github.com/tidwall/gjson"
 )
 
 func TestPrismBrowserCapacityRejectionOnlyFailsOverBeforeSubmission(t *testing.T) {
@@ -65,7 +66,12 @@ func TestPrismBrowserCapacityRejectionOnlyFailsOverBeforeSubmission(t *testing.T
 					require.False(t, errors.As(err, &failover))
 					require.True(t, c.Writer.Written())
 					require.Equal(t, tc.status, rec.Code)
-					require.Equal(t, tc.body, rec.Body.String())
+					require.NotEmpty(t, gjson.Get(rec.Body.String(), "error.type").String())
+					require.NotEmpty(t, gjson.Get(rec.Body.String(), "error.message").String())
+					if gjson.Valid(tc.body) {
+						require.Equal(t, gjson.Get(tc.body, "error.type").String(), gjson.Get(rec.Body.String(), "error.type").String())
+						require.Equal(t, gjson.Get(tc.body, "error.request_submitted").Raw, gjson.Get(rec.Body.String(), "error.request_submitted").Raw)
+					}
 				}
 			})
 		}

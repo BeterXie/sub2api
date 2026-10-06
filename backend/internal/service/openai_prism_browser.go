@@ -369,11 +369,25 @@ func (s *OpenAIGatewayService) forwardPrismBrowser(ctx context.Context, c *gin.C
 		}
 	}()
 	writeError := func(status int, raw []byte) {
+		code := gjson.GetBytes(raw, "error.type").String()
+		message := gjson.GetBytes(raw, "error.message").String()
+		if code == "" || message == "" {
+			if code == "" {
+				code = "prism_adapter_error"
+			}
+			if message == "" {
+				message = fmt.Sprintf("Prism adapter returned HTTP %d", status)
+			}
+			if gjson.ValidBytes(raw) && gjson.GetBytes(raw, "error").IsObject() {
+				raw, _ = sjson.SetBytes(raw, "error.type", code)
+				raw, _ = sjson.SetBytes(raw, "error.message", message)
+			} else {
+				raw, _ = json.Marshal(gin.H{"error": gin.H{"type": code, "message": message}})
+			}
+		}
 		committed := StopOpenAICompactSSEKeepaliveCommitted(c)
 		if committed || c.Writer.Written() {
-			code := gjson.GetBytes(raw, "error.type").String()
-			message := gjson.GetBytes(raw, "error.message").String()
-			writeOpenAICompactSSEFailureMessage(c, status, code, message)
+			writePrismSSEFailure(c, status, code, message)
 			return
 		}
 		c.Data(status, "application/json", raw)
@@ -417,8 +431,12 @@ func (s *OpenAIGatewayService) forwardPrismBrowser(ctx context.Context, c *gin.C
 	// downstream alive while the adapter prepares, polls and returns it;
 	// adapter-side heartbeats would still be held by our response buffer.
 	stopKeepalive := func() {}
-	if stream && s.cfg != nil {
-		stopKeepalive = startOpenAISSEKeepalive(c, time.Duration(s.cfg.Gateway.StreamKeepaliveInterval)*time.Second)
+	if stream {
+		interval := 8 * time.Second
+		if s.cfg != nil && s.cfg.Gateway.StreamKeepaliveInterval > 0 {
+			interval = min(interval, time.Duration(s.cfg.Gateway.StreamKeepaliveInterval)*time.Second)
+		}
+		stopKeepalive = startPrismSSEKeepalive(c, upstreamModel, interval)
 	}
 	defer stopKeepalive()
 	responseBody, upstreamHeaders, status, err := s.callPrismBrowserForCaller(ctx, account, body, sessionID, prismBrowserCallerID(c, account.ID))
@@ -460,6 +478,15 @@ func (s *OpenAIGatewayService) forwardPrismBrowser(ctx context.Context, c *gin.C
 	contentType := "application/json"
 	if stream {
 		contentType = "text/event-stream"
+		var streamResponseID string
+		responseBody, streamResponseID, err = prismBrowserStreamResponse(c, responseBody)
+		if err != nil {
+			fail(http.StatusBadGateway, "invalid_prism_response", "Failed to encode validated Prism response")
+			return nil, err
+		}
+		if streamResponseID != "" {
+			responseID = streamResponseID
+		}
 	}
 	SetActualOpenAIUpstreamEndpoint(c, "/v1/responses")
 	c.Header("X-Prism-Usage", UsageSourceEstimatedVisibleText)
