@@ -6,6 +6,10 @@ const PrismBrowserModelsKey = "openai_prism_browser_models"
 
 var prismBrowserModels = [...]string{"gpt-6.1-sol", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-6-luna"}
 
+func (a *Account) IsPrismBrowserEnabled() bool {
+	return accountHasPrismBrowser(a)
+}
+
 // PrismBrowserSupportedModels returns the adapter contract, not a statement of
 // live account entitlement. Never treat an absent scope as all OpenAI models.
 func PrismBrowserSupportedModels() []string {

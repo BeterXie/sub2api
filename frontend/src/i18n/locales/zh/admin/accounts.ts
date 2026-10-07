@@ -1744,6 +1744,9 @@ export default {
       testModel: '测试模型',
       testPrompt: '提示词："hi"',
       pelicanTest: {
+        loadingModels: '正在读取账号可用的 Prism 模型…',
+        noPrismModels: '该账号当前没有可用的 Prism 模型。',
+        modelCatalogFailed: '读取 Prism 模型失败，请稍后重新打开测试窗口。',
         question: '题目',
         candyQuestion: '糖果逻辑测试',
         pelicanQuestion: '鹈鹕骑自行车（HTML）',

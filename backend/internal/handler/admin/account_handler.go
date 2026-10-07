@@ -2936,13 +2936,17 @@ func (h *AccountHandler) GetAvailableModels(c *gin.Context) {
 
 	// Handle OpenAI accounts
 	if account.IsOpenAI() {
-		// Prefer the shared, account-keyed upstream catalog. If discovery fails,
-		// retain the legacy local catalog below so the test dialog remains usable.
+		// Prism discovery must succeed before exposing models. Native accounts
+		// retain their existing local catalog fallback below.
 		if h.accountTestService != nil {
 			if models, fetchErr := h.accountTestService.FetchOpenAIAccountModels(c.Request.Context(), account); fetchErr == nil {
 				response.Success(c, models)
 				return
 			}
+		}
+		if account.IsPrismShadow() || account.IsPrismBrowserEnabled() {
+			response.Error(c, http.StatusServiceUnavailable, "Prism live model discovery is unavailable")
+			return
 		}
 		// OpenAI 自动透传会绕过常规模型改写，测试/模型列表也应回落到默认模型集。
 		if account.IsOpenAIPassthroughEnabled() {

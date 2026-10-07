@@ -191,7 +191,10 @@ func (s *AccountTestService) SetOpenAIGatewayService(gateway *OpenAIGatewayServi
 // on its own copy; the shared catalog and its cache stay untouched.
 func (s *AccountTestService) FetchOpenAIAccountModels(ctx context.Context, account *Account) ([]openai.Model, error) {
 	if accountHasPrismBrowser(account) {
-		return prismBrowserModelCatalog(), nil
+		if s == nil || s.openaiGatewayService == nil {
+			return nil, errors.New("Prism model discovery service is unavailable")
+		}
+		return s.openaiGatewayService.fetchPrismBrowserModels(ctx, account)
 	}
 	if s == nil || s.openaiGatewayService == nil {
 		return nil, errors.New("OpenAI model discovery service is unavailable")
@@ -423,12 +426,14 @@ func (s *AccountTestService) TestAccountConnection(c *gin.Context, accountID int
 	if account.IsOpenAI() {
 		modelID = strings.TrimSpace(modelID)
 		if modelID == "" && accountHasPrismBrowser(account) {
-			for _, candidate := range PrismBrowserSupportedModels() {
-				if account.IsPrismBrowserEnabledForModel(candidate) {
-					modelID = candidate
-					break
-				}
+			models, err := s.FetchOpenAIAccountModels(c.Request.Context(), account)
+			if err != nil {
+				return s.sendErrorAndEnd(c, "Prism live model discovery is unavailable")
 			}
+			if len(models) == 0 {
+				return s.sendErrorAndEnd(c, "This account has no available Prism models")
+			}
+			modelID = models[0].ID
 		}
 		if account.IsPrismBrowserEnabledForModel(modelID) {
 			if normalizeAccountTestMode(mode) != AccountTestModeDefault || testOpts.ImageDataURL != "" || testOpts.AudioDataURL != "" {

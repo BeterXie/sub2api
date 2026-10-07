@@ -1657,6 +1657,9 @@ export default {
       testModel: 'Test model',
       testPrompt: 'Prompt: "hi"',
       pelicanTest: {
+        loadingModels: 'Loading available Prism models…',
+        noPrismModels: 'This account currently has no available Prism models.',
+        modelCatalogFailed: 'Could not load Prism models. Reopen this dialog to try again.',
         question: 'Question',
         candyQuestion: 'Candy logic test',
         pelicanQuestion: 'Pelican riding a bicycle (HTML)',

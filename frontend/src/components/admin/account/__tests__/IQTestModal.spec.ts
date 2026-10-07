@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import IQTestModal from '../IQTestModal.vue'
 
-const { probeOpenAICodexState } = vi.hoisted(() => ({ probeOpenAICodexState: vi.fn() }))
+const { probeOpenAICodexState, getAvailableModels } = vi.hoisted(() => ({ probeOpenAICodexState: vi.fn(), getAvailableModels: vi.fn() }))
 
 vi.mock('@/api/admin/accounts', async () => {
   const actual = await vi.importActual<typeof import('@/api/admin/accounts')>('@/api/admin/accounts')
-  return { ...actual, probeOpenAICodexState }
+  return { ...actual, probeOpenAICodexState, getAvailableModels }
 })
 
 vi.mock('vue-i18n', async () => {
@@ -64,6 +64,8 @@ describe('IQTestModal', () => {
   beforeEach(() => {
     localStorage.clear()
     localStorage.setItem('auth_token', 'test-token')
+    getAvailableModels.mockReset()
+    getAvailableModels.mockResolvedValue([{ id: 'gpt-5.6-sol' }, { id: 'gpt-6-luna' }])
     global.fetch = vi.fn(() => Promise.resolve(streamResponse([
       { type: 'test_start', model: 'gpt-6-astra' },
       { type: 'content', text: '<!doctype html><html><head><title>Pelican</title></head><body><svg></svg>' },
@@ -221,6 +223,9 @@ function probeResult(overrides: Record<string, unknown> = {}) {
 describe('IQTestModal state probe mode', () => {
   beforeEach(() => {
     probeOpenAICodexState.mockReset()
+    getAvailableModels.mockReset()
+    getAvailableModels.mockResolvedValue([{ id: 'gpt-5.6-sol' }, { id: 'gpt-6-luna' }])
+    localStorage.setItem('auth_token', 'test-token')
     global.fetch = vi.fn() as any
   })
 
@@ -234,13 +239,58 @@ describe('IQTestModal state probe mode', () => {
 
   it('keeps Prism shadows on question tests and blocks the native probe', async () => {
     const wrapper = mountModal({ parent_account_id: 4, quota_dimension: 'prism' })
-    expect((wrapper.vm as any).modelId).toBe('gpt-6.1-sol')
+    expect((wrapper.vm as any).canStart).toBe(false)
+    await flushPromises()
+    expect(getAvailableModels).toHaveBeenCalledWith(42)
+    expect((wrapper.vm as any).modelId).toBe('gpt-5.6-sol')
     expect(wrapper.text()).toContain('Prism')
     expect(wrapper.find('[data-testid="mode-probe"]').exists()).toBe(false)
     ;(wrapper.vm as any).selectMode('probe')
     await (wrapper.vm as any).startProbe()
     expect((wrapper.vm as any).testMode).toBe('question')
     expect(probeOpenAICodexState).not.toHaveBeenCalled()
+    wrapper.unmount()
+  })
+
+  it('does not run Prism inference if model discovery fails or returns no models', async () => {
+    for (const result of ['failure', 'empty']) {
+      if (result === 'failure') getAvailableModels.mockRejectedValueOnce(new Error('catalog unavailable'))
+      else getAvailableModels.mockResolvedValueOnce([])
+      const wrapper = mountModal({ parent_account_id: 4, quota_dimension: 'prism' })
+      await flushPromises()
+      expect((wrapper.vm as any).modelId).toBe('')
+      expect((wrapper.vm as any).canStart).toBe(false)
+      expect(wrapper.find('[data-testid="model-catalog-error"]').exists()).toBe(true)
+      await (wrapper.vm as any).startTest()
+      expect(global.fetch).not.toHaveBeenCalled()
+      wrapper.unmount()
+    }
+  })
+
+  it('ignores a stale Prism catalog after switching to a native account', async () => {
+    let resolveCatalog: (models: Array<{ id: string }>) => void = () => {}
+    getAvailableModels.mockImplementationOnce(() => new Promise(resolve => { resolveCatalog = resolve }))
+    const wrapper = mountModal({ parent_account_id: 4, quota_dimension: 'prism' })
+    await wrapper.setProps({ account: { id: 43, platform: 'openai', type: 'oauth', status: 'active' } as any })
+    resolveCatalog([{ id: 'gpt-5.6-sol' }])
+    await flushPromises()
+    expect((wrapper.vm as any).modelId).toBe('gpt-6-astra')
+    expect((wrapper.vm as any).loadingModels).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('uses the live Prism default for parallel question tests', async () => {
+    global.fetch = vi.fn(() => Promise.resolve(streamResponse([
+      { type: 'content', text: '21' }, { type: 'test_complete', success: true }
+    ]))) as any
+    const wrapper = mountModal({ extra: { openai_prism_browser: true } })
+    await flushPromises()
+    ;(wrapper.vm as any).parallelCount = 2
+    await (wrapper.vm as any).startTest()
+    expect(global.fetch).toHaveBeenCalledTimes(2)
+    for (const [, request] of (global.fetch as any).mock.calls) {
+      expect(JSON.parse(request.body).model_id).toBe('gpt-5.6-sol')
+    }
     wrapper.unmount()
   })
 

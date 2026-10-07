@@ -1,0 +1,21 @@
+FROM sub2api:v2.9.8-prism-frontend-tests AS frontend-builder
+WORKDIR /app/frontend
+COPY frontend/ ./
+RUN ["node", "node_modules/vitest/vitest.mjs", "run", "src/components/admin/account/__tests__/IQTestModal.spec.ts", "src/i18n/__tests__/localeKeyCompleteness.spec.ts"]
+RUN ["node", "node_modules/vue-tsc/bin/vue-tsc.js", "--noEmit"]
+RUN ["node", "node_modules/vite/bin/vite.js", "build"]
+
+FROM sub2api:v2.9.8-prism-usage-verify AS backend-builder
+ENV CGO_ENABLED=0 GOMAXPROCS=2
+WORKDIR /app/backend
+COPY backend/ ./
+COPY --from=frontend-builder /app/backend/internal/web/dist ./internal/web/dist
+RUN --mount=type=cache,id=sub2api-gomod,target=/go/pkg/mod \
+    --mount=type=cache,id=sub2api-gobuild,target=/root/.cache/go-build \
+    ["go", "test", "-p", "2", "-tags=unit", "./internal/service", "./internal/handler/admin", "-run", "Prism|OpenAIModels|OpenAIAccountModels", "-count=1", "-timeout=8m"]
+RUN --mount=type=cache,id=sub2api-gomod,target=/go/pkg/mod \
+    --mount=type=cache,id=sub2api-gobuild,target=/root/.cache/go-build \
+    ["go", "build", "-p", "2", "-tags=embed", "-ldflags=-s -w -X main.Version=2.9.10 -X main.Commit=prism-catalog-20261006 -X main.Date=2026-10-06 -X main.BuildType=release", "-trimpath", "-o", "/app/sub2api", "./cmd/server"]
+
+FROM sub2api:2.9.10-prism-relay-20261006
+COPY --from=backend-builder --chmod=755 --chown=sub2api:sub2api /app/sub2api /app/sub2api

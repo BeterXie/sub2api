@@ -9,7 +9,7 @@
           </div>
           <div>
             <div class="font-semibold text-gray-900 dark:text-gray-100">{{ account.name }}</div>
-            <div class="text-xs text-gray-500 dark:text-gray-400">{{ isPrismShadow ? 'Prism' : account.platform }} · {{ t('admin.accounts.pelicanTest.subtitle') }}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">{{ isPrismAccount ? 'Prism' : account.platform }} · {{ t('admin.accounts.pelicanTest.subtitle') }}</div>
           </div>
         </div>
         <span v-if="testMode === 'question'" class="whitespace-nowrap rounded-full bg-white px-2.5 py-1 text-xs font-medium text-amber-700 shadow-sm dark:bg-dark-800 dark:text-amber-300">
@@ -130,7 +130,14 @@
           :hint="t('admin.accounts.pelicanTest.promptHint')"
         />
         <div class="space-y-3">
+          <div v-if="isPrismAccount">
+            <label class="input-label mb-1.5 block">{{ t('admin.accounts.pelicanTest.model') }}</label>
+            <Select data-testid="prism-model-select" v-model="modelId" :options="prismModelOptions" :disabled="running || loadingModels" />
+            <p v-if="loadingModels" class="mt-2 text-xs text-gray-500">{{ t('admin.accounts.pelicanTest.loadingModels') }}</p>
+            <p v-else-if="modelCatalogError" class="mt-2 text-xs text-red-600" data-testid="model-catalog-error">{{ modelCatalogError }}</p>
+          </div>
           <Input
+            v-else
             v-model="modelId"
             :label="t('admin.accounts.pelicanTest.model')"
             :disabled="running"
@@ -188,8 +195,8 @@
       <ScheduledTestsPanel v-if="show && account && activeTab === 'schedule'" :key="account.id" :show="true" embedded
         :account-id="account.id" :default-model="modelId" :model-options="[{ value: modelId, label: modelId }]"
         :pelican-config="{ question_kind: questionKind, prompt, reasoning_effort: reasoningEffort, parallel_count: Number(parallelCount) }"
-        :allow-state-probe="!isPrismShadow"
-        :disabled="running" @preview="previewScheduled" @history="scheduledRecords = $event" />
+        :allow-state-probe="!isPrismAccount"
+        :disabled="running || loadingModels || Boolean(modelCatalogError)" @preview="previewScheduled" @history="scheduledRecords = $event" />
       <div v-else-if="activeTab === 'history'" class="space-y-2">
         <button v-for="result in scheduledRecords" :key="`scheduled-${result.id}`" type="button"
           class="flex w-full items-center justify-between rounded-lg border border-gray-200 px-3 py-2 text-left transition-colors hover:border-primary-300 hover:bg-primary-50/50 dark:border-dark-600 dark:hover:border-primary-700 dark:hover:bg-primary-900/10"
@@ -288,7 +295,7 @@ import Select from '@/components/common/Select.vue'
 import { Icon } from '@/components/icons'
 import { buildApiUrl } from '@/api/client'
 import { ADMIN_UI_REQUEST_HEADER } from '@/api/adminUIRequest'
-import { probeOpenAICodexState, type OpenAICodexStateProbeResult, type OpenAICodexStateVerdict } from '@/api/admin/accounts'
+import { getAvailableModels, probeOpenAICodexState, type OpenAICodexStateProbeResult, type OpenAICodexStateVerdict } from '@/api/admin/accounts'
 import type { Account, AccountListItem, PelicanTestConfig, ScheduledTestResult } from '@/types'
 import ScheduledTestsPanel from './ScheduledTestsPanel.vue'
 import PelicanRecordsDashboard from './PelicanRecordsDashboard.vue'
@@ -332,12 +339,18 @@ interface TestRecord {
 const props = defineProps<{ show: boolean; account: Account | null; accounts?: AccountListItem[] }>()
 const emit = defineEmits<{ (event: 'close'): void }>()
 const isPrismShadow = computed(() => props.account?.platform === 'openai' && Boolean(props.account.parent_account_id) && props.account.quota_dimension === 'prism')
-const testModes = computed<TestMode[]>(() => isPrismShadow.value ? ['question'] : ['question', 'probe'])
+const isPrismAccount = computed(() => isPrismShadow.value || (props.account?.platform === 'openai' && props.account.type === 'oauth' && props.account.extra?.openai_prism_browser === true))
+const testModes = computed<TestMode[]>(() => isPrismAccount.value ? ['question'] : ['question', 'probe'])
+const prismModelIds = ref<string[]>([])
+const prismModelOptions = computed(() => prismModelIds.value.map(id => ({ value: id, label: id })))
+const loadingModels = ref(false)
+const modelCatalogError = ref('')
+let modelLoadRevision = 0
 
 const questionKind = ref<IntelligenceQuestion>('candy')
 const prompt = ref(questionPrompt('candy'))
 // Claude accounts cannot serve the OpenAI default.
-const defaultModel = computed(() => props.account?.platform === 'anthropic' ? 'claude-opus-5-5' : isPrismShadow.value ? 'gpt-6.1-sol' : 'gpt-6-astra')
+const defaultModel = computed(() => props.account?.platform === 'anthropic' ? 'claude-opus-5-5' : isPrismAccount.value ? prismModelIds.value[0] || '' : 'gpt-6-astra')
 const modelId = ref(defaultModel.value)
 const reasoningEffort = ref('medium')
 const parallelCount = ref<string | number>(1)
@@ -365,9 +378,9 @@ const reasoningOptions = computed(() => [
   { value: 'medium', label: t('admin.accounts.pelicanTest.reasoningMedium') },
   { value: 'high', label: t('admin.accounts.pelicanTest.reasoningHigh') }
 ])
-const canStart = computed(() => Boolean(props.account && prompt.value.trim() && modelId.value.trim() && normalizeCount() > 0))
+const canStart = computed(() => Boolean(props.account && prompt.value.trim() && modelId.value.trim() && normalizeCount() > 0 && !loadingModels.value && !modelCatalogError.value && (!isPrismAccount.value || prismModelIds.value.includes(modelId.value))))
 const hasDownloadable = computed(() => runs.value.some((run) => Boolean(run.output)))
-const probeSupported = computed(() => !isPrismShadow.value && props.account?.platform === 'openai' && (props.account.type === 'oauth' || props.account.type === 'setup-token'))
+const probeSupported = computed(() => !isPrismAccount.value && props.account?.platform === 'openai' && (props.account.type === 'oauth' || props.account.type === 'setup-token'))
 const canStartProbe = computed(() => Boolean(props.account && probeSupported.value))
 
 function selectMode(mode: TestMode) {
@@ -639,7 +652,27 @@ function downloadAll() {
 
 onBeforeUnmount(() => { for (const controller of controllers.values()) controller.abort() })
 
+async function loadPrismModels(accountId: number, revision: number) {
+  loadingModels.value = true
+  try {
+    const models = await getAvailableModels(accountId)
+    if (revision !== modelLoadRevision) return
+    prismModelIds.value = models.map(model => model.id)
+    modelId.value = defaultModel.value
+    if (!modelId.value) modelCatalogError.value = t('admin.accounts.pelicanTest.noPrismModels')
+  } catch {
+    if (revision !== modelLoadRevision) return
+    modelCatalogError.value = t('admin.accounts.pelicanTest.modelCatalogFailed')
+  } finally {
+    if (revision === modelLoadRevision) loadingModels.value = false
+  }
+}
+
 watch(() => [props.show, props.account?.id] as const, ([show]) => {
+  const revision = ++modelLoadRevision
+  prismModelIds.value = []
+  loadingModels.value = false
+  modelCatalogError.value = ''
   if (show) {
     readRecords()
     activeTab.value = 'results'
@@ -655,6 +688,7 @@ watch(() => [props.show, props.account?.id] as const, ([show]) => {
     testMode.value = 'question'
     probeResults.value = []
     probeError.value = ''
+    if (isPrismAccount.value && props.account) void loadPrismModels(props.account.id, revision)
   } else {
     for (const controller of controllers.values()) controller.abort()
     controllers.clear()

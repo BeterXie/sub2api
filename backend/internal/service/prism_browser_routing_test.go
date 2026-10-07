@@ -70,7 +70,12 @@ func TestPrismBrowserEffortMappingKeepsExplicitEffort(t *testing.T) {
 }
 
 func TestPrismBrowserSelectedAccountCatalogAndScheduling(t *testing.T) {
-	s, account := prismTestService("http://127.0.0.1:1")
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, "/v1/models", r.URL.Path)
+		_, _ = io.WriteString(w, `{"data":[{"id":"gpt-5.6-sol"},{"id":"gpt-5.6-terra"},{"id":"gpt-6-luna"}]}`)
+	}))
+	defer server.Close()
+	s, account := prismTestService(server.URL)
 	response, err := s.FetchOpenAIModelsList(context.Background(), account)
 	require.NoError(t, err)
 	var list struct {
@@ -79,16 +84,16 @@ func TestPrismBrowserSelectedAccountCatalogAndScheduling(t *testing.T) {
 		} `json:"data"`
 	}
 	require.NoError(t, json.Unmarshal(response.Body, &list))
-	require.Len(t, list.Data, 5)
+	require.Len(t, list.Data, 3)
 	for _, id := range []string{"gpt-6.1-sol", "gpt-6-astra", "gpt-6-astra:ultra", "gpt-5.6-sol", "gpt-5.6-terra", "gpt-6-luna"} {
 		require.True(t, account.IsModelSupported(id), id)
 	}
 	for _, id := range []string{"gpt-5.4", "gpt-image-2", "unknown"} {
 		require.False(t, account.IsModelSupported(id), id)
 	}
-	models, err := (&AccountTestService{}).FetchOpenAIAccountModels(context.Background(), account)
+	models, err := (&AccountTestService{openaiGatewayService: s}).FetchOpenAIAccountModels(context.Background(), account)
 	require.NoError(t, err)
-	require.Equal(t, "gpt-6.1-sol", models[0].ID)
+	require.Equal(t, "gpt-5.6-sol", models[0].ID)
 	delete(account.Extra, "openai_prism_browser")
 	require.True(t, account.IsModelSupported("gpt-5.4"), "unchecking Prism restores native model selection")
 }
@@ -472,9 +477,12 @@ func TestPrismShadowAccountTestsNeverFallBackToNative(t *testing.T) {
 		name, model, mode, wantModel string
 		scope                        []string
 		disabled                     bool
+		catalogFailed, catalogEmpty  bool
 	}{
-		{name: "default model", wantModel: "gpt-6.1-sol"},
+		{name: "default model", wantModel: "gpt-5.6-sol"},
 		{name: "default respects scope", scope: []string{"gpt-5.6-terra"}, wantModel: "gpt-5.6-terra"},
+		{name: "catalog unavailable", catalogFailed: true},
+		{name: "empty live catalog", catalogEmpty: true},
 		{name: "unsupported model", model: "gpt-5.4"},
 		{name: "outside scope", model: "gpt-6.1-sol", scope: []string{"gpt-5.6-terra"}},
 		{name: "empty scope", scope: []string{}},
@@ -484,6 +492,17 @@ func TestPrismShadowAccountTestsNeverFallBackToNative(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			var calls int
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/v1/models" {
+					require.Equal(t, http.MethodGet, r.Method)
+					if tc.catalogFailed {
+						w.WriteHeader(http.StatusServiceUnavailable)
+					} else if tc.catalogEmpty {
+						_, _ = io.WriteString(w, `{"data":[]}`)
+					} else {
+						_, _ = io.WriteString(w, `{"data":[{"id":"gpt-5.6-sol"},{"id":"gpt-5.6-terra"},{"id":"gpt-6-luna"}]}`)
+					}
+					return
+				}
 				calls++
 				body, err := io.ReadAll(r.Body)
 				require.NoError(t, err)

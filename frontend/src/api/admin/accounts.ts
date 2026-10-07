@@ -606,7 +606,8 @@ export async function setSchedulable(id: number, schedulable: boolean): Promise<
  * @returns List of available models for this account
  */
 export async function getAvailableModels(id: number): Promise<ClaudeModel[]> {
-  const { data } = await apiClient.get<ClaudeModel[]>(`/admin/accounts/${id}/models`)
+  // A cold Prism profile may need an OAuth browser exchange before discovery.
+  const { data } = await apiClient.get<ClaudeModel[]>(`/admin/accounts/${id}/models`, { timeout: 100000 })
   return data
 }
 

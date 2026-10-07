@@ -555,30 +555,9 @@ func (s *OpenAIGatewayService) callPrismBrowserForTurn(ctx context.Context, acco
 	if key == "" {
 		return nil, nil, 0, errors.New("prism adapter key is not configured")
 	}
-	credentialAccount, err := resolveCredentialAccount(ctx, s.accountRepo, account)
+	headers, err := s.prismBrowserAccountHeaders(ctx, account, key)
 	if err != nil {
 		return nil, nil, 0, err
-	}
-	token, _, err := s.GetAccessToken(ctx, credentialAccount)
-	if err != nil {
-		return nil, nil, 0, err
-	}
-	if token == "" || strings.ContainsAny(token, "\r\n") {
-		return nil, nil, 0, errors.New("invalid Prism OAuth token")
-	}
-	proxy := credentialAccount.Proxy
-	if proxy == nil && credentialAccount.ProxyID != nil {
-		if s.proxyRepo == nil {
-			return nil, nil, 0, errors.New("Prism account proxy is unavailable")
-		}
-		proxy, err = s.proxyRepo.GetByID(ctx, *credentialAccount.ProxyID)
-		if err != nil || proxy == nil {
-			return nil, nil, 0, errors.New("Prism account proxy is unavailable")
-		}
-	}
-	proxyURL := ""
-	if proxy != nil {
-		proxyURL = proxy.URL()
 	}
 	body, err = prismBrowserMappedRequest(body)
 	if err != nil {
@@ -588,13 +567,8 @@ func (s *OpenAIGatewayService) callPrismBrowserForTurn(ctx context.Context, acco
 	if err != nil {
 		return nil, nil, 0, err
 	}
+	req.Header = headers
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+key)
-	req.Header.Set("X-Prism-Account-ID", strconv.FormatInt(credentialAccount.ID, 10))
-	req.Header.Set("X-Prism-OAuth-Token", token)
-	// Only the local adapter receives the proxy configuration. This HTTP hop
-	// itself stays on loopback and never uses the account's outbound proxy.
-	req.Header.Set("X-Prism-Proxy", proxyURL)
 	if sessionID != "" {
 		req.Header.Set("X-Prism-Session-ID", sessionID)
 	}
@@ -628,6 +602,98 @@ func (s *OpenAIGatewayService) callPrismBrowserForTurn(ctx context.Context, acco
 		return nil, nil, 0, errors.New("prism adapter redirected unexpectedly")
 	}
 	return responseBody, resp.Header, resp.StatusCode, nil
+}
+
+func (s *OpenAIGatewayService) prismBrowserAccountHeaders(ctx context.Context, account *Account, key string) (http.Header, error) {
+	credentialAccount, err := resolveCredentialAccount(ctx, s.accountRepo, account)
+	if err != nil {
+		return nil, err
+	}
+	token, _, err := s.GetAccessToken(ctx, credentialAccount)
+	if err != nil {
+		return nil, err
+	}
+	if token == "" || strings.ContainsAny(token, "\r\n") {
+		return nil, errors.New("invalid Prism OAuth token")
+	}
+	proxy := credentialAccount.Proxy
+	if proxy == nil && credentialAccount.ProxyID != nil {
+		if s.proxyRepo == nil {
+			return nil, errors.New("Prism account proxy is unavailable")
+		}
+		proxy, err = s.proxyRepo.GetByID(ctx, *credentialAccount.ProxyID)
+		if err != nil || proxy == nil {
+			return nil, errors.New("Prism account proxy is unavailable")
+		}
+	}
+	headers := make(http.Header)
+	headers.Set("Authorization", "Bearer "+key)
+	headers.Set("X-Prism-Account-ID", strconv.FormatInt(credentialAccount.ID, 10))
+	headers.Set("X-Prism-OAuth-Token", token)
+	// Account proxies are configuration for the local adapter, never this hop.
+	headers.Set("X-Prism-Proxy", "")
+	if proxy != nil {
+		headers.Set("X-Prism-Proxy", proxy.URL())
+	}
+	return headers, nil
+}
+
+func (s *OpenAIGatewayService) fetchPrismBrowserModels(ctx context.Context, account *Account) ([]openai.Model, error) {
+	runtime := s.prismBrowserRuntime(ctx)
+	if !runtime.Enabled || !accountHasPrismBrowser(account) {
+		return nil, errors.New("Prism model discovery is disabled")
+	}
+	endpoint, err := prismBrowserAdapterURL(runtime.BaseURL)
+	if err != nil {
+		return nil, err
+	}
+	key := strings.TrimSpace(runtime.APIKey)
+	if key == "" {
+		return nil, errors.New("Prism adapter key is not configured")
+	}
+	headers, err := s.prismBrowserAccountHeaders(ctx, account, key)
+	if err != nil {
+		return nil, err
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, strings.TrimSuffix(endpoint, "/responses")+"/models", nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header = headers
+	transport := &http.Transport{Proxy: nil, DisableKeepAlives: true}
+	defer transport.CloseIdleConnections()
+	client := &http.Client{Timeout: 90 * time.Second, Transport: transport,
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, errors.New("Prism live model discovery request failed")
+	}
+	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.New("Prism live model catalog is unavailable")
+	}
+	body, err := io.ReadAll(io.LimitReader(resp.Body, prismBrowserMaxResponseBytes+1))
+	if err != nil || len(body) > prismBrowserMaxResponseBytes {
+		return nil, errors.New("Prism model catalog exceeded limit")
+	}
+	var catalog struct {
+		Data []openai.Model `json:"data"`
+	}
+	if err := json.Unmarshal(body, &catalog); err != nil || catalog.Data == nil {
+		return nil, errors.New("Invalid Prism model catalog")
+	}
+	available := make(map[string]bool)
+	for _, model := range catalog.Data {
+		available[model.ID] = true
+	}
+	models := make([]openai.Model, 0)
+	for _, model := range prismBrowserModelCatalog() {
+		upstream, _ := prismBrowserModel(account.GetMappedModel(model.ID))
+		if available[upstream] && account.IsPrismBrowserEnabledForModel(model.ID) {
+			models = append(models, model)
+		}
+	}
+	return models, nil
 }
 
 func (s *OpenAIGatewayService) prismBrowserRuntime(ctx context.Context) PrismBrowserRuntime {

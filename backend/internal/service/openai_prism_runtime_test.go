@@ -88,3 +88,44 @@ func TestPrismPublicRetryKeepsTurnHeaderAcrossAccounts(t *testing.T) {
 	require.Len(t, headers[0], 64)
 	require.Equal(t, headers[0], headers[1])
 }
+
+func TestPrismLiveCatalogFiltersAliasesAndHonorsAccountScope(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		require.Equal(t, http.MethodGet, r.Method)
+		require.Equal(t, "/v1/models", r.URL.Path)
+		require.NotEmpty(t, r.Header.Get("X-Prism-OAuth-Token"))
+		require.NotEmpty(t, r.Header.Get("X-Prism-Account-ID"))
+		_, _ = io.WriteString(w, `{"data":[{"id":"gpt-5.6-sol"},{"id":"gpt-6-luna"}]}`)
+	}))
+	defer server.Close()
+	s, account := prismTestService(server.URL)
+	models, err := s.fetchPrismBrowserModels(context.Background(), account)
+	require.NoError(t, err)
+	require.Len(t, models, 2)
+	require.Equal(t, "gpt-5.6-sol", models[0].ID)
+	account.Extra[PrismBrowserModelsKey] = []string{"gpt-6-luna"}
+	models, err = s.fetchPrismBrowserModels(context.Background(), account)
+	require.NoError(t, err)
+	require.Len(t, models, 1)
+	require.Equal(t, "gpt-6-luna", models[0].ID)
+}
+
+func TestPrismLiveCatalogFailureDoesNotInventStaticModels(t *testing.T) {
+	for _, body := range []string{`{"data":[]}`, `{"error":"private-value"}`} {
+		t.Run(body, func(t *testing.T) {
+			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				_, _ = io.WriteString(w, body)
+			}))
+			defer server.Close()
+			s, account := prismTestService(server.URL)
+			models, err := (&AccountTestService{openaiGatewayService: s}).FetchOpenAIAccountModels(context.Background(), account)
+			require.Empty(t, models)
+			if body == `{"data":[]}` {
+				require.NoError(t, err)
+			} else {
+				require.Error(t, err)
+				require.NotContains(t, err.Error(), "private-value")
+			}
+		})
+	}
+}

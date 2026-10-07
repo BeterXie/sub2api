@@ -20,7 +20,11 @@ func (s *OpenAIGatewayService) FetchOpenAIModelsList(ctx context.Context, accoun
 		return nil, infraerrors.New(http.StatusInternalServerError, "OPENAI_MODELS_ACCOUNT_REQUIRED", "OpenAI account is required")
 	}
 	if accountHasPrismBrowser(account) {
-		body, err := json.Marshal(map[string]any{"object": "list", "data": prismBrowserModelCatalog()})
+		models, err := s.fetchPrismBrowserModels(ctx, account)
+		if err != nil {
+			return nil, err
+		}
+		body, err := json.Marshal(map[string]any{"object": "list", "data": models})
 		return &OpenAIModelsResponse{Body: body}, err
 	}
 	credentialAccount, err := resolveCredentialAccount(ctx, s.accountRepo, account)
