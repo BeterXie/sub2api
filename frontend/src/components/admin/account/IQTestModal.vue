@@ -40,9 +40,12 @@
           {{ t('admin.accounts.pelicanTest.probe.unsupported') }}
         </div>
         <div class="max-w-sm">
-          <Input
+          <Select
             v-model="modelId"
             :label="t('admin.accounts.pelicanTest.probe.model')"
+            :options="modelOptions"
+            searchable
+            creatable
             :disabled="running"
             :hint="t('admin.accounts.pelicanTest.probe.modelHint')"
           />
@@ -132,20 +135,23 @@
         <div class="space-y-3">
           <div v-if="isPrismAccount">
             <label class="input-label mb-1.5 block">{{ t('admin.accounts.pelicanTest.model') }}</label>
-            <Select data-testid="prism-model-select" v-model="modelId" :options="prismModelOptions" :disabled="running || loadingModels" />
+            <Select data-testid="prism-model-select" v-model="modelId" :options="modelOptions" :disabled="running || loadingModels" />
             <p v-if="loadingModels" class="mt-2 text-xs text-gray-500">{{ t('admin.accounts.pelicanTest.loadingModels') }}</p>
             <p v-else-if="modelCatalogError" class="mt-2 text-xs text-red-600" data-testid="model-catalog-error">{{ modelCatalogError }}</p>
           </div>
-          <Input
+          <Select
             v-else
             v-model="modelId"
             :label="t('admin.accounts.pelicanTest.model')"
-            :disabled="running"
+            :options="modelOptions"
+            searchable
+            creatable
+            :disabled="running || loadingModels"
             :hint="t('admin.accounts.pelicanTest.modelHint', { model: defaultModel })"
           />
           <div>
             <label class="input-label mb-1.5 block">{{ t('admin.accounts.pelicanTest.reasoning') }}</label>
-            <Select v-model="reasoningEffort" :options="reasoningOptions" :disabled="running" />
+            <Select data-testid="reasoning-select" v-model="reasoningEffort" :options="reasoningOptions" :disabled="running || loadingReasoning" />
           </div>
           <Input
             v-model="parallelCount"
@@ -295,7 +301,7 @@ import Select from '@/components/common/Select.vue'
 import { Icon } from '@/components/icons'
 import { buildApiUrl } from '@/api/client'
 import { ADMIN_UI_REQUEST_HEADER } from '@/api/adminUIRequest'
-import { getAvailableModels, probeOpenAICodexState, type OpenAICodexStateProbeResult, type OpenAICodexStateVerdict } from '@/api/admin/accounts'
+import { getAvailableModels, getModelReasoning, probeOpenAICodexState, type OpenAICodexStateProbeResult, type OpenAICodexStateVerdict } from '@/api/admin/accounts'
 import type { Account, AccountListItem, PelicanTestConfig, ScheduledTestResult } from '@/types'
 import ScheduledTestsPanel from './ScheduledTestsPanel.vue'
 import PelicanRecordsDashboard from './PelicanRecordsDashboard.vue'
@@ -341,18 +347,19 @@ const emit = defineEmits<{ (event: 'close'): void }>()
 const isPrismShadow = computed(() => props.account?.platform === 'openai' && Boolean(props.account.parent_account_id) && props.account.quota_dimension === 'prism')
 const isPrismAccount = computed(() => isPrismShadow.value || (props.account?.platform === 'openai' && props.account.type === 'oauth' && props.account.extra?.openai_prism_browser === true))
 const testModes = computed<TestMode[]>(() => isPrismAccount.value ? ['question'] : ['question', 'probe'])
-const prismModelIds = ref<string[]>([])
-const prismModelOptions = computed(() => prismModelIds.value.map(id => ({ value: id, label: id })))
 const loadingModels = ref(false)
+const loadingReasoning = ref(false)
 const modelCatalogError = ref('')
-let modelLoadRevision = 0
 
 const questionKind = ref<IntelligenceQuestion>('candy')
 const prompt = ref(questionPrompt('candy'))
 // Claude accounts cannot serve the OpenAI default.
-const defaultModel = computed(() => props.account?.platform === 'anthropic' ? 'claude-opus-5-5' : isPrismAccount.value ? prismModelIds.value[0] || '' : 'gpt-6-astra')
+const defaultModel = computed(() => props.account?.platform === 'anthropic' ? 'claude-opus-5-5' : isPrismAccount.value ? availableModels.value[0]?.id || '' : 'gpt-6-astra')
+const availableModels = ref<Array<{ id: string; display_name?: string }>>([])
 const modelId = ref(defaultModel.value)
 const reasoningEffort = ref('medium')
+const reasoningLevels = ref<string[]>(['low', 'medium', 'high'])
+const modelOptions = computed(() => availableModels.value.map((model) => ({ value: model.id, label: model.display_name || model.id })))
 const parallelCount = ref<string | number>(1)
 const activeTab = ref<'results' | 'history' | 'schedule'>('results')
 const running = ref(false)
@@ -373,15 +380,65 @@ function selectQuestion(value: string | number | boolean | null) {
   questionKind.value = value
   prompt.value = questionPrompt(value)
 }
-const reasoningOptions = computed(() => [
-  { value: 'low', label: t('admin.accounts.pelicanTest.reasoningLow') },
-  { value: 'medium', label: t('admin.accounts.pelicanTest.reasoningMedium') },
-  { value: 'high', label: t('admin.accounts.pelicanTest.reasoningHigh') }
-])
-const canStart = computed(() => Boolean(props.account && prompt.value.trim() && modelId.value.trim() && normalizeCount() > 0 && !loadingModels.value && !modelCatalogError.value && (!isPrismAccount.value || prismModelIds.value.includes(modelId.value))))
+const reasoningOptions = computed(() => reasoningLevels.value.map((value) => ({
+  value,
+  label: ({ low: t('admin.accounts.pelicanTest.reasoningLow'), medium: t('admin.accounts.pelicanTest.reasoningMedium'), high: t('admin.accounts.pelicanTest.reasoningHigh'), none: t('admin.accounts.pelicanTest.reasoningNone'), minimal: t('admin.accounts.pelicanTest.reasoningMinimal'), xhigh: t('admin.accounts.pelicanTest.reasoningXHigh'), max: t('admin.accounts.pelicanTest.reasoningMax'), ultra: t('admin.accounts.pelicanTest.reasoningUltra') } as Record<string, string>)[value] || value
+})))
+const canStart = computed(() => Boolean(props.account && prompt.value.trim() && modelId.value.trim() && normalizeCount() > 0 && !loadingModels.value && !loadingReasoning.value && !modelCatalogError.value && (!isPrismAccount.value || availableModels.value.some(model => model.id === modelId.value))))
 const hasDownloadable = computed(() => runs.value.some((run) => Boolean(run.output)))
 const probeSupported = computed(() => !isPrismAccount.value && props.account?.platform === 'openai' && (props.account.type === 'oauth' || props.account.type === 'setup-token'))
 const canStartProbe = computed(() => Boolean(props.account && probeSupported.value))
+
+let modelLoadToken = 0
+async function loadModels() {
+  if (!props.account) return
+  const accountId = props.account.id
+  const token = ++modelLoadToken
+  loadingModels.value = true
+  try {
+    const models = await getAvailableModels(accountId)
+    if (token !== modelLoadToken || props.account?.id !== accountId || !props.show) return
+    availableModels.value = models.map(model => ({ id: model.id, display_name: model.display_name }))
+    if (!availableModels.value.some((model) => model.id === modelId.value) && availableModels.value.length > 0) {
+      modelId.value = availableModels.value[0].id
+    }
+    if (isPrismAccount.value && availableModels.value.length === 0) {
+      modelCatalogError.value = t('admin.accounts.pelicanTest.noPrismModels')
+    }
+  } catch {
+    if (token !== modelLoadToken) return
+    availableModels.value = []
+    if (isPrismAccount.value) modelCatalogError.value = t('admin.accounts.pelicanTest.modelCatalogFailed')
+  } finally {
+    if (token === modelLoadToken) {
+      loadingModels.value = false
+      void loadReasoning()
+    }
+  }
+}
+let reasoningLoadToken = 0
+async function loadReasoning() {
+  const token = ++reasoningLoadToken
+  if (!props.account || !modelId.value.trim()) {
+    loadingReasoning.value = false
+    return
+  }
+  const accountId = props.account.id
+  const model = modelId.value.trim()
+  loadingReasoning.value = true
+  try {
+    const result = await getModelReasoning(accountId, model)
+    if (token !== reasoningLoadToken || props.account?.id !== accountId || modelId.value.trim() !== model || !props.show) return
+    reasoningLevels.value = result.supported_reasoning_levels.length > 0 ? result.supported_reasoning_levels : ['none']
+    reasoningEffort.value = reasoningLevels.value.includes(result.default_reasoning_level) ? result.default_reasoning_level : reasoningLevels.value[0]
+  } catch {
+    if (token !== reasoningLoadToken) return
+    reasoningLevels.value = isPrismAccount.value ? ['low', 'medium', 'high', 'xhigh'] : ['low', 'medium', 'high']
+    if (!reasoningLevels.value.includes(reasoningEffort.value)) reasoningEffort.value = 'medium'
+  } finally {
+    if (token === reasoningLoadToken) loadingReasoning.value = false
+  }
+}
 
 function selectMode(mode: TestMode) {
   if (running.value || !testModes.value.includes(mode)) return
@@ -650,28 +707,20 @@ function downloadAll() {
   runs.value.filter((run) => run.output).forEach((run) => downloadHtml(run))
 }
 
-onBeforeUnmount(() => { for (const controller of controllers.values()) controller.abort() })
+onBeforeUnmount(() => {
+  ++modelLoadToken
+  ++reasoningLoadToken
+  for (const controller of controllers.values()) controller.abort()
+})
 
-async function loadPrismModels(accountId: number, revision: number) {
-  loadingModels.value = true
-  try {
-    const models = await getAvailableModels(accountId)
-    if (revision !== modelLoadRevision) return
-    prismModelIds.value = models.map(model => model.id)
-    modelId.value = defaultModel.value
-    if (!modelId.value) modelCatalogError.value = t('admin.accounts.pelicanTest.noPrismModels')
-  } catch {
-    if (revision !== modelLoadRevision) return
-    modelCatalogError.value = t('admin.accounts.pelicanTest.modelCatalogFailed')
-  } finally {
-    if (revision === modelLoadRevision) loadingModels.value = false
-  }
-}
+watch(modelId, () => { if (props.show && !loadingModels.value) void loadReasoning() }, { flush: 'sync' })
 
 watch(() => [props.show, props.account?.id] as const, ([show]) => {
-  const revision = ++modelLoadRevision
-  prismModelIds.value = []
-  loadingModels.value = false
+  ++modelLoadToken
+  ++reasoningLoadToken
+  availableModels.value = []
+  loadingModels.value = Boolean(show && props.account)
+  loadingReasoning.value = false
   modelCatalogError.value = ''
   if (show) {
     readRecords()
@@ -682,13 +731,14 @@ watch(() => [props.show, props.account?.id] as const, ([show]) => {
     prompt.value = questionPrompt('candy')
     modelId.value = defaultModel.value
     reasoningEffort.value = 'medium'
+    reasoningLevels.value = ['low', 'medium', 'high']
     parallelCount.value = 1
     runs.value = []
     controllers.get(PROBE_CONTROLLER_KEY)?.abort()
     testMode.value = 'question'
     probeResults.value = []
     probeError.value = ''
-    if (isPrismAccount.value && props.account) void loadPrismModels(props.account.id, revision)
+    void loadModels()
   } else {
     for (const controller of controllers.values()) controller.abort()
     controllers.clear()

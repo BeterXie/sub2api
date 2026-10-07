@@ -2,11 +2,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { flushPromises, mount } from '@vue/test-utils'
 import IQTestModal from '../IQTestModal.vue'
 
-const { probeOpenAICodexState, getAvailableModels } = vi.hoisted(() => ({ probeOpenAICodexState: vi.fn(), getAvailableModels: vi.fn() }))
+const { probeOpenAICodexState, getAvailableModels, getModelReasoning } = vi.hoisted(() => ({ probeOpenAICodexState: vi.fn(), getAvailableModels: vi.fn(), getModelReasoning: vi.fn() }))
 
 vi.mock('@/api/admin/accounts', async () => {
   const actual = await vi.importActual<typeof import('@/api/admin/accounts')>('@/api/admin/accounts')
-  return { ...actual, probeOpenAICodexState, getAvailableModels }
+  return { ...actual, probeOpenAICodexState, getAvailableModels, getModelReasoning }
 })
 
 vi.mock('vue-i18n', async () => {
@@ -60,12 +60,17 @@ function mountModal(account: Record<string, unknown> = {}) {
   })
 }
 
+beforeEach(() => {
+  getAvailableModels.mockReset()
+  getAvailableModels.mockResolvedValue([{ id: 'gpt-6-astra' }, { id: 'claude-opus-5-5' }])
+  getModelReasoning.mockReset()
+  getModelReasoning.mockResolvedValue({ supported_reasoning_levels: ['low', 'medium', 'high'], default_reasoning_level: 'medium' })
+})
+
 describe('IQTestModal', () => {
   beforeEach(() => {
     localStorage.clear()
     localStorage.setItem('auth_token', 'test-token')
-    getAvailableModels.mockReset()
-    getAvailableModels.mockResolvedValue([{ id: 'gpt-5.6-sol' }, { id: 'gpt-6-luna' }])
     global.fetch = vi.fn(() => Promise.resolve(streamResponse([
       { type: 'test_start', model: 'gpt-6-astra' },
       { type: 'content', text: '<!doctype html><html><head><title>Pelican</title></head><body><svg></svg>' },
@@ -80,6 +85,7 @@ describe('IQTestModal', () => {
 
   it('uses the dedicated endpoint and sends identical settings to parallel runs', async () => {
     const wrapper = mountModal()
+    await flushPromises()
     ;(wrapper.vm as any).selectQuestion('pelican')
     ;(wrapper.vm as any).parallelCount = 2
     await (wrapper.vm as any).startTest()
@@ -109,6 +115,7 @@ describe('IQTestModal', () => {
 
   it('starts Claude accounts on a Claude model and other accounts on the OpenAI default', async () => {
     const wrapper = mountModal({ platform: 'anthropic', name: 'Claude account' })
+    await flushPromises()
     await (wrapper.vm as any).startTest()
     await flushPromises()
 
@@ -125,6 +132,7 @@ describe('IQTestModal', () => {
       { type: 'test_complete', success: true }
     ]))) as any
     const wrapper = mountModal()
+    await flushPromises()
     ;(wrapper.vm as any).selectQuestion('pelican')
     await (wrapper.vm as any).startTest()
     await flushPromises()
@@ -135,6 +143,7 @@ describe('IQTestModal', () => {
   })
   it('persists manual timing and model snapshots independently of later form edits', async () => {
     const wrapper = mountModal()
+    await flushPromises()
     ;(wrapper.vm as any).selectQuestion('pelican')
     await (wrapper.vm as any).startTest()
     const saved = JSON.parse(localStorage.getItem('sub2api-pelican-test:42')!)[0]
@@ -173,6 +182,7 @@ describe('Intelligence question selection', () => {
     ]))) as any
     const wrapper = mountModal()
     expect((wrapper.vm as any).questionKind).toBe('candy')
+    await flushPromises()
     await (wrapper.vm as any).startTest()
     await flushPromises()
     const body = JSON.parse((global.fetch as any).mock.calls[0][1].body)
@@ -223,8 +233,6 @@ function probeResult(overrides: Record<string, unknown> = {}) {
 describe('IQTestModal state probe mode', () => {
   beforeEach(() => {
     probeOpenAICodexState.mockReset()
-    getAvailableModels.mockReset()
-    getAvailableModels.mockResolvedValue([{ id: 'gpt-5.6-sol' }, { id: 'gpt-6-luna' }])
     localStorage.setItem('auth_token', 'test-token')
     global.fetch = vi.fn() as any
   })
@@ -238,6 +246,7 @@ describe('IQTestModal state probe mode', () => {
   })
 
   it('keeps Prism shadows on question tests and blocks the native probe', async () => {
+    getAvailableModels.mockResolvedValueOnce([{ id: 'gpt-5.6-sol' }, { id: 'gpt-6-luna' }])
     const wrapper = mountModal({ parent_account_id: 4, quota_dimension: 'prism' })
     expect((wrapper.vm as any).canStart).toBe(false)
     await flushPromises()
@@ -280,6 +289,7 @@ describe('IQTestModal state probe mode', () => {
   })
 
   it('uses the live Prism default for parallel question tests', async () => {
+    getAvailableModels.mockResolvedValueOnce([{ id: 'gpt-5.6-sol' }, { id: 'gpt-6-luna' }])
     global.fetch = vi.fn(() => Promise.resolve(streamResponse([
       { type: 'content', text: '21' }, { type: 'test_complete', success: true }
     ]))) as any
@@ -422,6 +432,54 @@ describe('IQTestModal state probe mode', () => {
     expect(probeOpenAICodexState.mock.calls[0][2].signal.aborted).toBe(true)
     expect((wrapper.vm as any).probeResults).toHaveLength(0)
     expect((wrapper.vm as any).running).toBe(false)
+    wrapper.unmount()
+  })
+})
+
+describe('IQTestModal model capabilities', () => {
+  it('selects an available native model and submits its supported effort', async () => {
+    getAvailableModels.mockResolvedValueOnce([{ id: 'gpt-6.1-sol', display_name: 'Sol' }])
+    getModelReasoning.mockResolvedValueOnce({ supported_reasoning_levels: ['high', 'xhigh', 'ultra'], default_reasoning_level: 'xhigh' })
+    global.fetch = vi.fn(() => Promise.resolve(streamResponse([
+      { type: 'content', text: '21' }, { type: 'test_complete', success: true }
+    ]))) as any
+    const wrapper = mountModal()
+    expect((wrapper.vm as any).canStart).toBe(false)
+    await flushPromises()
+    expect(getModelReasoning).toHaveBeenCalledWith(42, 'gpt-6.1-sol')
+    expect(wrapper.getComponent('[data-testid="reasoning-select"]').props('disabled')).toBe(false)
+    expect((wrapper.vm as any).reasoningLevels).toEqual(['high', 'xhigh', 'ultra'])
+    await (wrapper.vm as any).startTest()
+    expect(JSON.parse((global.fetch as any).mock.calls[0][1].body)).toMatchObject({ model_id: 'gpt-6.1-sol', reasoning_effort: 'xhigh' })
+    wrapper.unmount()
+  })
+
+  it('ignores a failed old reasoning lookup after switching to Prism', async () => {
+    let rejectReasoning: (error: Error) => void = () => {}
+    getModelReasoning.mockImplementationOnce(() => new Promise((_resolve, reject) => { rejectReasoning = reject }))
+    const wrapper = mountModal()
+    await flushPromises()
+    getAvailableModels.mockResolvedValueOnce([{ id: 'gpt-5.6-sol' }])
+    getModelReasoning.mockResolvedValueOnce({ supported_reasoning_levels: ['low', 'medium', 'high', 'xhigh'], default_reasoning_level: 'medium' })
+    await wrapper.setProps({ account: { id: 43, platform: 'openai', type: 'oauth', parent_account_id: 4, quota_dimension: 'prism' } as any })
+    await flushPromises()
+    rejectReasoning(new Error('late native failure'))
+    await flushPromises()
+    expect((wrapper.vm as any).reasoningLevels).toEqual(['low', 'medium', 'high', 'xhigh'])
+    expect((wrapper.vm as any).modelId).toBe('gpt-5.6-sol')
+    expect((wrapper.vm as any).loadingReasoning).toBe(false)
+    wrapper.unmount()
+  })
+
+  it('discards a model catalog arriving after close', async () => {
+    let resolveCatalog: (models: Array<{ id: string }>) => void = () => {}
+    getAvailableModels.mockImplementationOnce(() => new Promise(resolve => { resolveCatalog = resolve }))
+    const wrapper = mountModal({ parent_account_id: 4, quota_dimension: 'prism' })
+    await wrapper.setProps({ show: false })
+    resolveCatalog([{ id: 'gpt-5.6-sol' }])
+    await flushPromises()
+    expect((wrapper.vm as any).availableModels).toEqual([])
+    expect(getModelReasoning).not.toHaveBeenCalled()
     wrapper.unmount()
   })
 })

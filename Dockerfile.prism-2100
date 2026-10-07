@@ -1,0 +1,28 @@
+FROM sub2api:v2.9.8-prism-usage-verify AS backend-tests
+ENV CGO_ENABLED=0 GOMAXPROCS=2
+WORKDIR /app/backend
+COPY backend/ ./
+RUN --mount=type=cache,id=sub2api-gomod,target=/go/pkg/mod \
+    --mount=type=cache,id=sub2api-gobuild,target=/root/.cache/go-build \
+    ["go", "test", "-json", "-p", "2", "-tags=unit", "./internal/service", "./internal/handler/admin", "-run", "Prism|AccountTestReasoning|OpenAIModels|OpenAIAccountModels|OpenAIWS|CoderOpenAIWS|Priority|OAuthAutoConfig|AccountTokenGuard|PaymentResume|Pelican|NestedReasoning|OpenAIPluginAccount|OpenAIResponsesIngress", "-count=1", "-timeout=8m"]
+RUN --mount=type=cache,id=sub2api-gomod,target=/go/pkg/mod \
+    --mount=type=cache,id=sub2api-gobuild,target=/root/.cache/go-build \
+    ["go", "test", "-json", "-p", "2", "-tags=unit", "./internal/pkg/apicompat", "./internal/setup", "./internal/payment/provider", "-count=1", "-timeout=5m"]
+
+FROM sub2api:v2.9.8-prism-frontend-tests AS frontend-builder
+ENV CI=true COREPACK_ENABLE_NETWORK=0
+WORKDIR /app/frontend
+COPY frontend/ ./
+RUN ["node", "/usr/local/lib/node_modules/corepack/dist/pnpm.js", "install", "--frozen-lockfile", "--prefer-offline"]
+RUN ["node", "node_modules/vitest/vitest.mjs", "run", "src/components/admin/account/__tests__/IQTestModal.spec.ts", "src/components/account/__tests__/CreateAccountModal.spec.ts", "src/components/common/__tests__/HelpTooltip.spec.ts", "src/components/keys/__tests__/UseKeyModal.spec.ts", "src/views/admin/__tests__/AutoConfigView.spec.ts", "src/views/admin/__tests__/PrioritySchedulingView.spec.ts", "src/i18n/__tests__/localeKeyCompleteness.spec.ts"]
+RUN ["node", "node_modules/vue-tsc/bin/vue-tsc.js", "--noEmit"]
+RUN ["node", "node_modules/vite/bin/vite.js", "build"]
+
+FROM backend-tests AS backend-builder
+COPY --from=frontend-builder /app/backend/internal/web/dist ./internal/web/dist
+RUN --mount=type=cache,id=sub2api-gomod,target=/go/pkg/mod \
+    --mount=type=cache,id=sub2api-gobuild,target=/root/.cache/go-build \
+    ["go", "build", "-p", "2", "-tags=embed", "-ldflags=-s -w -X main.Version=2.10.0 -X main.Commit=prism-compatible-20261007 -X main.Date=2026-10-07 -X main.BuildType=release", "-trimpath", "-o", "/app/sub2api", "./cmd/server"]
+
+FROM sub2api:2.9.10-prism-relay-20261006
+COPY --from=backend-builder --chmod=755 --chown=sub2api:sub2api /app/sub2api /app/sub2api
