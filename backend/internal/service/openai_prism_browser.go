@@ -429,33 +429,14 @@ func (s *OpenAIGatewayService) forwardPrismBrowser(ctx context.Context, c *gin.C
 		fail(http.StatusBadRequest, "invalid_request_error", err.Error())
 		return nil, err
 	}
-	body, err = prismBrowserMappedRequest(body)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": gin.H{"type": "invalid_request_error", "message": "Invalid Prism request"}})
-		return nil, err
-	}
-	upstreamModel = gjson.GetBytes(body, "model").String()
-	// Prism supplies its complete result at the end of the turn. Keep the
-	// downstream alive while the adapter prepares, polls and returns it;
-	// adapter-side heartbeats would still be held by our response buffer.
-	stopKeepalive := func() {}
-	if stream {
-		interval := 8 * time.Second
-		if s.cfg != nil && s.cfg.Gateway.StreamKeepaliveInterval > 0 {
-			interval = min(interval, time.Duration(s.cfg.Gateway.StreamKeepaliveInterval)*time.Second)
-		}
-		stopKeepalive = startPrismSSEKeepalive(c, upstreamModel, interval)
-	}
-	defer stopKeepalive()
 	if err := controlledSubmission(ctx, "prism"); err != nil {
 		return nil, err
 	}
 	SetActualOpenAIUpstreamEndpoint(c, "/v1/responses")
-	responseBody, upstreamHeaders, status, err := s.callPrismBrowserForTurn(ctx, account, body, sessionID, prismBrowserCallerID(c, account.ID), turnID)
+	responseBody, upstreamHeaders, status, err := s.callPrismBrowserForCaller(ctx, account, body, sessionID, prismBrowserCallerID(c, account.ID))
 	if mode := controlledMode(ctx); mode != nil {
 		mode.httpStatus.Store(int32(status))
 	}
-	stopKeepalive()
 	if err != nil {
 		fail(http.StatusBadGateway, "prism_unavailable", "Prism adapter unavailable; request was not replayed")
 		return nil, err
@@ -582,8 +563,8 @@ func (s *OpenAIGatewayService) callPrismBrowserForTurn(ctx context.Context, acco
 	if callerID != "" {
 		req.Header.Set("X-Prism-Caller-ID", callerID)
 	}
-	if turnID != "" {
-		req.Header.Set("X-Prism-Turn-ID", turnID)
+	if mode := controlledMode(ctx); mode != nil {
+		req.Header.Set("X-Prism-Turn-ID", mode.prismTurnID)
 	}
 	// The token must never pass through an account proxy, environment proxy,
 	// plugin transport, or an HTTP redirect.

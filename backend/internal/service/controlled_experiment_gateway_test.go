@@ -121,7 +121,7 @@ func TestControlledExperimentGatewayWSUsesOneFrameAndNoHTTPFallback(t *testing.T
 	require.Empty(t, upstream.requests)
 }
 
-func TestControlledExperimentGatewayPrismKeepsAdapterEvidenceAndEstimatedCost(t *testing.T) {
+func TestControlledExperimentGatewayPrismKeepsAdapterEvidenceAndUnavailableUsage(t *testing.T) {
 	var submissions atomic.Int32
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == http.MethodGet {
@@ -147,8 +147,41 @@ func TestControlledExperimentGatewayPrismKeepsAdapterEvidenceAndEstimatedCost(t 
 	require.Equal(t, 1, d.Submissions)
 	require.Equal(t, "prism", d.ActualChannel)
 	require.Equal(t, "adapter_declared", d.EffortEvidence)
-	require.Equal(t, UsageSourceEstimatedVisibleText, d.UsageSource)
+	require.Equal(t, "unavailable", d.UsageSource)
+	require.Nil(t, d.CostUSD)
 	require.True(t, d.CostIncomplete)
+}
+
+func TestControlledExperimentGatewayRespectsProtocolSwitchesBeforeSend(t *testing.T) {
+	for _, channel := range []string{"prism", "bps"} {
+		t.Run(channel, func(t *testing.T) {
+			flag := "openai_prism_browser"
+			setting := SettingKeyPrismBrowserEnabled
+			reason := "prism_not_enabled_for_account_model"
+			model := "gpt-6-luna"
+			if channel == "bps" {
+				flag = "openai_excel_bps"
+				setting = SettingKeyExcelBPSEnabled
+				reason = "bps_not_enabled_for_account_model"
+				model = "gpt-5.4"
+			}
+			repo := &excelBPSImageSettingsRepo{values: map[string]string{setting: "false"}}
+			upstream := &httpUpstreamRecorder{}
+			account := &Account{ID: 1, Platform: PlatformOpenAI, Type: AccountTypeOAuth, Status: StatusActive, Schedulable: true, Credentials: map[string]any{"access_token": "fixture-oauth"}, Extra: map[string]any{flag: true}}
+			gateway := &OpenAIGatewayService{cfg: &config.Config{}, httpUpstream: upstream, settingService: NewSettingService(repo, &config.Config{})}
+			executor, route, spec, body := controlledGatewayFixture(account, gateway, channel, model)
+			preflight := executor.Preflight(context.Background(), route, spec)
+			require.False(t, preflight.Available)
+			require.Equal(t, reason, preflight.Reason)
+			_, diagnostic := executor.Execute(context.Background(), route, spec, body, "9d8ad823-69d3-4c0d-a0b2-23e4f9509e21")
+			require.Equal(t, "local_forwarding_rejected", diagnostic.Code)
+			require.Zero(t, diagnostic.Submissions)
+			require.Empty(t, upstream.requests)
+			require.Empty(t, gateway.controlledRouteReason(context.Background(), account, spec.Model, "native_http"))
+			require.NoError(t, repo.SetMultiple(context.Background(), map[string]string{setting: "true"}))
+			require.Empty(t, gateway.controlledRouteReason(context.Background(), account, spec.Model, channel))
+		})
+	}
 }
 
 func TestControlledExperimentGatewayBPSUsesOneSubmission(t *testing.T) {

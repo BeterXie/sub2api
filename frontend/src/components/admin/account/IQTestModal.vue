@@ -40,12 +40,11 @@
           {{ t('admin.accounts.pelicanTest.probe.unsupported') }}
         </div>
         <div class="max-w-sm">
-          <Select
+          <TestModelSelect
+            id="probe-model"
             v-model="modelId"
             :label="t('admin.accounts.pelicanTest.probe.model')"
             :options="modelOptions"
-            searchable
-            creatable
             :disabled="running"
             :hint="t('admin.accounts.pelicanTest.probe.modelHint')"
           />
@@ -133,20 +132,12 @@
           :hint="t('admin.accounts.pelicanTest.promptHint')"
         />
         <div class="space-y-3">
-          <div v-if="isPrismAccount">
-            <label class="input-label mb-1.5 block">{{ t('admin.accounts.pelicanTest.model') }}</label>
-            <Select data-testid="prism-model-select" v-model="modelId" :options="modelOptions" :disabled="running || loadingModels" />
-            <p v-if="loadingModels" class="mt-2 text-xs text-gray-500">{{ t('admin.accounts.pelicanTest.loadingModels') }}</p>
-            <p v-else-if="modelCatalogError" class="mt-2 text-xs text-red-600" data-testid="model-catalog-error">{{ modelCatalogError }}</p>
-          </div>
-          <Select
-            v-else
+          <TestModelSelect
+            id="question-model"
             v-model="modelId"
             :label="t('admin.accounts.pelicanTest.model')"
             :options="modelOptions"
-            searchable
-            creatable
-            :disabled="running || loadingModels"
+            :disabled="running"
             :hint="t('admin.accounts.pelicanTest.modelHint', { model: defaultModel })"
           />
           <div>
@@ -305,6 +296,7 @@ import { getAvailableModels, getModelReasoning, probeOpenAICodexState, type Open
 import type { Account, AccountListItem, PelicanTestConfig, ScheduledTestResult } from '@/types'
 import ScheduledTestsPanel from './ScheduledTestsPanel.vue'
 import PelicanRecordsDashboard from './PelicanRecordsDashboard.vue'
+import TestModelSelect from './TestModelSelect.vue'
 
 const { t } = useI18n()
 
@@ -359,7 +351,19 @@ const availableModels = ref<Array<{ id: string; display_name?: string }>>([])
 const modelId = ref(defaultModel.value)
 const reasoningEffort = ref('medium')
 const reasoningLevels = ref<string[]>(['low', 'medium', 'high'])
-const modelOptions = computed(() => availableModels.value.map((model) => ({ value: model.id, label: model.display_name || model.id })))
+const availableModels = ref<Array<{ id: string; display_name?: string }>>([])
+const modelOptions = computed(() => {
+  const models = new Map(availableModels.value.map((model) => [model.id, model.display_name?.trim()]))
+  // A diagnostic test must also allow explicitly configured public model names,
+  // even when the upstream discovery catalog does not advertise their targets.
+  const mapping = props.account?.credentials?.model_mapping
+  if (mapping && typeof mapping === 'object' && !Array.isArray(mapping)) {
+    for (const id of Object.keys(mapping)) {
+      if (id.trim() && !id.includes('*') && !models.has(id)) models.set(id, undefined)
+    }
+  }
+  return Array.from(models, ([id, name]) => ({ value: id, label: name && name !== id ? `${id} (${name})` : id }))
+})
 const parallelCount = ref<string | number>(1)
 const activeTab = ref<'results' | 'history' | 'schedule'>('results')
 const running = ref(false)
@@ -394,26 +398,21 @@ async function loadModels() {
   if (!props.account) return
   const accountId = props.account.id
   const token = ++modelLoadToken
-  loadingModels.value = true
+  const accountId = props.account.id
+  const initialModel = modelId.value
+  availableModels.value = []
   try {
     const models = await getAvailableModels(accountId)
     if (token !== modelLoadToken || props.account?.id !== accountId || !props.show) return
-    availableModels.value = models.map(model => ({ id: model.id, display_name: model.display_name }))
-    if (!availableModels.value.some((model) => model.id === modelId.value) && availableModels.value.length > 0) {
-      modelId.value = availableModels.value[0].id
+    availableModels.value = models.map((model: any) => ({ id: model.id, display_name: model.display_name }))
+    if (modelId.value === initialModel && !modelOptions.value.some((model) => model.value === modelId.value) && modelOptions.value.length > 0) {
+      modelId.value = modelOptions.value[0].value
     }
     if (isPrismAccount.value && availableModels.value.length === 0) {
       modelCatalogError.value = t('admin.accounts.pelicanTest.noPrismModels')
     }
   } catch {
-    if (token !== modelLoadToken) return
-    availableModels.value = []
-    if (isPrismAccount.value) modelCatalogError.value = t('admin.accounts.pelicanTest.modelCatalogFailed')
-  } finally {
-    if (token === modelLoadToken) {
-      loadingModels.value = false
-      void loadReasoning()
-    }
+    if (token === modelLoadToken && props.account?.id === accountId) availableModels.value = []
   }
 }
 let reasoningLoadToken = 0

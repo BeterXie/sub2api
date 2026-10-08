@@ -63,10 +63,11 @@ func (s *OpenAIGatewayService) controlledRouteReason(ctx context.Context, accoun
 	if s.pluginManager != nil && s.pluginManager.ShouldRouteOpenAIOAuth(account) {
 		return "plugin_route_not_supported"
 	}
-	prism, bps := account.IsPrismBrowserEnabledForModel(model), account.IsExcelBPSEnabledForModel(model)
+	prism := account.IsPrismBrowserEnabledForModel(model) && s.prismBrowserGloballyEnabled(ctx)
+	bps := account.IsExcelBPSEnabledForModel(model) && s.excelBPSGloballyEnabled(ctx)
 	switch channel {
 	case "prism":
-		if !prism || !s.prismBrowserRuntime(ctx).Enabled {
+		if !prism {
 			return "prism_not_enabled_for_account_model"
 		}
 	case "bps":

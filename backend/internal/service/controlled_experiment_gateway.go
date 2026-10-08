@@ -167,9 +167,9 @@ func (g *controlledExperimentGateway) Execute(parent context.Context, route Cont
 		}
 		d.ResponseModel = result.UpstreamResponseModel
 		d.Usage = result.Usage
-		d.UsageSource = result.UsageSource
-		if d.UsageSource == "" {
-			d.UsageSource = "provider"
+		d.UsageSource = "provider"
+		if result.UsageUnavailable {
+			d.UsageSource = "unavailable"
 		}
 		if result.ReasoningEffort != nil {
 			d.EffectiveEffort = *result.ReasoningEffort
@@ -420,7 +420,7 @@ func parseControlledResponse(wire []byte) (*ControlledTurn, string, string, stri
 			}
 			for _, part := range gjson.GetBytes(raw, "content").Array() {
 				if part.Get("type").String() == "output_text" {
-					text.WriteString(part.Get("text").String())
+					_, _ = text.WriteString(part.Get("text").String())
 				} else if part.Get("type").String() == "refusal" {
 					return nil, model, observedEffort, terminalType, errors.New("refusal")
 				} else {
