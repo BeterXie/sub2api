@@ -68,7 +68,7 @@ func (s *OpenAIGatewayService) tryPrismFallbackAfterRejection(
 	resp *http.Response, rejectedBody []byte, started time.Time,
 ) (*OpenAIForwardResult, error, bool) {
 	model := gjson.GetBytes(canonicalBody, "model").String()
-	if !s.prismFallbackEnabled(account, model) || c == nil || c.Writer.Written() ||
+	if isControlledExperiment(ctx) || !s.prismFallbackEnabled(account, model) || c == nil || c.Writer.Written() ||
 		ctx.Err() != nil || isOpenAIResponsesCompactPath(c) || resp == nil ||
 		!prismFallbackQuotaRejection(resp.StatusCode, resp.Header, rejectedBody) {
 		return nil, nil, false

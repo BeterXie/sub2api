@@ -447,7 +447,14 @@ func (s *OpenAIGatewayService) forwardPrismBrowser(ctx context.Context, c *gin.C
 		stopKeepalive = startPrismSSEKeepalive(c, upstreamModel, interval)
 	}
 	defer stopKeepalive()
+	if err := controlledSubmission(ctx, "prism"); err != nil {
+		return nil, err
+	}
+	SetActualOpenAIUpstreamEndpoint(c, "/v1/responses")
 	responseBody, upstreamHeaders, status, err := s.callPrismBrowserForTurn(ctx, account, body, sessionID, prismBrowserCallerID(c, account.ID), turnID)
+	if mode := controlledMode(ctx); mode != nil {
+		mode.httpStatus.Store(int32(status))
+	}
 	stopKeepalive()
 	if err != nil {
 		fail(http.StatusBadGateway, "prism_unavailable", "Prism adapter unavailable; request was not replayed")
@@ -712,6 +719,11 @@ func (s *OpenAIGatewayService) prismBrowserRuntime(ctx context.Context) PrismBro
 // Account-independent identity prevents a client retry from submitting the same
 // uncertain turn through another shadow account. Never trust private headers.
 func prismBrowserTurnID(c *gin.Context, body []byte) (string, error) {
+	if c != nil && c.Request != nil {
+		if mode := controlledMode(c.Request.Context()); mode != nil {
+			return mode.prismTurnID, nil
+		}
+	}
 	if c == nil || getAPIKeyIDFromContext(c) <= 0 {
 		return "", nil
 	}
@@ -735,6 +747,11 @@ func prismBrowserTurnID(c *gin.Context, body []byte) (string, error) {
 // Always derive the private tool identity from authenticated server context.
 // External callers cannot select another tenant's tool history by a header.
 func prismBrowserCallerID(c *gin.Context, accountID int64) string {
+	if c != nil && c.Request != nil {
+		if mode := controlledMode(c.Request.Context()); mode != nil {
+			return mode.prismIdentity
+		}
+	}
 	if c == nil || accountID <= 0 {
 		return ""
 	}
@@ -752,6 +769,9 @@ func prismBrowserCallerID(c *gin.Context, accountID int64) string {
 func prismBrowserSessionID(c *gin.Context, accountID int64, body []byte) (string, error) {
 	if c == nil || c.Request == nil {
 		return "", nil
+	}
+	if mode := controlledMode(c.Request.Context()); mode != nil {
+		return mode.prismIdentity, nil
 	}
 	for _, names := range [][]string{openAIThreadIdentityHeaders, openAISessionIdentityHeaders} {
 		for _, name := range names {
