@@ -16,6 +16,7 @@
 
       <!-- Main Content -->
       <main class="p-4 md:p-6 lg:p-8">
+        <BrandSelector v-if="authStore.isAdmin" class="mb-5" />
         <slot />
       </main>
     </div>
@@ -31,11 +32,12 @@ import { useOnboardingTour } from '@/composables/useOnboardingTour'
 import { useOnboardingStore } from '@/stores/onboarding'
 import AppSidebar from './AppSidebar.vue'
 import AppHeader from './AppHeader.vue'
+import BrandSelector from '@/components/brand/BrandSelector.vue'
 
 const appStore = useAppStore()
 const authStore = useAuthStore()
 const sidebarCollapsed = computed(() => appStore.sidebarCollapsed)
-const isAdmin = computed(() => authStore.user?.role === 'admin')
+const isAdmin = computed(() => authStore.isAdmin)
 
 const { replayTour } = useOnboardingTour({
   storageKey: isAdmin.value ? 'admin_guide' : 'user_guide',

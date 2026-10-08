@@ -3,9 +3,11 @@ package server
 import (
 	"context"
 	"log"
+	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/handler"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
@@ -36,10 +38,17 @@ func SetupRouter(
 	compositeResolver *service.CompositeRouteResolver,
 	cfg *config.Config,
 	redisClient *redis.Client,
+	brandStore *brand.Store,
 ) *gin.Engine {
+	r.Use(middleware2.BrandResolver(cfg, brandStore))
 	middleware2.SetIngressRejectRecorder(opsService)
 	// 缓存 iframe 页面的 origin 列表，用于动态注入 CSP frame-src
 	var cachedFrameOrigins atomic.Pointer[[]string]
+	type brandFrameOriginKey struct {
+		brandID  int64
+		domainID int64
+	}
+	var brandFrameOrigins sync.Map
 	emptyOrigins := []string{}
 	cachedFrameOrigins.Store(&emptyOrigins)
 
@@ -68,6 +77,28 @@ func SetupRouter(
 			return *p
 		}
 		return nil
+	}, func(c *gin.Context) []string {
+		if !middleware2.NeedsDynamicCSPOrigins(c) {
+			return nil
+		}
+		if scope, ok := brand.FromContext(c.Request.Context()); ok {
+			key := brandFrameOriginKey{brandID: scope.ID, domainID: scope.DomainID}
+			if cached, found := brandFrameOrigins.Load(key); found {
+				return cached.([]string)
+			}
+			ctx, cancel := context.WithTimeout(c.Request.Context(), frameSrcRefreshTimeout)
+			defer cancel()
+			origins, err := settingService.GetFrameSrcOrigins(ctx)
+			if err == nil {
+				brandFrameOrigins.Store(key, origins)
+				return origins
+			}
+			return nil
+		}
+		if p := cachedFrameOrigins.Load(); p != nil {
+			return *p
+		}
+		return nil
 	}))
 	r.Use(middleware2.ServerTiming(cfg.Server.EnableServerTiming))
 
@@ -77,21 +108,28 @@ func SetupRouter(
 		if err != nil {                                              //nolint:staticcheck // SA4023: see above
 			log.Printf("Warning: Failed to create frontend server with settings injection: %v, using legacy mode", err)
 			r.Use(web.ServeEmbeddedFrontend())
-			settingService.SetOnUpdateCallback(refreshFrameOrigins)
+			settingService.SetOnUpdateCallback(func() {
+				brandFrameOrigins.Clear()
+				refreshFrameOrigins()
+			})
 		} else {
 			// Register combined callback: invalidate HTML cache + refresh frame origins
 			settingService.SetOnUpdateCallback(func() {
 				frontendServer.InvalidateCache()
+				brandFrameOrigins.Clear()
 				refreshFrameOrigins()
 			})
 			r.Use(frontendServer.Middleware())
 		}
 	} else {
-		settingService.SetOnUpdateCallback(refreshFrameOrigins)
+		settingService.SetOnUpdateCallback(func() {
+			brandFrameOrigins.Clear()
+			refreshFrameOrigins()
+		})
 	}
 
 	// 注册路由
-	registerRoutes(r, handlers, jwtAuth, optionalJWTAuth, adminAuth, apiKeyAuth, auditLog, stepUpAuth, apiKeyService, subscriptionService, opsService, settingService, compositeResolver, cfg, redisClient)
+	registerRoutes(r, handlers, jwtAuth, optionalJWTAuth, adminAuth, apiKeyAuth, auditLog, stepUpAuth, apiKeyService, subscriptionService, opsService, settingService, compositeResolver, cfg, redisClient, brandStore)
 
 	return r
 }
@@ -113,13 +151,14 @@ func registerRoutes(
 	compositeResolver *service.CompositeRouteResolver,
 	cfg *config.Config,
 	redisClient *redis.Client,
+	brandStore *brand.Store,
 ) {
 	// 通用路由（健康检查、状态等）
 	routes.RegisterCommonRoutes(r)
 	if cfg.Runtime.Role == config.RuntimeRoleGateway {
 		// Global settings, payments, and internal worker/admin APIs stay on the
 		// primary. Request replicas only expose authenticated gateway routes.
-		routes.RegisterGatewayRoutes(r, h, apiKeyAuth, apiKeyService, subscriptionService, opsService, settingService, compositeResolver, cfg)
+		routes.RegisterGatewayRoutes(r, h, apiKeyAuth, apiKeyService, subscriptionService, opsService, settingService, compositeResolver, cfg, redisClient)
 		return
 	}
 
@@ -129,6 +168,7 @@ func registerRoutes(
 	// 面板 API 限流器：认证接口按用户 ID、公开接口按安全客户端 IP，
 	// 防止高频刷管理面接口打爆数据库（阈值可在系统设置中调整）。
 	panelRateLimiter := middleware2.NewPanelRateLimiter(redisClient, settingService)
+	routes.RegisterBrandRoutes(v1, brandStore, cfg, jwtAuth, adminAuth, auditLog, settingService, panelRateLimiter)
 
 	// 注册各模块路由
 	routes.RegisterAuthRoutes(v1, h, jwtAuth, auditLog, redisClient, settingService, panelRateLimiter)
@@ -136,7 +176,7 @@ func registerRoutes(
 	routes.RegisterModelPlazaRoutes(v1, h, optionalJWTAuth, settingService, panelRateLimiter)
 	routes.RegisterPublicPelicanShowcaseRoutes(v1, h, apiKeyAuth, panelRateLimiter)
 	routes.RegisterAdminRoutes(v1, h, adminAuth, auditLog, stepUpAuth, settingService, panelRateLimiter)
-	routes.RegisterGatewayRoutes(r, h, apiKeyAuth, apiKeyService, subscriptionService, opsService, settingService, compositeResolver, cfg)
+	routes.RegisterGatewayRoutes(r, h, apiKeyAuth, apiKeyService, subscriptionService, opsService, settingService, compositeResolver, cfg, redisClient)
 	routes.RegisterPaymentRoutes(v1, h.Payment, h.PaymentWebhook, h.Admin.Payment, jwtAuth, adminAuth, auditLog, settingService, panelRateLimiter, redisClient)
 
 	handler.RegisterPageRoutes(v1, cfg.Pricing.DataDir, gin.HandlerFunc(jwtAuth), gin.HandlerFunc(adminAuth), settingService)

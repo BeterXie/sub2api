@@ -22,6 +22,20 @@ type BatchImageJobCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *BatchImageJobCreate) SetBrandID(v int64) *BatchImageJobCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *BatchImageJobCreate) SetNillableBrandID(v *int64) *BatchImageJobCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetBatchID sets the "batch_id" field.
 func (_c *BatchImageJobCreate) SetBatchID(v string) *BatchImageJobCreate {
 	_c.mutation.SetBatchID(v)
@@ -549,7 +563,9 @@ func (_c *BatchImageJobCreate) Mutation() *BatchImageJobMutation {
 
 // Save creates the BatchImageJob in the database.
 func (_c *BatchImageJobCreate) Save(ctx context.Context) (*BatchImageJob, error) {
-	_c.defaults()
+	if err := _c.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -576,7 +592,11 @@ func (_c *BatchImageJobCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *BatchImageJobCreate) defaults() {
+func (_c *BatchImageJobCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := batchimagejob.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.TaskName(); !ok {
 		v := batchimagejob.DefaultTaskName
 		_c.mutation.SetTaskName(v)
@@ -614,17 +634,27 @@ func (_c *BatchImageJobCreate) defaults() {
 		_c.mutation.SetVersion(v)
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
+		if batchimagejob.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized batchimagejob.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := batchimagejob.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		if batchimagejob.DefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized batchimagejob.DefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := batchimagejob.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *BatchImageJobCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "BatchImageJob.brand_id"`)}
+	}
 	if _, ok := _c.mutation.BatchID(); !ok {
 		return &ValidationError{Name: "batch_id", err: errors.New(`ent: missing required field "BatchImageJob.batch_id"`)}
 	}
@@ -780,6 +810,10 @@ func (_c *BatchImageJobCreate) createSpec() (*BatchImageJob, *sqlgraph.CreateSpe
 		_spec = sqlgraph.NewCreateSpec(batchimagejob.Table, sqlgraph.NewFieldSpec(batchimagejob.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(batchimagejob.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.BatchID(); ok {
 		_spec.SetField(batchimagejob.FieldBatchID, field.TypeString, value)
 		_node.BatchID = value
@@ -947,7 +981,7 @@ func (_c *BatchImageJobCreate) createSpec() (*BatchImageJob, *sqlgraph.CreateSpe
 // of the `INSERT` statement. For example:
 //
 //	client.BatchImageJob.Create().
-//		SetBatchID(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -956,7 +990,7 @@ func (_c *BatchImageJobCreate) createSpec() (*BatchImageJob, *sqlgraph.CreateSpe
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.BatchImageJobUpsert) {
-//			SetBatchID(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *BatchImageJobCreate) OnConflict(opts ...sql.ConflictOption) *BatchImageJobUpsertOne {
@@ -1675,6 +1709,9 @@ func (u *BatchImageJobUpsert) ClearSettledAt() *BatchImageJobUpsert {
 func (u *BatchImageJobUpsertOne) UpdateNewValues() *BatchImageJobUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(batchimagejob.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.BatchID(); exists {
 			s.SetIgnore(batchimagejob.FieldBatchID)
 		}
@@ -2631,7 +2668,7 @@ func (_c *BatchImageJobCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.BatchImageJobUpsert) {
-//			SetBatchID(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *BatchImageJobCreateBulk) OnConflict(opts ...sql.ConflictOption) *BatchImageJobUpsertBulk {
@@ -2672,6 +2709,9 @@ func (u *BatchImageJobUpsertBulk) UpdateNewValues() *BatchImageJobUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(batchimagejob.FieldBrandID)
+			}
 			if _, exists := b.mutation.BatchID(); exists {
 				s.SetIgnore(batchimagejob.FieldBatchID)
 			}

@@ -462,8 +462,10 @@ func bootstrapAdminUser(ctx context.Context, db *sql.DB, cfg *SetupConfig) (bool
 
 	_, err = db.ExecContext(
 		ctx,
-		`INSERT INTO users (email, password_hash, role, balance, concurrency, status, created_at, updated_at)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+		`WITH admin AS (
+		 INSERT INTO users (email, password_hash, role, balance, concurrency, status, created_at, updated_at)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id
+		 ) INSERT INTO brand_admins(user_id,role) SELECT id,'super_admin' FROM admin`,
 		admin.Email,
 		admin.PasswordHash,
 		admin.Role,

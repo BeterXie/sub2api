@@ -12,6 +12,7 @@ var (
 	// APIKeysColumns holds the columns for the "api_keys" table.
 	APIKeysColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
@@ -45,13 +46,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "api_keys_groups_api_keys",
-				Columns:    []*schema.Column{APIKeysColumns[23]},
+				Columns:    []*schema.Column{APIKeysColumns[24]},
 				RefColumns: []*schema.Column{GroupsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "api_keys_users_api_keys",
-				Columns:    []*schema.Column{APIKeysColumns[24]},
+				Columns:    []*schema.Column{APIKeysColumns[25]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -60,37 +61,37 @@ var (
 			{
 				Name:    "apikey_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[24]},
+				Columns: []*schema.Column{APIKeysColumns[25]},
 			},
 			{
 				Name:    "apikey_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[23]},
+				Columns: []*schema.Column{APIKeysColumns[24]},
 			},
 			{
 				Name:    "apikey_status",
 				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[7]},
+				Columns: []*schema.Column{APIKeysColumns[8]},
 			},
 			{
 				Name:    "apikey_deleted_at",
 				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[3]},
+				Columns: []*schema.Column{APIKeysColumns[4]},
 			},
 			{
 				Name:    "apikey_last_used_at",
 				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[8]},
+				Columns: []*schema.Column{APIKeysColumns[9]},
 			},
 			{
 				Name:    "apikey_quota_quota_used",
 				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[11], APIKeysColumns[12]},
+				Columns: []*schema.Column{APIKeysColumns[12], APIKeysColumns[13]},
 			},
 			{
 				Name:    "apikey_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{APIKeysColumns[13]},
+				Columns: []*schema.Column{APIKeysColumns[14]},
 			},
 		},
 	}
@@ -265,6 +266,7 @@ var (
 	// AnnouncementsColumns holds the columns for the "announcements" table.
 	AnnouncementsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "title", Type: field.TypeString, Size: 200},
 		{Name: "content", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"}},
 		{Name: "status", Type: field.TypeString, Size: 20, Default: "draft"},
@@ -286,28 +288,29 @@ var (
 			{
 				Name:    "announcement_status",
 				Unique:  false,
-				Columns: []*schema.Column{AnnouncementsColumns[3]},
+				Columns: []*schema.Column{AnnouncementsColumns[4]},
 			},
 			{
 				Name:    "announcement_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{AnnouncementsColumns[10]},
+				Columns: []*schema.Column{AnnouncementsColumns[11]},
 			},
 			{
 				Name:    "announcement_starts_at",
 				Unique:  false,
-				Columns: []*schema.Column{AnnouncementsColumns[6]},
+				Columns: []*schema.Column{AnnouncementsColumns[7]},
 			},
 			{
 				Name:    "announcement_ends_at",
 				Unique:  false,
-				Columns: []*schema.Column{AnnouncementsColumns[7]},
+				Columns: []*schema.Column{AnnouncementsColumns[8]},
 			},
 		},
 	}
 	// AnnouncementReadsColumns holds the columns for the "announcement_reads" table.
 	AnnouncementReadsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "read_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "announcement_id", Type: field.TypeInt64},
@@ -321,13 +324,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "announcement_reads_announcements_reads",
-				Columns:    []*schema.Column{AnnouncementReadsColumns[3]},
+				Columns:    []*schema.Column{AnnouncementReadsColumns[4]},
 				RefColumns: []*schema.Column{AnnouncementsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "announcement_reads_users_announcement_reads",
-				Columns:    []*schema.Column{AnnouncementReadsColumns[4]},
+				Columns:    []*schema.Column{AnnouncementReadsColumns[5]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -336,28 +339,29 @@ var (
 			{
 				Name:    "announcementread_announcement_id",
 				Unique:  false,
-				Columns: []*schema.Column{AnnouncementReadsColumns[3]},
+				Columns: []*schema.Column{AnnouncementReadsColumns[4]},
 			},
 			{
 				Name:    "announcementread_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{AnnouncementReadsColumns[4]},
+				Columns: []*schema.Column{AnnouncementReadsColumns[5]},
 			},
 			{
 				Name:    "announcementread_read_at",
 				Unique:  false,
-				Columns: []*schema.Column{AnnouncementReadsColumns[1]},
+				Columns: []*schema.Column{AnnouncementReadsColumns[2]},
 			},
 			{
 				Name:    "announcementread_announcement_id_user_id",
 				Unique:  true,
-				Columns: []*schema.Column{AnnouncementReadsColumns[3], AnnouncementReadsColumns[4]},
+				Columns: []*schema.Column{AnnouncementReadsColumns[4], AnnouncementReadsColumns[5]},
 			},
 		},
 	}
 	// AuthIdentitiesColumns holds the columns for the "auth_identities" table.
 	AuthIdentitiesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "provider_type", Type: field.TypeString, Size: 20},
@@ -376,32 +380,33 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "auth_identities_users_auth_identities",
-				Columns:    []*schema.Column{AuthIdentitiesColumns[9]},
+				Columns:    []*schema.Column{AuthIdentitiesColumns[10]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "authidentity_provider_type_provider_key_provider_subject",
+				Name:    "authidentity_brand_id_provider_type_provider_key_provider_subject",
 				Unique:  true,
-				Columns: []*schema.Column{AuthIdentitiesColumns[3], AuthIdentitiesColumns[4], AuthIdentitiesColumns[5]},
+				Columns: []*schema.Column{AuthIdentitiesColumns[1], AuthIdentitiesColumns[4], AuthIdentitiesColumns[5], AuthIdentitiesColumns[6]},
 			},
 			{
 				Name:    "authidentity_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{AuthIdentitiesColumns[9]},
+				Columns: []*schema.Column{AuthIdentitiesColumns[10]},
 			},
 			{
 				Name:    "authidentity_user_id_provider_type",
 				Unique:  false,
-				Columns: []*schema.Column{AuthIdentitiesColumns[9], AuthIdentitiesColumns[3]},
+				Columns: []*schema.Column{AuthIdentitiesColumns[10], AuthIdentitiesColumns[4]},
 			},
 		},
 	}
 	// AuthIdentityChannelsColumns holds the columns for the "auth_identity_channels" table.
 	AuthIdentityChannelsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "provider_type", Type: field.TypeString, Size: 20},
@@ -420,27 +425,28 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "auth_identity_channels_auth_identities_channels",
-				Columns:    []*schema.Column{AuthIdentityChannelsColumns[9]},
+				Columns:    []*schema.Column{AuthIdentityChannelsColumns[10]},
 				RefColumns: []*schema.Column{AuthIdentitiesColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
-				Name:    "authidentitychannel_provider_type_provider_key_channel_channel_app_id_channel_subject",
+				Name:    "authidentitychannel_brand_id_provider_type_provider_key_channel_channel_app_id_channel_subject",
 				Unique:  true,
-				Columns: []*schema.Column{AuthIdentityChannelsColumns[3], AuthIdentityChannelsColumns[4], AuthIdentityChannelsColumns[5], AuthIdentityChannelsColumns[6], AuthIdentityChannelsColumns[7]},
+				Columns: []*schema.Column{AuthIdentityChannelsColumns[1], AuthIdentityChannelsColumns[4], AuthIdentityChannelsColumns[5], AuthIdentityChannelsColumns[6], AuthIdentityChannelsColumns[7], AuthIdentityChannelsColumns[8]},
 			},
 			{
 				Name:    "authidentitychannel_identity_id",
 				Unique:  false,
-				Columns: []*schema.Column{AuthIdentityChannelsColumns[9]},
+				Columns: []*schema.Column{AuthIdentityChannelsColumns[10]},
 			},
 		},
 	}
 	// BatchImageEventsColumns holds the columns for the "batch_image_events" table.
 	BatchImageEventsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "job_id", Type: field.TypeString, Size: 64},
 		{Name: "event_type", Type: field.TypeString, Size: 64},
 		{Name: "payload", Type: field.TypeJSON, Nullable: true, SchemaType: map[string]string{"postgres": "jsonb"}},
@@ -456,17 +462,17 @@ var (
 			{
 				Name:    "batchimageevent_job_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{BatchImageEventsColumns[1], BatchImageEventsColumns[5]},
+				Columns: []*schema.Column{BatchImageEventsColumns[2], BatchImageEventsColumns[6]},
 			},
 			{
 				Name:    "batchimageevent_event_type",
 				Unique:  false,
-				Columns: []*schema.Column{BatchImageEventsColumns[2]},
+				Columns: []*schema.Column{BatchImageEventsColumns[3]},
 			},
 			{
 				Name:    "batchimageevent_job_id_event_hash",
 				Unique:  true,
-				Columns: []*schema.Column{BatchImageEventsColumns[1], BatchImageEventsColumns[4]},
+				Columns: []*schema.Column{BatchImageEventsColumns[2], BatchImageEventsColumns[5]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "event_hash IS NOT NULL AND event_hash <> ''",
 				},
@@ -476,6 +482,7 @@ var (
 	// BatchImageItemsColumns holds the columns for the "batch_image_items" table.
 	BatchImageItemsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "job_id", Type: field.TypeString, Size: 64},
 		{Name: "custom_id", Type: field.TypeString, Size: 255},
 		{Name: "status", Type: field.TypeString, Size: 32},
@@ -503,23 +510,24 @@ var (
 			{
 				Name:    "batchimageitem_job_id_custom_id",
 				Unique:  true,
-				Columns: []*schema.Column{BatchImageItemsColumns[1], BatchImageItemsColumns[2]},
+				Columns: []*schema.Column{BatchImageItemsColumns[2], BatchImageItemsColumns[3]},
 			},
 			{
 				Name:    "batchimageitem_job_id_status",
 				Unique:  false,
-				Columns: []*schema.Column{BatchImageItemsColumns[1], BatchImageItemsColumns[3]},
+				Columns: []*schema.Column{BatchImageItemsColumns[2], BatchImageItemsColumns[4]},
 			},
 			{
 				Name:    "batchimageitem_provider_source_object",
 				Unique:  false,
-				Columns: []*schema.Column{BatchImageItemsColumns[6]},
+				Columns: []*schema.Column{BatchImageItemsColumns[7]},
 			},
 		},
 	}
 	// BatchImageJobsColumns holds the columns for the "batch_image_jobs" table.
 	BatchImageJobsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "batch_id", Type: field.TypeString, Size: 64},
 		{Name: "user_id", Type: field.TypeInt64},
 		{Name: "api_key_id", Type: field.TypeInt64, Nullable: true},
@@ -570,27 +578,27 @@ var (
 			{
 				Name:    "batchimagejob_batch_id",
 				Unique:  true,
-				Columns: []*schema.Column{BatchImageJobsColumns[1]},
+				Columns: []*schema.Column{BatchImageJobsColumns[2]},
 			},
 			{
 				Name:    "batchimagejob_user_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{BatchImageJobsColumns[2], BatchImageJobsColumns[35]},
+				Columns: []*schema.Column{BatchImageJobsColumns[3], BatchImageJobsColumns[36]},
 			},
 			{
 				Name:    "batchimagejob_status",
 				Unique:  false,
-				Columns: []*schema.Column{BatchImageJobsColumns[8]},
+				Columns: []*schema.Column{BatchImageJobsColumns[9]},
 			},
 			{
 				Name:    "batchimagejob_provider_status",
 				Unique:  false,
-				Columns: []*schema.Column{BatchImageJobsColumns[5], BatchImageJobsColumns[8]},
+				Columns: []*schema.Column{BatchImageJobsColumns[6], BatchImageJobsColumns[9]},
 			},
 			{
 				Name:    "batchimagejob_idempotency_key",
 				Unique:  false,
-				Columns: []*schema.Column{BatchImageJobsColumns[23]},
+				Columns: []*schema.Column{BatchImageJobsColumns[24]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "idempotency_key IS NOT NULL AND idempotency_key <> ''",
 				},
@@ -598,7 +606,7 @@ var (
 			{
 				Name:    "batchimagejob_manifest_hash",
 				Unique:  true,
-				Columns: []*schema.Column{BatchImageJobsColumns[25]},
+				Columns: []*schema.Column{BatchImageJobsColumns[26]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "manifest_hash IS NOT NULL AND manifest_hash <> ''",
 				},
@@ -606,17 +614,17 @@ var (
 			{
 				Name:    "batchimagejob_output_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{BatchImageJobsColumns[28]},
+				Columns: []*schema.Column{BatchImageJobsColumns[29]},
 			},
 			{
 				Name:    "batchimagejob_downloaded_at",
 				Unique:  false,
-				Columns: []*schema.Column{BatchImageJobsColumns[31]},
+				Columns: []*schema.Column{BatchImageJobsColumns[32]},
 			},
 			{
 				Name:    "batchimagejob_user_deleted_at",
 				Unique:  false,
-				Columns: []*schema.Column{BatchImageJobsColumns[32]},
+				Columns: []*schema.Column{BatchImageJobsColumns[33]},
 			},
 		},
 	}
@@ -807,6 +815,7 @@ var (
 	// CompositeModelRoutesColumns holds the columns for the "composite_model_routes" table.
 	CompositeModelRoutesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
@@ -828,7 +837,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "composite_model_routes_groups_group",
-				Columns:    []*schema.Column{CompositeModelRoutesColumns[12]},
+				Columns:    []*schema.Column{CompositeModelRoutesColumns[13]},
 				RefColumns: []*schema.Column{GroupsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -837,32 +846,32 @@ var (
 			{
 				Name:    "compositemodelroute_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{CompositeModelRoutesColumns[12]},
+				Columns: []*schema.Column{CompositeModelRoutesColumns[13]},
 			},
 			{
 				Name:    "compositemodelroute_group_id_enabled",
 				Unique:  false,
-				Columns: []*schema.Column{CompositeModelRoutesColumns[12], CompositeModelRoutesColumns[10]},
+				Columns: []*schema.Column{CompositeModelRoutesColumns[13], CompositeModelRoutesColumns[11]},
 			},
 			{
 				Name:    "compositemodelroute_group_id_endpoint",
 				Unique:  false,
-				Columns: []*schema.Column{CompositeModelRoutesColumns[12], CompositeModelRoutesColumns[8]},
+				Columns: []*schema.Column{CompositeModelRoutesColumns[13], CompositeModelRoutesColumns[9]},
 			},
 			{
 				Name:    "compositemodelroute_group_id_target_platform",
 				Unique:  false,
-				Columns: []*schema.Column{CompositeModelRoutesColumns[12], CompositeModelRoutesColumns[6]},
+				Columns: []*schema.Column{CompositeModelRoutesColumns[13], CompositeModelRoutesColumns[7]},
 			},
 			{
 				Name:    "compositemodelroute_deleted_at",
 				Unique:  false,
-				Columns: []*schema.Column{CompositeModelRoutesColumns[3]},
+				Columns: []*schema.Column{CompositeModelRoutesColumns[4]},
 			},
 			{
 				Name:    "compositemodelroute_priority",
 				Unique:  false,
-				Columns: []*schema.Column{CompositeModelRoutesColumns[9]},
+				Columns: []*schema.Column{CompositeModelRoutesColumns[10]},
 			},
 		},
 	}
@@ -906,6 +915,7 @@ var (
 	// GroupsColumns holds the columns for the "groups" table.
 	GroupsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
@@ -983,37 +993,37 @@ var (
 			{
 				Name:    "group_status",
 				Unique:  false,
-				Columns: []*schema.Column{GroupsColumns[12]},
+				Columns: []*schema.Column{GroupsColumns[13]},
 			},
 			{
 				Name:    "group_platform",
 				Unique:  false,
-				Columns: []*schema.Column{GroupsColumns[14]},
+				Columns: []*schema.Column{GroupsColumns[15]},
 			},
 			{
 				Name:    "group_subscription_type",
 				Unique:  false,
-				Columns: []*schema.Column{GroupsColumns[15]},
+				Columns: []*schema.Column{GroupsColumns[16]},
 			},
 			{
 				Name:    "group_is_exclusive",
 				Unique:  false,
-				Columns: []*schema.Column{GroupsColumns[11]},
+				Columns: []*schema.Column{GroupsColumns[12]},
 			},
 			{
 				Name:    "group_deleted_at",
 				Unique:  false,
-				Columns: []*schema.Column{GroupsColumns[3]},
+				Columns: []*schema.Column{GroupsColumns[4]},
 			},
 			{
 				Name:    "group_sort_order",
 				Unique:  false,
-				Columns: []*schema.Column{GroupsColumns[50]},
+				Columns: []*schema.Column{GroupsColumns[51]},
 			},
 			{
 				Name:    "idx_groups_duplicate_operation_id_active",
 				Unique:  true,
-				Columns: []*schema.Column{GroupsColumns[13]},
+				Columns: []*schema.Column{GroupsColumns[14]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "duplicate_operation_id IS NOT NULL AND deleted_at IS NULL",
 				},
@@ -1023,6 +1033,7 @@ var (
 	// IdempotencyRecordsColumns holds the columns for the "idempotency_records" table.
 	IdempotencyRecordsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "scope", Type: field.TypeString, Size: 128},
@@ -1042,25 +1053,26 @@ var (
 		PrimaryKey: []*schema.Column{IdempotencyRecordsColumns[0]},
 		Indexes: []*schema.Index{
 			{
-				Name:    "idempotencyrecord_scope_idempotency_key_hash",
+				Name:    "idempotencyrecord_brand_id_scope_idempotency_key_hash",
 				Unique:  true,
-				Columns: []*schema.Column{IdempotencyRecordsColumns[3], IdempotencyRecordsColumns[4]},
+				Columns: []*schema.Column{IdempotencyRecordsColumns[1], IdempotencyRecordsColumns[4], IdempotencyRecordsColumns[5]},
 			},
 			{
 				Name:    "idempotencyrecord_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{IdempotencyRecordsColumns[11]},
+				Columns: []*schema.Column{IdempotencyRecordsColumns[12]},
 			},
 			{
 				Name:    "idempotencyrecord_status_locked_until",
 				Unique:  false,
-				Columns: []*schema.Column{IdempotencyRecordsColumns[6], IdempotencyRecordsColumns[10]},
+				Columns: []*schema.Column{IdempotencyRecordsColumns[7], IdempotencyRecordsColumns[11]},
 			},
 		},
 	}
 	// IdentityAdoptionDecisionsColumns holds the columns for the "identity_adoption_decisions" table.
 	IdentityAdoptionDecisionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "adopt_display_name", Type: field.TypeBool, Default: false},
@@ -1077,13 +1089,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "identity_adoption_decisions_auth_identities_adoption_decisions",
-				Columns:    []*schema.Column{IdentityAdoptionDecisionsColumns[6]},
+				Columns:    []*schema.Column{IdentityAdoptionDecisionsColumns[7]},
 				RefColumns: []*schema.Column{AuthIdentitiesColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "identity_adoption_decisions_pending_auth_sessions_adoption_decision",
-				Columns:    []*schema.Column{IdentityAdoptionDecisionsColumns[7]},
+				Columns:    []*schema.Column{IdentityAdoptionDecisionsColumns[8]},
 				RefColumns: []*schema.Column{PendingAuthSessionsColumns[0]},
 				OnDelete:   schema.Cascade,
 			},
@@ -1092,18 +1104,19 @@ var (
 			{
 				Name:    "identityadoptiondecision_pending_auth_session_id",
 				Unique:  true,
-				Columns: []*schema.Column{IdentityAdoptionDecisionsColumns[7]},
+				Columns: []*schema.Column{IdentityAdoptionDecisionsColumns[8]},
 			},
 			{
 				Name:    "identityadoptiondecision_identity_id",
 				Unique:  false,
-				Columns: []*schema.Column{IdentityAdoptionDecisionsColumns[6]},
+				Columns: []*schema.Column{IdentityAdoptionDecisionsColumns[7]},
 			},
 		},
 	}
 	// PaymentAuditLogsColumns holds the columns for the "payment_audit_logs" table.
 	PaymentAuditLogsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "order_id", Type: field.TypeString, Size: 64},
 		{Name: "action", Type: field.TypeString, Size: 50},
 		{Name: "detail", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"}},
@@ -1119,13 +1132,14 @@ var (
 			{
 				Name:    "paymentauditlog_order_id",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentAuditLogsColumns[1]},
+				Columns: []*schema.Column{PaymentAuditLogsColumns[2]},
 			},
 		},
 	}
 	// PaymentOrdersColumns holds the columns for the "payment_orders" table.
 	PaymentOrdersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "user_email", Type: field.TypeString, Size: 255},
 		{Name: "user_name", Type: field.TypeString, Size: 100},
 		{Name: "user_notes", Type: field.TypeString, Nullable: true, SchemaType: map[string]string{"postgres": "text"}},
@@ -1175,7 +1189,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "payment_orders_users_payment_orders",
-				Columns:    []*schema.Column{PaymentOrdersColumns[40]},
+				Columns:    []*schema.Column{PaymentOrdersColumns[41]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -1184,7 +1198,7 @@ var (
 			{
 				Name:    "paymentorder_out_trade_no",
 				Unique:  true,
-				Columns: []*schema.Column{PaymentOrdersColumns[9]},
+				Columns: []*schema.Column{PaymentOrdersColumns[10]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "out_trade_no <> ''",
 				},
@@ -1192,43 +1206,44 @@ var (
 			{
 				Name:    "paymentorder_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentOrdersColumns[40]},
+				Columns: []*schema.Column{PaymentOrdersColumns[41]},
 			},
 			{
 				Name:    "paymentorder_status",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentOrdersColumns[22]},
+				Columns: []*schema.Column{PaymentOrdersColumns[23]},
 			},
 			{
 				Name:    "paymentorder_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentOrdersColumns[30]},
+				Columns: []*schema.Column{PaymentOrdersColumns[31]},
 			},
 			{
 				Name:    "paymentorder_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentOrdersColumns[38]},
+				Columns: []*schema.Column{PaymentOrdersColumns[39]},
 			},
 			{
 				Name:    "paymentorder_paid_at",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentOrdersColumns[31]},
+				Columns: []*schema.Column{PaymentOrdersColumns[32]},
 			},
 			{
 				Name:    "paymentorder_payment_type_paid_at",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentOrdersColumns[10], PaymentOrdersColumns[31]},
+				Columns: []*schema.Column{PaymentOrdersColumns[11], PaymentOrdersColumns[32]},
 			},
 			{
 				Name:    "paymentorder_order_type",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentOrdersColumns[15]},
+				Columns: []*schema.Column{PaymentOrdersColumns[16]},
 			},
 		},
 	}
 	// PaymentProviderInstancesColumns holds the columns for the "payment_provider_instances" table.
 	PaymentProviderInstancesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "provider_key", Type: field.TypeString, Size: 30},
 		{Name: "name", Type: field.TypeString, Size: 100, Default: ""},
 		{Name: "config", Type: field.TypeString, SchemaType: map[string]string{"postgres": "text"}},
@@ -1251,18 +1266,19 @@ var (
 			{
 				Name:    "paymentproviderinstance_provider_key",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentProviderInstancesColumns[1]},
+				Columns: []*schema.Column{PaymentProviderInstancesColumns[2]},
 			},
 			{
 				Name:    "paymentproviderinstance_enabled",
 				Unique:  false,
-				Columns: []*schema.Column{PaymentProviderInstancesColumns[5]},
+				Columns: []*schema.Column{PaymentProviderInstancesColumns[6]},
 			},
 		},
 	}
 	// PendingAuthSessionsColumns holds the columns for the "pending_auth_sessions" table.
 	PendingAuthSessionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "session_token", Type: field.TypeString, Size: 255},
@@ -1293,7 +1309,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "pending_auth_sessions_users_pending_auth_sessions",
-				Columns:    []*schema.Column{PendingAuthSessionsColumns[21]},
+				Columns:    []*schema.Column{PendingAuthSessionsColumns[22]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -1302,34 +1318,35 @@ var (
 			{
 				Name:    "pendingauthsession_session_token",
 				Unique:  true,
-				Columns: []*schema.Column{PendingAuthSessionsColumns[3]},
+				Columns: []*schema.Column{PendingAuthSessionsColumns[4]},
 			},
 			{
 				Name:    "pendingauthsession_target_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{PendingAuthSessionsColumns[21]},
+				Columns: []*schema.Column{PendingAuthSessionsColumns[22]},
 			},
 			{
 				Name:    "pendingauthsession_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{PendingAuthSessionsColumns[19]},
+				Columns: []*schema.Column{PendingAuthSessionsColumns[20]},
 			},
 			{
 				Name:    "pendingauthsession_provider_type_provider_key_provider_subject",
 				Unique:  false,
-				Columns: []*schema.Column{PendingAuthSessionsColumns[5], PendingAuthSessionsColumns[6], PendingAuthSessionsColumns[7]},
+				Columns: []*schema.Column{PendingAuthSessionsColumns[6], PendingAuthSessionsColumns[7], PendingAuthSessionsColumns[8]},
 			},
 			{
 				Name:    "pendingauthsession_completion_code_hash",
 				Unique:  false,
-				Columns: []*schema.Column{PendingAuthSessionsColumns[14]},
+				Columns: []*schema.Column{PendingAuthSessionsColumns[15]},
 			},
 		},
 	}
 	// PromoCodesColumns holds the columns for the "promo_codes" table.
 	PromoCodesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
-		{Name: "code", Type: field.TypeString, Unique: true, Size: 32},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
+		{Name: "code", Type: field.TypeString, Size: 32},
 		{Name: "bonus_amount", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
 		{Name: "max_uses", Type: field.TypeInt, Default: 0},
 		{Name: "used_count", Type: field.TypeInt, Default: 0},
@@ -1346,20 +1363,26 @@ var (
 		PrimaryKey: []*schema.Column{PromoCodesColumns[0]},
 		Indexes: []*schema.Index{
 			{
+				Name:    "promocode_brand_id_code",
+				Unique:  true,
+				Columns: []*schema.Column{PromoCodesColumns[1], PromoCodesColumns[2]},
+			},
+			{
 				Name:    "promocode_status",
 				Unique:  false,
-				Columns: []*schema.Column{PromoCodesColumns[5]},
+				Columns: []*schema.Column{PromoCodesColumns[6]},
 			},
 			{
 				Name:    "promocode_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{PromoCodesColumns[6]},
+				Columns: []*schema.Column{PromoCodesColumns[7]},
 			},
 		},
 	}
 	// PromoCodeUsagesColumns holds the columns for the "promo_code_usages" table.
 	PromoCodeUsagesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "bonus_amount", Type: field.TypeFloat64, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
 		{Name: "used_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "promo_code_id", Type: field.TypeInt64},
@@ -1373,13 +1396,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "promo_code_usages_promo_codes_usage_records",
-				Columns:    []*schema.Column{PromoCodeUsagesColumns[3]},
+				Columns:    []*schema.Column{PromoCodeUsagesColumns[4]},
 				RefColumns: []*schema.Column{PromoCodesColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "promo_code_usages_users_promo_code_usages",
-				Columns:    []*schema.Column{PromoCodeUsagesColumns[4]},
+				Columns:    []*schema.Column{PromoCodeUsagesColumns[5]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -1388,17 +1411,17 @@ var (
 			{
 				Name:    "promocodeusage_promo_code_id",
 				Unique:  false,
-				Columns: []*schema.Column{PromoCodeUsagesColumns[3]},
+				Columns: []*schema.Column{PromoCodeUsagesColumns[4]},
 			},
 			{
 				Name:    "promocodeusage_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{PromoCodeUsagesColumns[4]},
+				Columns: []*schema.Column{PromoCodeUsagesColumns[5]},
 			},
 			{
 				Name:    "promocodeusage_promo_code_id_user_id",
 				Unique:  true,
-				Columns: []*schema.Column{PromoCodeUsagesColumns[3], PromoCodeUsagesColumns[4]},
+				Columns: []*schema.Column{PromoCodeUsagesColumns[4], PromoCodeUsagesColumns[5]},
 			},
 		},
 	}
@@ -1459,7 +1482,8 @@ var (
 	// RedeemCodesColumns holds the columns for the "redeem_codes" table.
 	RedeemCodesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
-		{Name: "code", Type: field.TypeString, Unique: true, Size: 32},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
+		{Name: "code", Type: field.TypeString, Size: 32},
 		{Name: "type", Type: field.TypeString, Size: 20, Default: "balance"},
 		{Name: "value", Type: field.TypeFloat64, Default: 0, SchemaType: map[string]string{"postgres": "decimal(20,8)"}},
 		{Name: "status", Type: field.TypeString, Size: 20, Default: "unused"},
@@ -1479,37 +1503,42 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "redeem_codes_groups_redeem_codes",
-				Columns:    []*schema.Column{RedeemCodesColumns[10]},
+				Columns:    []*schema.Column{RedeemCodesColumns[11]},
 				RefColumns: []*schema.Column{GroupsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "redeem_codes_users_redeem_codes",
-				Columns:    []*schema.Column{RedeemCodesColumns[11]},
+				Columns:    []*schema.Column{RedeemCodesColumns[12]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 		},
 		Indexes: []*schema.Index{
 			{
+				Name:    "redeemcode_brand_id_code",
+				Unique:  true,
+				Columns: []*schema.Column{RedeemCodesColumns[1], RedeemCodesColumns[2]},
+			},
+			{
 				Name:    "redeemcode_status",
 				Unique:  false,
-				Columns: []*schema.Column{RedeemCodesColumns[4]},
+				Columns: []*schema.Column{RedeemCodesColumns[5]},
 			},
 			{
 				Name:    "redeemcode_used_by",
 				Unique:  false,
-				Columns: []*schema.Column{RedeemCodesColumns[11]},
+				Columns: []*schema.Column{RedeemCodesColumns[12]},
 			},
 			{
 				Name:    "redeemcode_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{RedeemCodesColumns[10]},
+				Columns: []*schema.Column{RedeemCodesColumns[11]},
 			},
 			{
 				Name:    "redeemcode_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{RedeemCodesColumns[8]},
+				Columns: []*schema.Column{RedeemCodesColumns[9]},
 			},
 		},
 	}
@@ -1543,6 +1572,7 @@ var (
 	// SubscriptionPlansColumns holds the columns for the "subscription_plans" table.
 	SubscriptionPlansColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "group_id", Type: field.TypeInt64},
 		{Name: "name", Type: field.TypeString, Size: 100},
 		{Name: "description", Type: field.TypeString, Default: "", SchemaType: map[string]string{"postgres": "text"}},
@@ -1567,12 +1597,12 @@ var (
 			{
 				Name:    "subscriptionplan_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{SubscriptionPlansColumns[1]},
+				Columns: []*schema.Column{SubscriptionPlansColumns[2]},
 			},
 			{
 				Name:    "subscriptionplan_for_sale",
 				Unique:  false,
-				Columns: []*schema.Column{SubscriptionPlansColumns[11]},
+				Columns: []*schema.Column{SubscriptionPlansColumns[12]},
 			},
 		},
 	}
@@ -1603,6 +1633,7 @@ var (
 	// UsageCleanupTasksColumns holds the columns for the "usage_cleanup_tasks" table.
 	UsageCleanupTasksColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "status", Type: field.TypeString, Size: 20},
@@ -1624,23 +1655,24 @@ var (
 			{
 				Name:    "usagecleanuptask_status_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageCleanupTasksColumns[3], UsageCleanupTasksColumns[1]},
+				Columns: []*schema.Column{UsageCleanupTasksColumns[4], UsageCleanupTasksColumns[2]},
 			},
 			{
 				Name:    "usagecleanuptask_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageCleanupTasksColumns[1]},
+				Columns: []*schema.Column{UsageCleanupTasksColumns[2]},
 			},
 			{
 				Name:    "usagecleanuptask_canceled_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageCleanupTasksColumns[9]},
+				Columns: []*schema.Column{UsageCleanupTasksColumns[10]},
 			},
 		},
 	}
 	// UsageLogsColumns holds the columns for the "usage_logs" table.
 	UsageLogsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "request_id", Type: field.TypeString, Size: 64},
 		{Name: "model", Type: field.TypeString, Size: 100},
 		{Name: "requested_model", Type: field.TypeString, Nullable: true, Size: 100},
@@ -1697,31 +1729,31 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "usage_logs_api_keys_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[43]},
+				Columns:    []*schema.Column{UsageLogsColumns[44]},
 				RefColumns: []*schema.Column{APIKeysColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "usage_logs_accounts_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[44]},
+				Columns:    []*schema.Column{UsageLogsColumns[45]},
 				RefColumns: []*schema.Column{AccountsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "usage_logs_groups_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[45]},
+				Columns:    []*schema.Column{UsageLogsColumns[46]},
 				RefColumns: []*schema.Column{GroupsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
 			{
 				Symbol:     "usage_logs_users_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[46]},
+				Columns:    []*schema.Column{UsageLogsColumns[47]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "usage_logs_user_subscriptions_usage_logs",
-				Columns:    []*schema.Column{UsageLogsColumns[47]},
+				Columns:    []*schema.Column{UsageLogsColumns[48]},
 				RefColumns: []*schema.Column{UserSubscriptionsColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -1730,68 +1762,69 @@ var (
 			{
 				Name:    "usagelog_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[46]},
+				Columns: []*schema.Column{UsageLogsColumns[47]},
 			},
 			{
 				Name:    "usagelog_api_key_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[43]},
+				Columns: []*schema.Column{UsageLogsColumns[44]},
 			},
 			{
 				Name:    "usagelog_account_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[44]},
+				Columns: []*schema.Column{UsageLogsColumns[45]},
 			},
 			{
 				Name:    "usagelog_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[45]},
+				Columns: []*schema.Column{UsageLogsColumns[46]},
 			},
 			{
 				Name:    "usagelog_subscription_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[47]},
+				Columns: []*schema.Column{UsageLogsColumns[48]},
 			},
 			{
 				Name:    "usagelog_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[42]},
+				Columns: []*schema.Column{UsageLogsColumns[43]},
 			},
 			{
 				Name:    "usagelog_model",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[2]},
+				Columns: []*schema.Column{UsageLogsColumns[3]},
 			},
 			{
 				Name:    "usagelog_requested_model",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[3]},
+				Columns: []*schema.Column{UsageLogsColumns[4]},
 			},
 			{
 				Name:    "usagelog_request_id",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[1]},
+				Columns: []*schema.Column{UsageLogsColumns[2]},
 			},
 			{
 				Name:    "usagelog_user_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[46], UsageLogsColumns[42]},
+				Columns: []*schema.Column{UsageLogsColumns[47], UsageLogsColumns[43]},
 			},
 			{
 				Name:    "usagelog_api_key_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[43], UsageLogsColumns[42]},
+				Columns: []*schema.Column{UsageLogsColumns[44], UsageLogsColumns[43]},
 			},
 			{
 				Name:    "usagelog_group_id_created_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsageLogsColumns[45], UsageLogsColumns[42]},
+				Columns: []*schema.Column{UsageLogsColumns[46], UsageLogsColumns[43]},
 			},
 		},
 	}
 	// UsersColumns holds the columns for the "users" table.
 	UsersColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
@@ -1828,17 +1861,18 @@ var (
 			{
 				Name:    "user_status",
 				Unique:  false,
-				Columns: []*schema.Column{UsersColumns[11]},
+				Columns: []*schema.Column{UsersColumns[12]},
 			},
 			{
 				Name:    "user_deleted_at",
 				Unique:  false,
-				Columns: []*schema.Column{UsersColumns[3]},
+				Columns: []*schema.Column{UsersColumns[4]},
 			},
 		},
 	}
 	// UserAllowedGroupsColumns holds the columns for the "user_allowed_groups" table.
 	UserAllowedGroupsColumns = []*schema.Column{
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "user_id", Type: field.TypeInt64},
 		{Name: "group_id", Type: field.TypeInt64},
@@ -1847,17 +1881,17 @@ var (
 	UserAllowedGroupsTable = &schema.Table{
 		Name:       "user_allowed_groups",
 		Columns:    UserAllowedGroupsColumns,
-		PrimaryKey: []*schema.Column{UserAllowedGroupsColumns[1], UserAllowedGroupsColumns[2]},
+		PrimaryKey: []*schema.Column{UserAllowedGroupsColumns[2], UserAllowedGroupsColumns[3]},
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "user_allowed_groups_users_user",
-				Columns:    []*schema.Column{UserAllowedGroupsColumns[1]},
+				Columns:    []*schema.Column{UserAllowedGroupsColumns[2]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "user_allowed_groups_groups_group",
-				Columns:    []*schema.Column{UserAllowedGroupsColumns[2]},
+				Columns:    []*schema.Column{UserAllowedGroupsColumns[3]},
 				RefColumns: []*schema.Column{GroupsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -1866,13 +1900,14 @@ var (
 			{
 				Name:    "userallowedgroup_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{UserAllowedGroupsColumns[2]},
+				Columns: []*schema.Column{UserAllowedGroupsColumns[3]},
 			},
 		},
 	}
 	// UserAttributeDefinitionsColumns holds the columns for the "user_attribute_definitions" table.
 	UserAttributeDefinitionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
@@ -1896,28 +1931,29 @@ var (
 			{
 				Name:    "userattributedefinition_key",
 				Unique:  false,
-				Columns: []*schema.Column{UserAttributeDefinitionsColumns[4]},
+				Columns: []*schema.Column{UserAttributeDefinitionsColumns[5]},
 			},
 			{
 				Name:    "userattributedefinition_enabled",
 				Unique:  false,
-				Columns: []*schema.Column{UserAttributeDefinitionsColumns[13]},
+				Columns: []*schema.Column{UserAttributeDefinitionsColumns[14]},
 			},
 			{
 				Name:    "userattributedefinition_display_order",
 				Unique:  false,
-				Columns: []*schema.Column{UserAttributeDefinitionsColumns[12]},
+				Columns: []*schema.Column{UserAttributeDefinitionsColumns[13]},
 			},
 			{
 				Name:    "userattributedefinition_deleted_at",
 				Unique:  false,
-				Columns: []*schema.Column{UserAttributeDefinitionsColumns[3]},
+				Columns: []*schema.Column{UserAttributeDefinitionsColumns[4]},
 			},
 		},
 	}
 	// UserAttributeValuesColumns holds the columns for the "user_attribute_values" table.
 	UserAttributeValuesColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "value", Type: field.TypeString, Size: 2147483647, Default: ""},
@@ -1932,13 +1968,13 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "user_attribute_values_users_attribute_values",
-				Columns:    []*schema.Column{UserAttributeValuesColumns[4]},
+				Columns:    []*schema.Column{UserAttributeValuesColumns[5]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "user_attribute_values_user_attribute_definitions_values",
-				Columns:    []*schema.Column{UserAttributeValuesColumns[5]},
+				Columns:    []*schema.Column{UserAttributeValuesColumns[6]},
 				RefColumns: []*schema.Column{UserAttributeDefinitionsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -1947,18 +1983,19 @@ var (
 			{
 				Name:    "userattributevalue_user_id_attribute_id",
 				Unique:  true,
-				Columns: []*schema.Column{UserAttributeValuesColumns[4], UserAttributeValuesColumns[5]},
+				Columns: []*schema.Column{UserAttributeValuesColumns[5], UserAttributeValuesColumns[6]},
 			},
 			{
 				Name:    "userattributevalue_attribute_id",
 				Unique:  false,
-				Columns: []*schema.Column{UserAttributeValuesColumns[5]},
+				Columns: []*schema.Column{UserAttributeValuesColumns[6]},
 			},
 		},
 	}
 	// UserPlatformQuotasColumns holds the columns for the "user_platform_quotas" table.
 	UserPlatformQuotasColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
@@ -1982,7 +2019,7 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "user_platform_quotas_users_platform_quotas",
-				Columns:    []*schema.Column{UserPlatformQuotasColumns[14]},
+				Columns:    []*schema.Column{UserPlatformQuotasColumns[15]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
@@ -1991,7 +2028,7 @@ var (
 			{
 				Name:    "userplatformquota_user_id_platform",
 				Unique:  true,
-				Columns: []*schema.Column{UserPlatformQuotasColumns[14], UserPlatformQuotasColumns[4]},
+				Columns: []*schema.Column{UserPlatformQuotasColumns[15], UserPlatformQuotasColumns[5]},
 				Annotation: &entsql.IndexAnnotation{
 					Where: "deleted_at IS NULL",
 				},
@@ -1999,13 +2036,14 @@ var (
 			{
 				Name:    "userplatformquota_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{UserPlatformQuotasColumns[14]},
+				Columns: []*schema.Column{UserPlatformQuotasColumns[15]},
 			},
 		},
 	}
 	// UserSubscriptionsColumns holds the columns for the "user_subscriptions" table.
 	UserSubscriptionsColumns = []*schema.Column{
 		{Name: "id", Type: field.TypeInt64, Increment: true},
+		{Name: "brand_id", Type: field.TypeInt64, Default: 1},
 		{Name: "created_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "updated_at", Type: field.TypeTime, SchemaType: map[string]string{"postgres": "timestamptz"}},
 		{Name: "deleted_at", Type: field.TypeTime, Nullable: true, SchemaType: map[string]string{"postgres": "timestamptz"}},
@@ -2032,19 +2070,19 @@ var (
 		ForeignKeys: []*schema.ForeignKey{
 			{
 				Symbol:     "user_subscriptions_groups_subscriptions",
-				Columns:    []*schema.Column{UserSubscriptionsColumns[15]},
+				Columns:    []*schema.Column{UserSubscriptionsColumns[16]},
 				RefColumns: []*schema.Column{GroupsColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "user_subscriptions_users_subscriptions",
-				Columns:    []*schema.Column{UserSubscriptionsColumns[16]},
+				Columns:    []*schema.Column{UserSubscriptionsColumns[17]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.NoAction,
 			},
 			{
 				Symbol:     "user_subscriptions_users_assigned_subscriptions",
-				Columns:    []*schema.Column{UserSubscriptionsColumns[17]},
+				Columns:    []*schema.Column{UserSubscriptionsColumns[18]},
 				RefColumns: []*schema.Column{UsersColumns[0]},
 				OnDelete:   schema.SetNull,
 			},
@@ -2053,42 +2091,42 @@ var (
 			{
 				Name:    "usersubscription_user_id",
 				Unique:  false,
-				Columns: []*schema.Column{UserSubscriptionsColumns[16]},
+				Columns: []*schema.Column{UserSubscriptionsColumns[17]},
 			},
 			{
 				Name:    "usersubscription_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{UserSubscriptionsColumns[15]},
+				Columns: []*schema.Column{UserSubscriptionsColumns[16]},
 			},
 			{
 				Name:    "usersubscription_status",
 				Unique:  false,
-				Columns: []*schema.Column{UserSubscriptionsColumns[6]},
+				Columns: []*schema.Column{UserSubscriptionsColumns[7]},
 			},
 			{
 				Name:    "usersubscription_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{UserSubscriptionsColumns[5]},
+				Columns: []*schema.Column{UserSubscriptionsColumns[6]},
 			},
 			{
 				Name:    "usersubscription_user_id_status_expires_at",
 				Unique:  false,
-				Columns: []*schema.Column{UserSubscriptionsColumns[16], UserSubscriptionsColumns[6], UserSubscriptionsColumns[5]},
+				Columns: []*schema.Column{UserSubscriptionsColumns[17], UserSubscriptionsColumns[7], UserSubscriptionsColumns[6]},
 			},
 			{
 				Name:    "usersubscription_assigned_by",
 				Unique:  false,
-				Columns: []*schema.Column{UserSubscriptionsColumns[17]},
+				Columns: []*schema.Column{UserSubscriptionsColumns[18]},
 			},
 			{
 				Name:    "usersubscription_user_id_group_id",
 				Unique:  false,
-				Columns: []*schema.Column{UserSubscriptionsColumns[16], UserSubscriptionsColumns[15]},
+				Columns: []*schema.Column{UserSubscriptionsColumns[17], UserSubscriptionsColumns[16]},
 			},
 			{
 				Name:    "usersubscription_deleted_at",
 				Unique:  false,
-				Columns: []*schema.Column{UserSubscriptionsColumns[3]},
+				Columns: []*schema.Column{UserSubscriptionsColumns[4]},
 			},
 		},
 	}

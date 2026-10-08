@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
@@ -109,7 +110,7 @@ type pelicanPublicCachedItem struct {
 	body *pelicanPublicBody
 }
 
-// A single shared manifest bounds the DB work independently of caller count.
+// Each brand has a shared manifest that bounds DB work independently of caller count.
 // Each generation owns a byte- and count-bounded LRU of serialized item bodies.
 // Refreshing the manifest drops the old LRU, so removed/expired items cannot be
 // served indefinitely. No cache entries are allocated for arbitrary missing IDs.
@@ -164,20 +165,20 @@ func (s *pelicanPublicSnapshot) put(id int64, body *pelicanPublicBody) {
 type pelicanPublicCache struct {
 	source     pelicanPublicSource
 	mu         sync.Mutex
-	snapshot   *pelicanPublicSnapshot
+	snapshots  map[string]*pelicanPublicSnapshot
 	generation uint64
 	flights    singleflight.Group
 }
 
 func newPelicanPublicCache(source pelicanPublicSource) *pelicanPublicCache {
-	return &pelicanPublicCache{source: source}
+	return &pelicanPublicCache{source: source, snapshots: make(map[string]*pelicanPublicSnapshot)}
 }
 
 func (p *pelicanPublicCache) invalidate() {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	p.generation++
-	p.snapshot = nil
+	clear(p.snapshots)
 }
 
 // One disconnected caller must not cancel a refresh needed by other callers.
@@ -197,15 +198,16 @@ func (p *pelicanPublicCache) shared(ctx context.Context, key string, load func(c
 }
 
 func (p *pelicanPublicCache) manifest(ctx context.Context) (*pelicanPublicSnapshot, error) {
+	key := brand.CacheKey(ctx, "manifest")
 	p.mu.Lock()
-	current, generation := p.snapshot, p.generation
+	current, generation := p.snapshots[key], p.generation
 	p.mu.Unlock()
 	if current != nil && time.Now().Before(current.expiresAt) {
 		return current, nil
 	}
-	value, err := p.shared(ctx, fmt.Sprintf("manifest:%d", generation), func(ctx context.Context) (any, error) {
+	value, err := p.shared(ctx, fmt.Sprintf("%s:%d", key, generation), func(ctx context.Context) (any, error) {
 		p.mu.Lock()
-		current := p.snapshot
+		current := p.snapshots[key]
 		p.mu.Unlock()
 		if current != nil && time.Now().Before(current.expiresAt) {
 			return current, nil
@@ -245,7 +247,10 @@ func (p *pelicanPublicCache) manifest(ctx context.Context) (*pelicanPublicSnapsh
 		}
 		p.mu.Lock()
 		if p.generation == generation {
-			p.snapshot = snapshot
+			if len(p.snapshots) >= 64 {
+				clear(p.snapshots)
+			}
+			p.snapshots[key] = snapshot
 		}
 		p.mu.Unlock()
 		return snapshot, nil

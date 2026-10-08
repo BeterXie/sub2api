@@ -827,7 +827,7 @@ currency, hold_id,
 idempotency_key, request_hash, manifest_hash,
 retry_count, version, session_id, output_expires_at, input_deleted_at, output_deleted_at, downloaded_at, user_deleted_at,
 last_error_code, last_error_message,
-created_at, updated_at, submitted_at, started_at, finished_at, settled_at`
+created_at, updated_at, submitted_at, started_at, finished_at, settled_at,brand_id`
 
 const batchImageJobSelectSQL = `SELECT ` + batchImageJobColumns + ` FROM batch_image_jobs`
 
@@ -856,6 +856,7 @@ func scanBatchImageJob(row rowScanner) (*service.BatchImageJob, error) {
 		&job.RetryCount, &job.Version, &sessionID, &outputExpiresAt, &inputDeletedAt, &outputDeletedAt, &downloadedAt, &userDeletedAt,
 		&lastErrorCode, &lastErrorMessage,
 		&job.CreatedAt, &job.UpdatedAt, &submittedAt, &startedAt, &finishedAt, &settledAt,
+		&job.BrandID,
 	)
 	if err != nil {
 		return nil, err

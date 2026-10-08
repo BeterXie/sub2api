@@ -18,6 +18,8 @@ type CompositeModelRoute struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int64 `json:"id,omitempty"`
+	// BrandID holds the value of the "brand_id" field.
+	BrandID int64 `json:"brand_id,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -75,7 +77,7 @@ func (*CompositeModelRoute) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case compositemodelroute.FieldEnabled:
 			values[i] = new(sql.NullBool)
-		case compositemodelroute.FieldID, compositemodelroute.FieldGroupID, compositemodelroute.FieldPriority:
+		case compositemodelroute.FieldID, compositemodelroute.FieldBrandID, compositemodelroute.FieldGroupID, compositemodelroute.FieldPriority:
 			values[i] = new(sql.NullInt64)
 		case compositemodelroute.FieldPublicModel, compositemodelroute.FieldMatchType, compositemodelroute.FieldTargetPlatform, compositemodelroute.FieldUpstreamModel, compositemodelroute.FieldEndpoint, compositemodelroute.FieldNotes:
 			values[i] = new(sql.NullString)
@@ -102,6 +104,12 @@ func (_m *CompositeModelRoute) assignValues(columns []string, values []any) erro
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int64(value.Int64)
+		case compositemodelroute.FieldBrandID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field brand_id", values[i])
+			} else if value.Valid {
+				_m.BrandID = value.Int64
+			}
 		case compositemodelroute.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -217,6 +225,9 @@ func (_m *CompositeModelRoute) String() string {
 	var builder strings.Builder
 	builder.WriteString("CompositeModelRoute(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
+	builder.WriteString("brand_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.BrandID))
+	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")

@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -19,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/require"
@@ -178,12 +180,12 @@ func TestPelicanPublicVisibilityAndRefresh(t *testing.T) {
 	require.EqualValues(t, 1, source.itemReads.Load(), "unknown IDs never reach the DB")
 
 	// The server snapshot stays shared, but HTTP caches must revalidate auth.
-	h.public.snapshot.expiresAt = time.Now().Add(10 * time.Second)
+	h.public.snapshots["manifest"].expiresAt = time.Now().Add(10 * time.Second)
 	remaining := publicPelicanRequest(h, http.MethodGet, "", nil)
 	require.Equal(t, "private, no-cache, must-revalidate", remaining.Header().Get("Cache-Control"))
 
 	// Unchanged refreshes preserve the validator; no wall-clock field churn.
-	h.public.snapshot.expiresAt = time.Now().Add(-time.Second)
+	h.public.snapshots["manifest"].expiresAt = time.Now().Add(-time.Second)
 	unchanged := publicPelicanRequest(h, http.MethodGet, "", map[string]string{"If-None-Match": first.Header().Get("ETag")})
 	require.Equal(t, http.StatusNotModified, unchanged.Code)
 	require.EqualValues(t, 2, source.viewReads.Load())
@@ -230,7 +232,7 @@ func TestPelicanPublicAPISwitchRejectsCachedAndConditionalReads(t *testing.T) {
 		require.Equal(t, http.StatusOK, warm.Code)
 		etags[id] = warm.Header().Get("ETag")
 	}
-	require.NotNil(t, h.public.snapshot.item(7), "warm both caches before toggling the API switch")
+	require.NotNil(t, h.public.snapshots["manifest"].item(7), "warm both caches before toggling the API switch")
 	source.apiDisabled = true
 	for _, id := range []string{"", "7"} {
 		for _, method := range []string{http.MethodGet, http.MethodHead} {
@@ -315,7 +317,7 @@ func TestPelicanPublicInvalidateDuringRefreshDoesNotRepopulateCache(t *testing.T
 	h.public.invalidate()
 	close(source.release)
 	require.NoError(t, <-finished)
-	require.Nil(t, h.public.snapshot)
+	require.Empty(t, h.public.snapshots)
 	_, err := h.public.manifest(context.Background())
 	require.NoError(t, err)
 	require.EqualValues(t, 2, source.viewReads.Load())
@@ -335,4 +337,34 @@ func TestPelicanPublicBodyCacheHasMemoryAndEntryLimits(t *testing.T) {
 	snapshot.put(102, &pelicanPublicBody{json: make([]byte, pelicanPublicMaxBytes+1)})
 	require.Len(t, snapshot.items, 1)
 	require.Nil(t, snapshot.item(102))
+}
+
+type brandedPelicanSource struct{ publicPelicanSourceStub }
+
+func (s *brandedPelicanSource) View(ctx context.Context, _ time.Time) (*service.PelicanShowcaseView, error) {
+	s.viewReads.Add(1)
+	id := brand.ID(ctx)
+	item := &service.PelicanShowcaseItem{ID: id * 100, GroupID: id, ModelID: fmt.Sprint(id)}
+	return &service.PelicanShowcaseView{Enabled: true, Groups: []*service.PelicanShowcaseGroup{{ID: id, Name: fmt.Sprint(id), Items: []*service.PelicanShowcaseItem{item}}}}, nil
+}
+func TestPelicanPublicBrandCache(t *testing.T) {
+	source := &brandedPelicanSource{}
+	cache := newPelicanPublicCache(source)
+	llmp := brand.WithScope(context.Background(), brand.Scope{ID: 1})
+	mues := brand.WithScope(context.Background(), brand.Scope{ID: 2})
+	first, err := cache.manifest(llmp)
+	require.NoError(t, err)
+	second, err := cache.manifest(mues)
+	require.NoError(t, err)
+	require.NotEqual(t, first.body.etag, second.body.etag)
+	_, err = cache.item(mues, second, 100)
+	require.ErrorIs(t, err, service.ErrPelicanShowcaseItemNotFound)
+	again, err := cache.manifest(llmp)
+	require.NoError(t, err)
+	require.Same(t, first, again)
+	require.EqualValues(t, 2, source.viewReads.Load())
+	cache.invalidate()
+	_, err = cache.manifest(mues)
+	require.NoError(t, err)
+	require.EqualValues(t, 3, source.viewReads.Load())
 }

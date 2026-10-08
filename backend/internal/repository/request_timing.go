@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/requesttiming"
 )
@@ -14,6 +15,7 @@ type timingWrite struct {
 	requestID string
 	apiKeyID  int64
 	data      requesttiming.Snapshot
+	ctx       context.Context
 }
 
 // RecordRequestTiming is called after usage persistence has settled. Each real
@@ -27,7 +29,7 @@ func (r *usageLogRepository) RecordRequestTiming(ctx context.Context, requestID 
 	r.timingOnce.Do(func() { r.timingQueue = make(chan timingWrite, 512); go r.runTimingWriter() })
 	c.WhenFinished(func(data requesttiming.Snapshot) {
 		select {
-		case r.timingQueue <- timingWrite{requestID, apiKeyID, data}:
+		case r.timingQueue <- timingWrite{requestID: requestID, apiKeyID: apiKeyID, data: data, ctx: brand.Detached(ctx)}:
 		default:
 			logger.LegacyPrintf("request_timing", "diagnostic queue full; detail dropped")
 		}
@@ -42,7 +44,11 @@ func (r *usageLogRepository) runTimingWriter() {
 			// All errors remain diagnostic-only. A short bounded retry handles transient
 			// SQL failures; it never retries billing or a model request.
 			for attempt := 0; attempt < 3; attempt++ {
-				ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+				base := job.ctx
+				if base == nil {
+					base = context.Background()
+				}
+				ctx, cancel := context.WithTimeout(base, 3*time.Second)
 				err := r.writeTiming(ctx, job)
 				cancel()
 				if err == nil {

@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/pkg/usagestats"
@@ -107,7 +108,7 @@ func (h *DashboardHandler) getUsageTrendCached(
 		BillingType:           billingType,
 		UpstreamModelMismatch: upstreamModelMismatch,
 	})
-	entry, hit, err := dashboardTrendCache.GetOrLoad(key, func() (any, error) {
+	entry, hit, err := dashboardTrendCache.GetOrLoad(brand.CacheKey(ctx, key), func() (any, error) {
 		return h.dashboardService.GetUsageTrendWithUsageFilters(ctx, startTime, endTime, granularity, usagestats.UsageLogFilters{
 			UserID: userID, APIKeyID: apiKeyID, AccountID: accountID, GroupID: groupID,
 			Model: model, RequestType: requestType, Stream: stream, NativeCompactionV2: nativeCompactionV2, BillingType: billingType,
@@ -146,7 +147,7 @@ func (h *DashboardHandler) getModelStatsCached(
 		BillingType:           billingType,
 		UpstreamModelMismatch: upstreamModelMismatch,
 	})
-	entry, hit, err := dashboardModelStatsCache.GetOrLoad(key, func() (any, error) {
+	entry, hit, err := dashboardModelStatsCache.GetOrLoad(brand.CacheKey(ctx, key), func() (any, error) {
 		return h.dashboardService.GetModelStatsWithUsageFiltersBySource(ctx, startTime, endTime, usagestats.UsageLogFilters{
 			UserID: userID, APIKeyID: apiKeyID, AccountID: accountID, GroupID: groupID,
 			RequestType: requestType, Stream: stream, NativeCompactionV2: nativeCompactionV2, BillingType: billingType,
@@ -183,7 +184,7 @@ func (h *DashboardHandler) getGroupStatsCached(
 		BillingType:           billingType,
 		UpstreamModelMismatch: upstreamModelMismatch,
 	})
-	entry, hit, err := dashboardGroupStatsCache.GetOrLoad(key, func() (any, error) {
+	entry, hit, err := dashboardGroupStatsCache.GetOrLoad(brand.CacheKey(ctx, key), func() (any, error) {
 		return h.dashboardService.GetGroupStatsWithUsageFilters(ctx, startTime, endTime, usagestats.UsageLogFilters{
 			UserID: userID, APIKeyID: apiKeyID, AccountID: accountID, GroupID: groupID,
 			RequestType: requestType, Stream: stream, NativeCompactionV2: nativeCompactionV2, BillingType: billingType,
@@ -204,7 +205,7 @@ func (h *DashboardHandler) getAPIKeyUsageTrendCached(ctx context.Context, startT
 		Granularity: granularity,
 		Limit:       limit,
 	})
-	entry, hit, err := dashboardAPIKeysTrendCache.GetOrLoad(key, func() (any, error) {
+	entry, hit, err := dashboardAPIKeysTrendCache.GetOrLoad(brand.CacheKey(ctx, key), func() (any, error) {
 		return h.dashboardService.GetAPIKeyUsageTrend(ctx, startTime, endTime, granularity, limit)
 	})
 	if err != nil {
@@ -222,7 +223,7 @@ func (h *DashboardHandler) getUserUsageTrendCached(ctx context.Context, startTim
 		Limit:       limit,
 		Metric:      metric,
 	})
-	entry, hit, err := dashboardUsersTrendCache.GetOrLoad(key, func() (any, error) {
+	entry, hit, err := dashboardUsersTrendCache.GetOrLoad(brand.CacheKey(ctx, key), func() (any, error) {
 		return h.dashboardService.GetUserUsageTrend(ctx, startTime, endTime, granularity, limit, metric)
 	})
 	if err != nil {

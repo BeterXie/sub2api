@@ -18,6 +18,8 @@ type BatchImageEvent struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int64 `json:"id,omitempty"`
+	// BrandID holds the value of the "brand_id" field.
+	BrandID int64 `json:"brand_id,omitempty"`
 	// JobID holds the value of the "job_id" field.
 	JobID string `json:"job_id,omitempty"`
 	// EventType holds the value of the "event_type" field.
@@ -38,7 +40,7 @@ func (*BatchImageEvent) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case batchimageevent.FieldPayload:
 			values[i] = new([]byte)
-		case batchimageevent.FieldID:
+		case batchimageevent.FieldID, batchimageevent.FieldBrandID:
 			values[i] = new(sql.NullInt64)
 		case batchimageevent.FieldJobID, batchimageevent.FieldEventType, batchimageevent.FieldEventHash:
 			values[i] = new(sql.NullString)
@@ -65,6 +67,12 @@ func (_m *BatchImageEvent) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int64(value.Int64)
+		case batchimageevent.FieldBrandID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field brand_id", values[i])
+			} else if value.Valid {
+				_m.BrandID = value.Int64
+			}
 		case batchimageevent.FieldJobID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field job_id", values[i])
@@ -134,6 +142,9 @@ func (_m *BatchImageEvent) String() string {
 	var builder strings.Builder
 	builder.WriteString("BatchImageEvent(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
+	builder.WriteString("brand_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.BrandID))
+	builder.WriteString(", ")
 	builder.WriteString("job_id=")
 	builder.WriteString(_m.JobID)
 	builder.WriteString(", ")

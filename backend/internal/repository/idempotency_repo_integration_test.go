@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/stretchr/testify/require"
 )
@@ -50,6 +51,33 @@ func TestIdempotencyRepo_CreateProcessing_CompeteSameKey(t *testing.T) {
 	owner, err = repo.CreateProcessing(ctx, duplicate)
 	require.NoError(t, err)
 	require.False(t, owner, "same scope+key hash should be de-duplicated")
+}
+
+func TestIdempotencyRepo_SameKeyIsIndependentAcrossBrands(t *testing.T) {
+	tx := testTx(t)
+	repo := &idempotencyRepository{sql: tx}
+	now := time.Now().UTC()
+	scope := uniqueTestValue(t, "idem-cross-brand")
+	keyHash := hashedTestValue(t, "idem-cross-brand-key")
+
+	for brandID := int64(1); brandID <= 2; brandID++ {
+		ctx := brand.WithScope(context.Background(), brand.Scope{ID: brandID})
+		record := &service.IdempotencyRecord{
+			Scope:              scope,
+			IdempotencyKeyHash: keyHash,
+			RequestFingerprint: hashedTestValue(t, "idem-cross-brand-fingerprint"),
+			Status:             service.IdempotencyStatusProcessing,
+			LockedUntil:        ptrTime(now.Add(30 * time.Second)),
+			ExpiresAt:          now.Add(24 * time.Hour),
+		}
+		owner, err := repo.CreateProcessing(ctx, record)
+		require.NoError(t, err)
+		require.True(t, owner)
+		stored, err := repo.GetByScopeAndKeyHash(ctx, scope, keyHash)
+		require.NoError(t, err)
+		require.NotNil(t, stored)
+		require.Equal(t, record.RequestFingerprint, stored.RequestFingerprint)
+	}
 }
 
 func TestIdempotencyRepo_TryReclaim_StatusAndLockWindow(t *testing.T) {

@@ -2,6 +2,7 @@
 package schema
 
 import (
+	"github.com/Wei-Shaw/sub2api/ent/schema/mixins"
 	"time"
 
 	"entgo.io/ent"
@@ -29,6 +30,8 @@ func (UsageLog) Annotations() []schema.Annotation {
 }
 
 // Fields 定义使用日志实体的所有字段。
+func (UsageLog) Mixin() []ent.Mixin { return []ent.Mixin{mixins.BrandMixin{}} }
+
 func (UsageLog) Fields() []ent.Field {
 	return []ent.Field{
 		// 关联字段

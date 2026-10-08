@@ -108,7 +108,7 @@ func GetNonceFromContext(c *gin.Context) string {
 // SecurityHeaders sets baseline security headers for all responses.
 // getFrameSrcOrigins is an optional function that returns extra origins to inject into frame-src;
 // pass nil to disable dynamic frame-src injection.
-func SecurityHeaders(cfg config.CSPConfig, getFrameSrcOrigins func() []string) gin.HandlerFunc {
+func SecurityHeaders(cfg config.CSPConfig, getFrameSrcOrigins func() []string, requestOrigins ...func(*gin.Context) []string) gin.HandlerFunc {
 	policy := strings.TrimSpace(cfg.Policy)
 	if policy == "" {
 		policy = config.DefaultCSPPolicy
@@ -118,15 +118,6 @@ func SecurityHeaders(cfg config.CSPConfig, getFrameSrcOrigins func() []string) g
 	policy = enhanceCSPPolicy(policy)
 
 	return func(c *gin.Context) {
-		finalPolicy := policy
-		if getFrameSrcOrigins != nil {
-			for _, origin := range getFrameSrcOrigins() {
-				if origin != "" {
-					finalPolicy = addToDirective(finalPolicy, "frame-src", origin)
-				}
-			}
-		}
-
 		c.Header("X-Content-Type-Options", "nosniff")
 		c.Header("X-Frame-Options", "DENY")
 		c.Header("Referrer-Policy", "strict-origin-when-cross-origin")
@@ -136,6 +127,19 @@ func SecurityHeaders(cfg config.CSPConfig, getFrameSrcOrigins func() []string) g
 		}
 
 		if cfg.Enabled {
+			finalPolicy := policy
+			var origins []string
+			if len(requestOrigins) > 0 && requestOrigins[0] != nil {
+				origins = requestOrigins[0](c)
+			} else if getFrameSrcOrigins != nil {
+				origins = getFrameSrcOrigins()
+			}
+			for _, origin := range origins {
+				if origin != "" {
+					finalPolicy = addToDirective(finalPolicy, "frame-src", origin)
+				}
+			}
+
 			// Generate nonce for this request
 			nonce, err := GenerateNonce()
 			if err != nil {
@@ -149,6 +153,22 @@ func SecurityHeaders(cfg config.CSPConfig, getFrameSrcOrigins func() []string) g
 		}
 		c.Next()
 	}
+}
+
+// NeedsDynamicCSPOrigins reports whether a request can consume an HTML CSP.
+// Asset and API requests do not need tenant-specific frame-src lookups.
+func NeedsDynamicCSPOrigins(c *gin.Context) bool {
+	if c == nil || c.Request == nil || c.Request.URL == nil || isAPIRoutePath(c) {
+		return false
+	}
+	if strings.HasPrefix(c.Request.URL.Path, "/api/") {
+		return false
+	}
+	method := c.Request.Method
+	if method != "GET" && method != "HEAD" {
+		return false
+	}
+	return strings.Contains(strings.ToLower(c.GetHeader("Accept")), "text/html")
 }
 
 func isAPIRoutePath(c *gin.Context) bool {

@@ -17,6 +17,8 @@ type PromoCode struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int64 `json:"id,omitempty"`
+	// BrandID holds the value of the "brand_id" field.
+	BrandID int64 `json:"brand_id,omitempty"`
 	// 优惠码
 	Code string `json:"code,omitempty"`
 	// 赠送余额金额
@@ -66,7 +68,7 @@ func (*PromoCode) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case promocode.FieldBonusAmount:
 			values[i] = new(sql.NullFloat64)
-		case promocode.FieldID, promocode.FieldMaxUses, promocode.FieldUsedCount:
+		case promocode.FieldID, promocode.FieldBrandID, promocode.FieldMaxUses, promocode.FieldUsedCount:
 			values[i] = new(sql.NullInt64)
 		case promocode.FieldCode, promocode.FieldStatus, promocode.FieldNotes:
 			values[i] = new(sql.NullString)
@@ -93,6 +95,12 @@ func (_m *PromoCode) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int64(value.Int64)
+		case promocode.FieldBrandID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field brand_id", values[i])
+			} else if value.Valid {
+				_m.BrandID = value.Int64
+			}
 		case promocode.FieldCode:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field code", values[i])
@@ -190,6 +198,9 @@ func (_m *PromoCode) String() string {
 	var builder strings.Builder
 	builder.WriteString("PromoCode(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
+	builder.WriteString("brand_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.BrandID))
+	builder.WriteString(", ")
 	builder.WriteString("code=")
 	builder.WriteString(_m.Code)
 	builder.WriteString(", ")

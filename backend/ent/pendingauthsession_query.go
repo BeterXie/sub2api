@@ -337,12 +337,12 @@ func (_q *PendingAuthSessionQuery) WithAdoptionDecision(opts ...func(*IdentityAd
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.PendingAuthSession.Query().
-//		GroupBy(pendingauthsession.FieldCreatedAt).
+//		GroupBy(pendingauthsession.FieldBrandID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *PendingAuthSessionQuery) GroupBy(field string, fields ...string) *PendingAuthSessionGroupBy {
@@ -360,11 +360,11 @@ func (_q *PendingAuthSessionQuery) GroupBy(field string, fields ...string) *Pend
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //	}
 //
 //	client.PendingAuthSession.Query().
-//		Select(pendingauthsession.FieldCreatedAt).
+//		Select(pendingauthsession.FieldBrandID).
 //		Scan(ctx, &v)
 func (_q *PendingAuthSessionQuery) Select(fields ...string) *PendingAuthSessionSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

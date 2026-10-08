@@ -7,6 +7,7 @@ import (
 )
 
 type User struct {
+	BrandID          int64
 	ID               int64
 	Email            string
 	Username         string

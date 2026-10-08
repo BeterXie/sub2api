@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"github.com/Wei-Shaw/sub2api/ent/schema/mixins"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/domain"
@@ -33,12 +34,13 @@ func (RedeemCode) Annotations() []schema.Annotation {
 	}
 }
 
+func (RedeemCode) Mixin() []ent.Mixin { return []ent.Mixin{mixins.BrandMixin{}} }
+
 func (RedeemCode) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("code").
 			MaxLen(32).
-			NotEmpty().
-			Unique(),
+			NotEmpty(),
 		field.String("type").
 			MaxLen(20).
 			Default(domain.RedeemTypeBalance),
@@ -90,7 +92,7 @@ func (RedeemCode) Edges() []ent.Edge {
 
 func (RedeemCode) Indexes() []ent.Index {
 	return []ent.Index{
-		// code 字段已在 Fields() 中声明 Unique()，无需重复索引
+		index.Fields("brand_id", "code").Unique(),
 		index.Fields("status"),
 		index.Fields("used_by"),
 		index.Fields("group_id"),

@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"github.com/Wei-Shaw/sub2api/ent/schema/mixins"
 	"time"
 
 	"entgo.io/ent"
@@ -28,6 +29,8 @@ func (PaymentOrder) Annotations() []schema.Annotation {
 		entsql.Annotation{Table: "payment_orders"},
 	}
 }
+
+func (PaymentOrder) Mixin() []ent.Mixin { return []ent.Mixin{mixins.BrandMixin{}} }
 
 func (PaymentOrder) Fields() []ent.Field {
 	return []ent.Field{

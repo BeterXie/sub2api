@@ -23,6 +23,20 @@ type CompositeModelRouteCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *CompositeModelRouteCreate) SetBrandID(v int64) *CompositeModelRouteCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *CompositeModelRouteCreate) SetNillableBrandID(v *int64) *CompositeModelRouteCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *CompositeModelRouteCreate) SetCreatedAt(v time.Time) *CompositeModelRouteCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -217,6 +231,10 @@ func (_c *CompositeModelRouteCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *CompositeModelRouteCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := compositemodelroute.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		if compositemodelroute.DefaultCreatedAt == nil {
 			return fmt.Errorf("ent: uninitialized compositemodelroute.DefaultCreatedAt (forgotten import ent/runtime?)")
@@ -260,6 +278,9 @@ func (_c *CompositeModelRouteCreate) defaults() error {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *CompositeModelRouteCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "CompositeModelRoute.brand_id"`)}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "CompositeModelRoute.created_at"`)}
 	}
@@ -345,6 +366,10 @@ func (_c *CompositeModelRouteCreate) createSpec() (*CompositeModelRoute, *sqlgra
 		_spec = sqlgraph.NewCreateSpec(compositemodelroute.Table, sqlgraph.NewFieldSpec(compositemodelroute.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(compositemodelroute.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(compositemodelroute.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -413,7 +438,7 @@ func (_c *CompositeModelRouteCreate) createSpec() (*CompositeModelRoute, *sqlgra
 // of the `INSERT` statement. For example:
 //
 //	client.CompositeModelRoute.Create().
-//		SetCreatedAt(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -422,7 +447,7 @@ func (_c *CompositeModelRouteCreate) createSpec() (*CompositeModelRoute, *sqlgra
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.CompositeModelRouteUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *CompositeModelRouteCreate) OnConflict(opts ...sql.ConflictOption) *CompositeModelRouteUpsertOne {
@@ -619,6 +644,9 @@ func (u *CompositeModelRouteUpsert) ClearNotes() *CompositeModelRouteUpsert {
 func (u *CompositeModelRouteUpsertOne) UpdateNewValues() *CompositeModelRouteUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(compositemodelroute.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(compositemodelroute.FieldCreatedAt)
 		}
@@ -963,7 +991,7 @@ func (_c *CompositeModelRouteCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.CompositeModelRouteUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *CompositeModelRouteCreateBulk) OnConflict(opts ...sql.ConflictOption) *CompositeModelRouteUpsertBulk {
@@ -1004,6 +1032,9 @@ func (u *CompositeModelRouteUpsertBulk) UpdateNewValues() *CompositeModelRouteUp
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(compositemodelroute.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(compositemodelroute.FieldCreatedAt)
 			}

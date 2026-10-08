@@ -19,6 +19,8 @@ type IdentityAdoptionDecision struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int64 `json:"id,omitempty"`
+	// BrandID holds the value of the "brand_id" field.
+	BrandID int64 `json:"brand_id,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -79,7 +81,7 @@ func (*IdentityAdoptionDecision) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case identityadoptiondecision.FieldAdoptDisplayName, identityadoptiondecision.FieldAdoptAvatar:
 			values[i] = new(sql.NullBool)
-		case identityadoptiondecision.FieldID, identityadoptiondecision.FieldPendingAuthSessionID, identityadoptiondecision.FieldIdentityID:
+		case identityadoptiondecision.FieldID, identityadoptiondecision.FieldBrandID, identityadoptiondecision.FieldPendingAuthSessionID, identityadoptiondecision.FieldIdentityID:
 			values[i] = new(sql.NullInt64)
 		case identityadoptiondecision.FieldCreatedAt, identityadoptiondecision.FieldUpdatedAt, identityadoptiondecision.FieldDecidedAt:
 			values[i] = new(sql.NullTime)
@@ -104,6 +106,12 @@ func (_m *IdentityAdoptionDecision) assignValues(columns []string, values []any)
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int64(value.Int64)
+		case identityadoptiondecision.FieldBrandID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field brand_id", values[i])
+			} else if value.Valid {
+				_m.BrandID = value.Int64
+			}
 		case identityadoptiondecision.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -193,6 +201,9 @@ func (_m *IdentityAdoptionDecision) String() string {
 	var builder strings.Builder
 	builder.WriteString("IdentityAdoptionDecision(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
+	builder.WriteString("brand_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.BrandID))
+	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")

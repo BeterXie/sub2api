@@ -23,6 +23,20 @@ type PromoCodeCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *PromoCodeCreate) SetBrandID(v int64) *PromoCodeCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *PromoCodeCreate) SetNillableBrandID(v *int64) *PromoCodeCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetCode sets the "code" field.
 func (_c *PromoCodeCreate) SetCode(v string) *PromoCodeCreate {
 	_c.mutation.SetCode(v)
@@ -163,7 +177,9 @@ func (_c *PromoCodeCreate) Mutation() *PromoCodeMutation {
 
 // Save creates the PromoCode in the database.
 func (_c *PromoCodeCreate) Save(ctx context.Context) (*PromoCode, error) {
-	_c.defaults()
+	if err := _c.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -190,7 +206,11 @@ func (_c *PromoCodeCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *PromoCodeCreate) defaults() {
+func (_c *PromoCodeCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := promocode.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.BonusAmount(); !ok {
 		v := promocode.DefaultBonusAmount
 		_c.mutation.SetBonusAmount(v)
@@ -208,17 +228,27 @@ func (_c *PromoCodeCreate) defaults() {
 		_c.mutation.SetStatus(v)
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
+		if promocode.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized promocode.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := promocode.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		if promocode.DefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized promocode.DefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := promocode.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *PromoCodeCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "PromoCode.brand_id"`)}
+	}
 	if _, ok := _c.mutation.Code(); !ok {
 		return &ValidationError{Name: "code", err: errors.New(`ent: missing required field "PromoCode.code"`)}
 	}
@@ -277,6 +307,10 @@ func (_c *PromoCodeCreate) createSpec() (*PromoCode, *sqlgraph.CreateSpec) {
 		_spec = sqlgraph.NewCreateSpec(promocode.Table, sqlgraph.NewFieldSpec(promocode.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(promocode.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.Code(); ok {
 		_spec.SetField(promocode.FieldCode, field.TypeString, value)
 		_node.Code = value
@@ -336,7 +370,7 @@ func (_c *PromoCodeCreate) createSpec() (*PromoCode, *sqlgraph.CreateSpec) {
 // of the `INSERT` statement. For example:
 //
 //	client.PromoCode.Create().
-//		SetCode(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -345,7 +379,7 @@ func (_c *PromoCodeCreate) createSpec() (*PromoCode, *sqlgraph.CreateSpec) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.PromoCodeUpsert) {
-//			SetCode(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *PromoCodeCreate) OnConflict(opts ...sql.ConflictOption) *PromoCodeUpsertOne {
@@ -518,6 +552,9 @@ func (u *PromoCodeUpsert) UpdateUpdatedAt() *PromoCodeUpsert {
 func (u *PromoCodeUpsertOne) UpdateNewValues() *PromoCodeUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(promocode.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(promocode.FieldCreatedAt)
 		}
@@ -834,7 +871,7 @@ func (_c *PromoCodeCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.PromoCodeUpsert) {
-//			SetCode(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *PromoCodeCreateBulk) OnConflict(opts ...sql.ConflictOption) *PromoCodeUpsertBulk {
@@ -875,6 +912,9 @@ func (u *PromoCodeUpsertBulk) UpdateNewValues() *PromoCodeUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(promocode.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(promocode.FieldCreatedAt)
 			}

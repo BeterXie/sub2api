@@ -7,8 +7,10 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	middleware2 "github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/Wei-Shaw/sub2api/internal/service"
@@ -22,6 +24,31 @@ const maxPageFileSize = 1 << 20 // 1MB
 type PageHandler struct {
 	pagesDir       string
 	settingService *service.SettingService
+}
+
+func (h *PageHandler) pageDirectories(c *gin.Context) []string {
+	scope, ok := brand.FromContext(c.Request.Context())
+	if !ok {
+		return []string{h.pagesDir}
+	}
+	if !brand.ValidSlug(scope.Code) {
+		return []string{filepath.Join(h.pagesDir, "__unavailable__")}
+	}
+	root := filepath.Join(h.pagesDir, scope.Code)
+	if scope.ID == brand.LegacyID {
+		return []string{root, h.pagesDir}
+	}
+	return []string{root}
+}
+
+func (h *PageHandler) pageDirectory(c *gin.Context, slug string) string {
+	roots := h.pageDirectories(c)
+	for _, root := range roots {
+		if _, err := os.Stat(filepath.Join(root, slug+".md")); err == nil {
+			return root
+		}
+	}
+	return roots[0]
 }
 
 func NewPageHandler(dataDir string, settingService *service.SettingService) *PageHandler {
@@ -46,10 +73,11 @@ func (h *PageHandler) GetPageContent(c *gin.Context) {
 		return
 	}
 
-	filePath := filepath.Join(h.pagesDir, slug+".md")
-	cleaned := filepath.Clean(filePath)
-	if !strings.HasPrefix(cleaned, filepath.Clean(h.pagesDir)) {
-		response.BadRequest(c, "Invalid page slug")
+	root := h.pageDirectory(c, slug)
+	cleaned, err := filepath.EvalSymlinks(filepath.Join(root, slug+".md"))
+	realRoot, rootErr := filepath.EvalSymlinks(root)
+	if err != nil || rootErr != nil || !isPathWithinBase(cleaned, realRoot) {
+		c.JSON(http.StatusNotFound, gin.H{"error": "page not found"})
 		return
 	}
 
@@ -75,22 +103,27 @@ func (h *PageHandler) GetPageContent(c *gin.Context) {
 // ListPages returns available page slugs.
 // GET /api/v1/pages
 func (h *PageHandler) ListPages(c *gin.Context) {
-	entries, err := os.ReadDir(h.pagesDir)
-	if err != nil {
-		response.Success(c, []string{})
-		return
-	}
-
-	slugs := make([]string, 0, len(entries))
-	for _, e := range entries {
-		if e.IsDir() {
+	slugSet := make(map[string]struct{})
+	for _, root := range h.pageDirectories(c) {
+		entries, err := os.ReadDir(root)
+		if err != nil {
 			continue
 		}
-		name := e.Name()
-		if strings.HasSuffix(name, ".md") {
-			slugs = append(slugs, strings.TrimSuffix(name, ".md"))
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+			name := entry.Name()
+			if strings.HasSuffix(name, ".md") {
+				slugSet[strings.TrimSuffix(name, ".md")] = struct{}{}
+			}
 		}
 	}
+	slugs := make([]string, 0, len(slugSet))
+	for slug := range slugSet {
+		slugs = append(slugs, slug)
+	}
+	sort.Strings(slugs)
 	response.Success(c, slugs)
 }
 
@@ -112,8 +145,7 @@ func (h *PageHandler) ServePageImage(c *gin.Context) {
 		return
 	}
 
-	imagesDir := filepath.Join(h.pagesDir, slug)
-	cleaned, ok := resolvePageImagePath(h.pagesDir, imagesDir, filename)
+	cleaned, ok := h.pageImagePath(c, slug, filename)
 	if !ok {
 		c.Status(http.StatusNotFound)
 		return
@@ -126,6 +158,16 @@ func (h *PageHandler) ServePageImage(c *gin.Context) {
 	}
 
 	c.File(cleaned)
+}
+
+func (h *PageHandler) pageImagePath(c *gin.Context, slug, filename string) (string, bool) {
+	for _, root := range h.pageDirectories(c) {
+		cleaned, ok := resolvePageImagePath(root, filepath.Join(root, slug), filename)
+		if ok {
+			return cleaned, true
+		}
+	}
+	return "", false
 }
 
 func resolvePageImagePath(pagesDir, imagesDir, filename string) (string, bool) {

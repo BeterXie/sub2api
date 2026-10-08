@@ -7,6 +7,7 @@ import (
 
 	entsql "entgo.io/ent/dialect/sql"
 	"github.com/Wei-Shaw/sub2api/ent"
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/google/wire"
@@ -65,6 +66,7 @@ func ProvideSchedulerCache(rdb *redis.Client, cfg *config.Config) service.Schedu
 
 // ProviderSet is the Wire provider set for all repositories
 var ProviderSet = wire.NewSet(
+	brand.NewStore,
 	NewUserRepository,
 	NewAPIKeyRepository,
 	NewGroupRepository,
@@ -93,13 +95,14 @@ var ProviderSet = wire.NewSet(
 	NewIdempotencyRepository,
 	NewUsageCleanupRepository,
 	NewDashboardAggregationRepository,
-	NewSettingRepository,
+	ProvideBrandSettingRepository,
 	NewCodexHarvestNodeRepository,
 	NewCodexHarvestFlowRepository,
 	NewOpsRepository,
 	NewAuditLogRepository,
 	NewPasskeyRepository,
 	NewPasskeySessionStore,
+	NewOAuthStateStore,
 	NewUserSubscriptionRepository,
 	NewUserAttributeDefinitionRepository,
 	NewUserAttributeValueRepository,

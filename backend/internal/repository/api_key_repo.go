@@ -133,6 +133,7 @@ func (r *apiKeyRepository) GetByKeyForAuth(ctx context.Context, key string) (*se
 		Where(apikey.KeyEQ(key)).
 		Select(
 			apikey.FieldID,
+			apikey.FieldBrandID,
 			apikey.FieldUserID,
 			apikey.FieldGroupID,
 			apikey.FieldName,
@@ -150,6 +151,7 @@ func (r *apiKeyRepository) GetByKeyForAuth(ctx context.Context, key string) (*se
 		WithUser(func(q *dbent.UserQuery) {
 			q.Select(
 				user.FieldID,
+				user.FieldBrandID,
 				user.FieldEmail,
 				user.FieldUsername,
 				user.FieldStatus,
@@ -174,6 +176,7 @@ func (r *apiKeyRepository) GetByKeyForAuth(ctx context.Context, key string) (*se
 		WithGroup(func(q *dbent.GroupQuery) {
 			q.Select(
 				group.FieldID,
+				group.FieldBrandID,
 				group.FieldName,
 				group.FieldPlatform,
 				group.FieldIsExclusive,
@@ -891,6 +894,7 @@ func apiKeyEntityToService(m *dbent.APIKey) *service.APIKey {
 	}
 	out := &service.APIKey{
 		ID:               m.ID,
+		BrandID:          m.BrandID,
 		UserID:           m.UserID,
 		Key:              m.Key,
 		Name:             m.Name,
@@ -938,6 +942,7 @@ func userEntityToService(u *dbent.User) *service.User {
 	}
 	out := &service.User{
 		ID:                         u.ID,
+		BrandID:                    u.BrandID,
 		Email:                      u.Email,
 		Username:                   u.Username,
 		Notes:                      u.Notes,
@@ -985,6 +990,7 @@ func groupEntityToService(g *dbent.Group) *service.Group {
 	}
 	return &service.Group{
 		ID:                              g.ID,
+		BrandID:                         g.BrandID,
 		Name:                            g.Name,
 		Description:                     derefString(g.Description),
 		Platform:                        g.Platform,

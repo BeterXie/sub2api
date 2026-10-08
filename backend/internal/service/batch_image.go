@@ -100,6 +100,7 @@ var (
 
 type BatchImageJob struct {
 	ID                int64
+	BrandID           int64
 	BatchID           string
 	UserID            int64
 	APIKeyID          *int64

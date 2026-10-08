@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"strconv"
 	"strings"
 	"time"
@@ -80,6 +81,12 @@ func (s *BatchImageSettlementService) Settle(ctx context.Context, batchID string
 	job, err := s.Repo.GetBatchImageJobByBatchID(ctx, batchID)
 	if err != nil {
 		return nil, err
+	}
+	if job.BrandID > 0 {
+		if !brand.Matches(ctx, job.BrandID) {
+			return nil, brand.ErrScope
+		}
+		ctx = brand.WithScope(ctx, brand.Scope{ID: job.BrandID})
 	}
 
 	manifestHash := BuildBatchImageSettlementManifestHash(job)
@@ -345,6 +352,9 @@ func (p *BatchImagePipelineProcessor) Process(ctx context.Context, batchID strin
 	job, err := p.ProviderProcessor.Repo.GetBatchImageJobByBatchID(ctx, batchID)
 	if err != nil {
 		return BatchImageProcessResult{}, err
+	}
+	if job.BrandID > 0 {
+		ctx = brand.WithScope(ctx, brand.Scope{ID: job.BrandID})
 	}
 	if job.Status == BatchImageJobStatusSettling {
 		if p.SettlementService == nil {

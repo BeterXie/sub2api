@@ -17,6 +17,8 @@ type BatchImageItem struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int64 `json:"id,omitempty"`
+	// BrandID holds the value of the "brand_id" field.
+	BrandID int64 `json:"brand_id,omitempty"`
 	// JobID holds the value of the "job_id" field.
 	JobID string `json:"job_id,omitempty"`
 	// CustomID holds the value of the "custom_id" field.
@@ -61,7 +63,7 @@ func (*BatchImageItem) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case batchimageitem.FieldBilledAmount:
 			values[i] = new(sql.NullFloat64)
-		case batchimageitem.FieldID, batchimageitem.FieldSourceLineNumber, batchimageitem.FieldSourceByteOffset, batchimageitem.FieldSourceByteLength, batchimageitem.FieldImageCount:
+		case batchimageitem.FieldID, batchimageitem.FieldBrandID, batchimageitem.FieldSourceLineNumber, batchimageitem.FieldSourceByteOffset, batchimageitem.FieldSourceByteLength, batchimageitem.FieldImageCount:
 			values[i] = new(sql.NullInt64)
 		case batchimageitem.FieldJobID, batchimageitem.FieldCustomID, batchimageitem.FieldStatus, batchimageitem.FieldRequestHash, batchimageitem.FieldPromptPreview, batchimageitem.FieldProviderSourceObject, batchimageitem.FieldMimeType, batchimageitem.FieldFileExtension, batchimageitem.FieldErrorCode, batchimageitem.FieldErrorMessage:
 			values[i] = new(sql.NullString)
@@ -88,6 +90,12 @@ func (_m *BatchImageItem) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int64(value.Int64)
+		case batchimageitem.FieldBrandID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field brand_id", values[i])
+			} else if value.Valid {
+				_m.BrandID = value.Int64
+			}
 		case batchimageitem.FieldJobID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field job_id", values[i])
@@ -238,6 +246,9 @@ func (_m *BatchImageItem) String() string {
 	var builder strings.Builder
 	builder.WriteString("BatchImageItem(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
+	builder.WriteString("brand_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.BrandID))
+	builder.WriteString(", ")
 	builder.WriteString("job_id=")
 	builder.WriteString(_m.JobID)
 	builder.WriteString(", ")

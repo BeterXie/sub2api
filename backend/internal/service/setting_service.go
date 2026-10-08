@@ -409,6 +409,13 @@ func (s *SettingService) SetOnUpdateCallback(callback func()) {
 	s.onUpdate = callback
 }
 
+// Brand presentation changes share the existing HTML invalidation hook.
+func (s *SettingService) InvalidatePublicSettings() {
+	if s != nil && s.onUpdate != nil {
+		s.onUpdate()
+	}
+}
+
 // SubscribeChannelMonitorRuntime registers a listener that is invoked after
 // settings are successfully persisted (and process caches refreshed).
 // Used by ChannelMonitorRunner / ChannelMonitorV2Aggregator for immediate

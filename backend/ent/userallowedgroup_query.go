@@ -263,12 +263,12 @@ func (_q *UserAllowedGroupQuery) WithGroup(opts ...func(*GroupQuery)) *UserAllow
 // Example:
 //
 //	var v []struct {
-//		UserID int64 `json:"user_id,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.UserAllowedGroup.Query().
-//		GroupBy(userallowedgroup.FieldUserID).
+//		GroupBy(userallowedgroup.FieldBrandID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *UserAllowedGroupQuery) GroupBy(field string, fields ...string) *UserAllowedGroupGroupBy {
@@ -286,11 +286,11 @@ func (_q *UserAllowedGroupQuery) GroupBy(field string, fields ...string) *UserAl
 // Example:
 //
 //	var v []struct {
-//		UserID int64 `json:"user_id,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //	}
 //
 //	client.UserAllowedGroup.Query().
-//		Select(userallowedgroup.FieldUserID).
+//		Select(userallowedgroup.FieldBrandID).
 //		Scan(ctx, &v)
 func (_q *UserAllowedGroupQuery) Select(fields ...string) *UserAllowedGroupSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

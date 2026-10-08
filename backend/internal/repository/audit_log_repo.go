@@ -5,11 +5,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/service"
-	"github.com/lib/pq"
 )
 
 // auditLogRepository 审计日志仓储（raw SQL，append-only）。
@@ -25,7 +26,7 @@ func NewAuditLogRepository(db *sql.DB) service.AuditLogRepository {
 
 const auditLogInsertColumns = `created_at, actor_user_id, actor_email, actor_role, auth_method,
 credential_masked, action, method, path, request_id, client_ip, user_agent,
-request_body, status_code, latency_ms, extra`
+request_body, status_code, latency_ms, extra, brand_id`
 
 func auditLogInsertValues(log *service.AuditLog) []any {
 	createdAt := log.CreatedAt
@@ -55,7 +56,15 @@ func auditLogInsertValues(log *service.AuditLog) []any {
 		log.StatusCode,
 		log.LatencyMs,
 		extraJSON,
+		auditLogBrandID(log),
 	}
+}
+
+func auditLogBrandID(log *service.AuditLog) int64 {
+	if log.BrandID > 0 {
+		return log.BrandID
+	}
+	return brand.LegacyID
 }
 
 func (r *auditLogRepository) BatchInsert(ctx context.Context, logs []*service.AuditLog) (int64, error) {
@@ -66,47 +75,64 @@ func (r *auditLogRepository) BatchInsert(ctx context.Context, logs []*service.Au
 		return 0, nil
 	}
 
-	tx, err := r.db.BeginTx(ctx, nil)
-	if err != nil {
-		return 0, err
+	type brandBatch struct {
+		brandID int64
+		logs    []*service.AuditLog
 	}
-	stmt, err := tx.PrepareContext(ctx, pq.CopyIn(
-		"audit_logs",
-		"created_at", "actor_user_id", "actor_email", "actor_role", "auth_method",
-		"credential_masked", "action", "method", "path", "request_id", "client_ip", "user_agent",
-		"request_body", "status_code", "latency_ms", "extra",
-	))
-	if err != nil {
-		_ = tx.Rollback()
-		return 0, err
-	}
-
-	var inserted int64
+	batchesByBrand := make(map[int64]*brandBatch)
+	orderedBatches := make([]*brandBatch, 0)
 	for _, log := range logs {
 		if log == nil {
 			continue
 		}
-		if _, err := stmt.ExecContext(ctx, auditLogInsertValues(log)...); err != nil {
-			_ = stmt.Close()
-			_ = tx.Rollback()
-			return inserted, err
+		brandID := log.BrandID
+		if brandID <= 0 {
+			brandID = brand.ID(ctx)
 		}
-		inserted++
+		batch := batchesByBrand[brandID]
+		if batch == nil {
+			batch = &brandBatch{brandID: brandID}
+			batchesByBrand[brandID] = batch
+			orderedBatches = append(orderedBatches, batch)
+		}
+		copy := *log
+		copy.BrandID = brandID
+		batch.logs = append(batch.logs, &copy)
 	}
 
-	if _, err := stmt.ExecContext(ctx); err != nil {
-		_ = stmt.Close()
-		_ = tx.Rollback()
-		return inserted, err
-	}
-	if err := stmt.Close(); err != nil {
-		_ = tx.Rollback()
-		return inserted, err
-	}
-	if err := tx.Commit(); err != nil {
-		return inserted, err
+	var inserted int64
+	for _, batch := range orderedBatches {
+		batchCtx := brand.WithScope(ctx, brand.Scope{ID: batch.brandID})
+		count, err := r.insertBatch(batchCtx, batch.logs)
+		inserted += count
+		if err != nil {
+			return inserted, err
+		}
 	}
 	return inserted, nil
+}
+
+func (r *auditLogRepository) insertBatch(ctx context.Context, logs []*service.AuditLog) (int64, error) {
+	rows := make([]string, 0, len(logs))
+	args := make([]any, 0, len(logs)*17)
+	for _, log := range logs {
+		values := auditLogInsertValues(log)
+		placeholders := make([]string, len(values))
+		for i := range values {
+			placeholders[i] = "$" + strconv.Itoa(len(args)+i+1)
+		}
+		rows = append(rows, "("+strings.Join(placeholders, ",")+")")
+		args = append(args, values...)
+	}
+	if len(rows) == 0 {
+		return 0, nil
+	}
+	query := `INSERT INTO audit_logs (` + auditLogInsertColumns + `) VALUES ` + strings.Join(rows, ",")
+	result, err := r.db.ExecContext(ctx, query, args...)
+	if err != nil {
+		return 0, err
+	}
+	return result.RowsAffected()
 }
 
 func (r *auditLogRepository) Insert(ctx context.Context, log *service.AuditLog) error {
@@ -116,8 +142,13 @@ func (r *auditLogRepository) Insert(ctx context.Context, log *service.AuditLog) 
 	if log == nil {
 		return fmt.Errorf("nil audit log")
 	}
+	if log.BrandID == 0 {
+		copy := *log
+		copy.BrandID = brand.ID(ctx)
+		log = &copy
+	}
 	query := `INSERT INTO audit_logs (` + auditLogInsertColumns + `)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`
 	_, err := r.db.ExecContext(ctx, query, auditLogInsertValues(log)...)
 	return err
 }
@@ -192,7 +223,8 @@ const auditLogSelectColumns = `
   COALESCE(l.request_body, ''),
   l.status_code,
   l.latency_ms,
-  COALESCE(l.extra::text, '{}')`
+  COALESCE(l.extra::text, '{}'),
+  l.brand_id`
 
 func scanAuditLogRow(scan func(dest ...any) error) (*service.AuditLog, error) {
 	item := &service.AuditLog{}
@@ -216,6 +248,7 @@ func scanAuditLogRow(scan func(dest ...any) error) (*service.AuditLog, error) {
 		&item.StatusCode,
 		&item.LatencyMs,
 		&extraRaw,
+		&item.BrandID,
 	); err != nil {
 		return nil, err
 	}

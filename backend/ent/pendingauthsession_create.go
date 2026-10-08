@@ -24,6 +24,20 @@ type PendingAuthSessionCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *PendingAuthSessionCreate) SetBrandID(v int64) *PendingAuthSessionCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *PendingAuthSessionCreate) SetNillableBrandID(v *int64) *PendingAuthSessionCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *PendingAuthSessionCreate) SetCreatedAt(v time.Time) *PendingAuthSessionCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -285,7 +299,9 @@ func (_c *PendingAuthSessionCreate) Mutation() *PendingAuthSessionMutation {
 
 // Save creates the PendingAuthSession in the database.
 func (_c *PendingAuthSessionCreate) Save(ctx context.Context) (*PendingAuthSession, error) {
-	_c.defaults()
+	if err := _c.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -312,12 +328,22 @@ func (_c *PendingAuthSessionCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *PendingAuthSessionCreate) defaults() {
+func (_c *PendingAuthSessionCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := pendingauthsession.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
+		if pendingauthsession.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized pendingauthsession.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := pendingauthsession.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		if pendingauthsession.DefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized pendingauthsession.DefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := pendingauthsession.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
@@ -334,10 +360,16 @@ func (_c *PendingAuthSessionCreate) defaults() {
 		_c.mutation.SetRegistrationPasswordHash(v)
 	}
 	if _, ok := _c.mutation.UpstreamIdentityClaims(); !ok {
+		if pendingauthsession.DefaultUpstreamIdentityClaims == nil {
+			return fmt.Errorf("ent: uninitialized pendingauthsession.DefaultUpstreamIdentityClaims (forgotten import ent/runtime?)")
+		}
 		v := pendingauthsession.DefaultUpstreamIdentityClaims()
 		_c.mutation.SetUpstreamIdentityClaims(v)
 	}
 	if _, ok := _c.mutation.LocalFlowState(); !ok {
+		if pendingauthsession.DefaultLocalFlowState == nil {
+			return fmt.Errorf("ent: uninitialized pendingauthsession.DefaultLocalFlowState (forgotten import ent/runtime?)")
+		}
 		v := pendingauthsession.DefaultLocalFlowState()
 		_c.mutation.SetLocalFlowState(v)
 	}
@@ -349,10 +381,14 @@ func (_c *PendingAuthSessionCreate) defaults() {
 		v := pendingauthsession.DefaultCompletionCodeHash
 		_c.mutation.SetCompletionCodeHash(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *PendingAuthSessionCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "PendingAuthSession.brand_id"`)}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "PendingAuthSession.created_at"`)}
 	}
@@ -450,6 +486,10 @@ func (_c *PendingAuthSessionCreate) createSpec() (*PendingAuthSession, *sqlgraph
 		_spec = sqlgraph.NewCreateSpec(pendingauthsession.Table, sqlgraph.NewFieldSpec(pendingauthsession.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(pendingauthsession.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(pendingauthsession.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -570,7 +610,7 @@ func (_c *PendingAuthSessionCreate) createSpec() (*PendingAuthSession, *sqlgraph
 // of the `INSERT` statement. For example:
 //
 //	client.PendingAuthSession.Create().
-//		SetCreatedAt(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -579,7 +619,7 @@ func (_c *PendingAuthSessionCreate) createSpec() (*PendingAuthSession, *sqlgraph
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.PendingAuthSessionUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *PendingAuthSessionCreate) OnConflict(opts ...sql.ConflictOption) *PendingAuthSessionUpsertOne {
@@ -902,6 +942,9 @@ func (u *PendingAuthSessionUpsert) ClearConsumedAt() *PendingAuthSessionUpsert {
 func (u *PendingAuthSessionUpsertOne) UpdateNewValues() *PendingAuthSessionUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(pendingauthsession.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(pendingauthsession.FieldCreatedAt)
 		}
@@ -1393,7 +1436,7 @@ func (_c *PendingAuthSessionCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.PendingAuthSessionUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *PendingAuthSessionCreateBulk) OnConflict(opts ...sql.ConflictOption) *PendingAuthSessionUpsertBulk {
@@ -1434,6 +1477,9 @@ func (u *PendingAuthSessionUpsertBulk) UpdateNewValues() *PendingAuthSessionUpse
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(pendingauthsession.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(pendingauthsession.FieldCreatedAt)
 			}

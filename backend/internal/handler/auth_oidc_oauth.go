@@ -124,7 +124,7 @@ func (h *AuthHandler) OIDCOAuthStart(c *gin.Context) {
 		return
 	}
 
-	state, err := oauth.GenerateState()
+	state, err := h.generateOAuthState(c)
 	if err != nil {
 		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_STATE_GEN_FAILED", "failed to generate oauth state").WithCause(err))
 		return
@@ -234,7 +234,7 @@ func (h *AuthHandler) OIDCOAuthCallback(c *gin.Context) {
 	}()
 
 	expectedState, err := readCookieDecoded(c, oidcOAuthStateCookieName)
-	if err != nil || expectedState == "" || state != expectedState {
+	if err != nil || expectedState == "" || state != expectedState || !h.validOAuthState(c, state) {
 		redirectOAuthError(c, frontendCallback, "invalid_state", "invalid oauth state", "")
 		return
 	}

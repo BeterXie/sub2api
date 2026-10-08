@@ -54,6 +54,11 @@ func IDLTE(id int64) predicate.PaymentAuditLog {
 	return predicate.PaymentAuditLog(sql.FieldLTE(FieldID, id))
 }
 
+// BrandID applies equality check predicate on the "brand_id" field. It's identical to BrandIDEQ.
+func BrandID(v int64) predicate.PaymentAuditLog {
+	return predicate.PaymentAuditLog(sql.FieldEQ(FieldBrandID, v))
+}
+
 // OrderID applies equality check predicate on the "order_id" field. It's identical to OrderIDEQ.
 func OrderID(v string) predicate.PaymentAuditLog {
 	return predicate.PaymentAuditLog(sql.FieldEQ(FieldOrderID, v))
@@ -77,6 +82,46 @@ func Operator(v string) predicate.PaymentAuditLog {
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.PaymentAuditLog {
 	return predicate.PaymentAuditLog(sql.FieldEQ(FieldCreatedAt, v))
+}
+
+// BrandIDEQ applies the EQ predicate on the "brand_id" field.
+func BrandIDEQ(v int64) predicate.PaymentAuditLog {
+	return predicate.PaymentAuditLog(sql.FieldEQ(FieldBrandID, v))
+}
+
+// BrandIDNEQ applies the NEQ predicate on the "brand_id" field.
+func BrandIDNEQ(v int64) predicate.PaymentAuditLog {
+	return predicate.PaymentAuditLog(sql.FieldNEQ(FieldBrandID, v))
+}
+
+// BrandIDIn applies the In predicate on the "brand_id" field.
+func BrandIDIn(vs ...int64) predicate.PaymentAuditLog {
+	return predicate.PaymentAuditLog(sql.FieldIn(FieldBrandID, vs...))
+}
+
+// BrandIDNotIn applies the NotIn predicate on the "brand_id" field.
+func BrandIDNotIn(vs ...int64) predicate.PaymentAuditLog {
+	return predicate.PaymentAuditLog(sql.FieldNotIn(FieldBrandID, vs...))
+}
+
+// BrandIDGT applies the GT predicate on the "brand_id" field.
+func BrandIDGT(v int64) predicate.PaymentAuditLog {
+	return predicate.PaymentAuditLog(sql.FieldGT(FieldBrandID, v))
+}
+
+// BrandIDGTE applies the GTE predicate on the "brand_id" field.
+func BrandIDGTE(v int64) predicate.PaymentAuditLog {
+	return predicate.PaymentAuditLog(sql.FieldGTE(FieldBrandID, v))
+}
+
+// BrandIDLT applies the LT predicate on the "brand_id" field.
+func BrandIDLT(v int64) predicate.PaymentAuditLog {
+	return predicate.PaymentAuditLog(sql.FieldLT(FieldBrandID, v))
+}
+
+// BrandIDLTE applies the LTE predicate on the "brand_id" field.
+func BrandIDLTE(v int64) predicate.PaymentAuditLog {
+	return predicate.PaymentAuditLog(sql.FieldLTE(FieldBrandID, v))
 }
 
 // OrderIDEQ applies the EQ predicate on the "order_id" field.

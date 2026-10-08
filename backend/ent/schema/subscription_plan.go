@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"github.com/Wei-Shaw/sub2api/ent/schema/mixins"
 	"time"
 
 	"entgo.io/ent"
@@ -27,6 +28,8 @@ func (SubscriptionPlan) Annotations() []schema.Annotation {
 		entsql.Annotation{Table: "subscription_plans"},
 	}
 }
+
+func (SubscriptionPlan) Mixin() []ent.Mixin { return []ent.Mixin{mixins.BrandMixin{}} }
 
 func (SubscriptionPlan) Fields() []ent.Field {
 	return []ent.Field{

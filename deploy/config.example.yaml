@@ -4,6 +4,16 @@
 runtime:
   role: "full"
 
+# Brand isolation applies to both full and gateway roles.
+# All independent brands and LLMP aliases are disabled by the initial migration.
+# After activating a new brand, keep this switch enabled and disable that brand
+# or its domain instead of reverting to an older single-brand binary.
+multibrand:
+  enabled: false
+  # Old JWTs without brand_id are accepted only by LLMP before this UTC deadline.
+  # Leave empty to reject old JWTs immediately. Use a reviewed RFC3339 timestamp.
+  legacy_jwt_until: ""
+
 # Sub2API Configuration File
 # Sub2API 配置文件
 #

@@ -1,9 +1,15 @@
 package handler
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"testing"
+
+	"github.com/Wei-Shaw/sub2api/internal/brand"
+	"github.com/gin-gonic/gin"
+	"github.com/stretchr/testify/require"
 )
 
 func TestCleanPageImageRelativePath(t *testing.T) {
@@ -99,6 +105,34 @@ func TestResolvePageImagePathRejectsSymlinkEscape(t *testing.T) {
 	if got, ok := resolvePageImagePath(pagesDir, base, "images/secret.png"); ok {
 		t.Fatalf("expected symlink escape to be rejected, got %q", got)
 	}
+}
+
+func TestLegacyBrandPageSourcesMergeAndImagesFallbackByFile(t *testing.T) {
+	pagesDir := filepath.Join(t.TempDir(), "pages")
+	brandDir := filepath.Join(pagesDir, "llmp")
+	require.NoError(t, os.MkdirAll(filepath.Join(brandDir, "guide"), 0755))
+	require.NoError(t, os.MkdirAll(filepath.Join(pagesDir, "guide"), 0755))
+	require.NoError(t, os.WriteFile(filepath.Join(brandDir, "brand-only.md"), []byte("brand"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(pagesDir, "legacy-only.md"), []byte("legacy"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(brandDir, "shared.md"), []byte("brand shared"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(pagesDir, "shared.md"), []byte("legacy shared"), 0644))
+	require.NoError(t, os.WriteFile(filepath.Join(brandDir, "guide.md"), []byte("guide"), 0644))
+	legacyImage := filepath.Join(pagesDir, "guide", "logo.png")
+	require.NoError(t, os.WriteFile(legacyImage, []byte("image"), 0644))
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/pages", nil)
+	c.Request = req.WithContext(brand.WithScope(req.Context(), brand.Scope{ID: brand.LegacyID, Code: "llmp"}))
+	handler := &PageHandler{pagesDir: pagesDir}
+
+	require.Equal(t, brandDir, handler.pageDirectory(c, "shared"))
+	image, ok := handler.pageImagePath(c, "guide", "logo.png")
+	require.True(t, ok)
+	require.Equal(t, mustEvalSymlinks(t, legacyImage), image)
+
+	handler.ListPages(c)
+	require.JSONEq(t, `{"code":0,"message":"success","data":["brand-only","guide","legacy-only","shared"]}`, w.Body.String())
 }
 
 func mustEvalSymlinks(t *testing.T, path string) string {

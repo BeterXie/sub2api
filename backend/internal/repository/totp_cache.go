@@ -8,6 +8,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 )
 
@@ -71,7 +72,7 @@ func (c *TotpCache) DeleteSetupSession(ctx context.Context, userID int64) error 
 
 // GetLoginSession retrieves a TOTP login session
 func (c *TotpCache) GetLoginSession(ctx context.Context, tempToken string) (*service.TotpLoginSession, error) {
-	key := totpLoginKeyPrefix + tempToken
+	key := brand.CacheKey(ctx, totpLoginKeyPrefix+tempToken)
 	data, err := c.rdb.Get(ctx, key).Bytes()
 	if err != nil {
 		if err == redis.Nil {
@@ -90,7 +91,7 @@ func (c *TotpCache) GetLoginSession(ctx context.Context, tempToken string) (*ser
 
 // SetLoginSession stores a TOTP login session
 func (c *TotpCache) SetLoginSession(ctx context.Context, tempToken string, session *service.TotpLoginSession, ttl time.Duration) error {
-	key := totpLoginKeyPrefix + tempToken
+	key := brand.CacheKey(ctx, totpLoginKeyPrefix+tempToken)
 	data, err := json.Marshal(session)
 	if err != nil {
 		return fmt.Errorf("marshal login session: %w", err)
@@ -105,7 +106,7 @@ func (c *TotpCache) SetLoginSession(ctx context.Context, tempToken string, sessi
 
 // DeleteLoginSession deletes a TOTP login session
 func (c *TotpCache) DeleteLoginSession(ctx context.Context, tempToken string) error {
-	key := totpLoginKeyPrefix + tempToken
+	key := brand.CacheKey(ctx, totpLoginKeyPrefix+tempToken)
 	return c.rdb.Del(ctx, key).Err()
 }
 

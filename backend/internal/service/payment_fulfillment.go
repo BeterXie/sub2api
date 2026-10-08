@@ -16,6 +16,7 @@ import (
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/paymentauditlog"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 )
@@ -81,6 +82,10 @@ func (s *PaymentService) confirmPayment(ctx context.Context, oid int64, tradeNo 
 		slog.Error("order not found", "orderID", oid)
 		return nil
 	}
+	ctx, err = s.paymentOrderBrandContext(ctx, o)
+	if err != nil {
+		return err
+	}
 	instanceProviderKey := ""
 	if inst, instErr := s.getOrderProviderInstance(ctx, o); instErr == nil && inst != nil {
 		instanceProviderKey = inst.ProviderKey
@@ -114,6 +119,76 @@ func (s *PaymentService) confirmPayment(ctx context.Context, oid int64, tradeNo 
 		return fmt.Errorf("amount mismatch: expected %s, got %s", strconv.FormatFloat(o.PayAmount, 'f', -1, 64), strconv.FormatFloat(paid, 'f', -1, 64))
 	}
 	return s.toPaid(ctx, o, tradeNo, paid, pk)
+}
+
+func (s *PaymentService) paymentOrderBrandContext(ctx context.Context, order *dbent.PaymentOrder) (context.Context, error) {
+	if scope, ok := brand.FromContext(ctx); ok {
+		if scope.ID != order.BrandID && !scope.Platform {
+			return nil, brand.ErrScope
+		}
+		if !scope.Platform {
+			return ctx, nil
+		}
+	}
+	store := brand.StoreFromContext(ctx)
+	if store == nil {
+		store = s.brandStore
+	}
+	if store == nil {
+		return ctx, nil
+	} // Single-brand mode and internal legacy jobs.
+	scope, err := store.ScopeForBrand(ctx, order.BrandID)
+	if err != nil {
+		return nil, err
+	}
+	return brand.WithScope(ctx, scope), nil
+}
+
+// Verify the callback again against the order's pinned merchant before
+// fulfillment. A different brand's provider candidate cannot authorize it.
+func (s *PaymentService) HandleVerifiedPaymentNotification(ctx context.Context, n *payment.PaymentNotification, pk, body string, headers map[string]string) error {
+	order, err := s.resolvePaymentNotificationOrder(ctx, n.OrderID)
+	if err != nil {
+		return err
+	}
+	orderCtx, err := s.paymentOrderBrandContext(brand.CredentialContext(ctx), order)
+	if err != nil {
+		return err
+	}
+	providers, err := s.GetWebhookProviders(orderCtx, pk, order.OutTradeNo)
+	if err != nil {
+		return err
+	}
+	for _, provider := range providers {
+		verified, err := provider.VerifyNotification(orderCtx, body, headers)
+		if err == nil && verified != nil && verified.OrderID == n.OrderID && verified.TradeNo == n.TradeNo && verified.Amount == n.Amount {
+			return s.HandlePaymentNotification(orderCtx, verified, provider.ProviderKey())
+		}
+	}
+	return fmt.Errorf("callback does not match the order merchant")
+}
+
+func (s *PaymentService) resolvePaymentNotificationOrder(ctx context.Context, orderID string) (*dbent.PaymentOrder, error) {
+	lookupCtx := brand.CredentialContext(ctx)
+	order, err := s.entClient.PaymentOrder.Query().Where(paymentorder.OutTradeNo(orderID)).Only(lookupCtx)
+	if err == nil {
+		return order, nil
+	}
+	if !dbent.IsNotFound(err) {
+		return nil, fmt.Errorf("lookup order failed for out_trade_no %s: %w", orderID, err)
+	}
+	oid, ok := parseLegacyPaymentOrderID(orderID, err)
+	if !ok {
+		return nil, fmt.Errorf("%w: out_trade_no=%s", ErrOrderNotFound, orderID)
+	}
+	order, err = s.entClient.PaymentOrder.Get(lookupCtx, oid)
+	if dbent.IsNotFound(err) {
+		return nil, fmt.Errorf("%w: legacy_order_id=%d", ErrOrderNotFound, oid)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("lookup legacy order %d: %w", oid, err)
+	}
+	return order, nil
 }
 
 func paymentAmountToleranceForCurrency(currency string) float64 {
@@ -228,6 +303,10 @@ func (s *PaymentService) ExecuteBalanceFulfillment(ctx context.Context, oid int6
 	o, err := s.entClient.PaymentOrder.Get(ctx, oid)
 	if err != nil {
 		return infraerrors.NotFound("NOT_FOUND", "order not found")
+	}
+	ctx, err = s.paymentOrderBrandContext(ctx, o)
+	if err != nil {
+		return err
 	}
 	if o.Status == OrderStatusCompleted {
 		return nil
@@ -424,17 +503,18 @@ func (s *PaymentService) markCompleted(ctx context.Context, o *dbent.PaymentOrde
 			"creditedAmount": o.Amount,
 			"payAmount":      o.PayAmount,
 		})
-		s.dispatchPaymentFulfillmentNotification(o, auditAction)
+		s.dispatchPaymentFulfillmentNotification(ctx, o, auditAction)
 	}
 	return nil
 }
 
-func (s *PaymentService) dispatchPaymentFulfillmentNotification(o *dbent.PaymentOrder, auditAction string) {
+func (s *PaymentService) dispatchPaymentFulfillmentNotification(ctx context.Context, o *dbent.PaymentOrder, auditAction string) {
 	if s == nil || s.notificationEmailService == nil || o == nil {
 		return
 	}
+	ctx = brand.Detached(ctx)
 	go func() {
-		ctx, cancel := context.WithTimeout(context.Background(), emailSendTimeout)
+		ctx, cancel := context.WithTimeout(ctx, emailSendTimeout)
 		defer cancel()
 		var err error
 		switch auditAction {
@@ -510,6 +590,10 @@ func (s *PaymentService) ExecuteSubscriptionFulfillment(ctx context.Context, oid
 	o, err := s.entClient.PaymentOrder.Get(ctx, oid)
 	if err != nil {
 		return infraerrors.NotFound("NOT_FOUND", "order not found")
+	}
+	ctx, err = s.paymentOrderBrandContext(ctx, o)
+	if err != nil {
+		return err
 	}
 	if o.Status == OrderStatusCompleted {
 		return nil

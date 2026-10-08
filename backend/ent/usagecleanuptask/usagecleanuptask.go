@@ -5,6 +5,7 @@ package usagecleanuptask
 import (
 	"time"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 )
 
@@ -13,6 +14,8 @@ const (
 	Label = "usage_cleanup_task"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldBrandID holds the string denoting the brand_id field in the database.
+	FieldBrandID = "brand_id"
 	// FieldCreatedAt holds the string denoting the created_at field in the database.
 	FieldCreatedAt = "created_at"
 	// FieldUpdatedAt holds the string denoting the updated_at field in the database.
@@ -42,6 +45,7 @@ const (
 // Columns holds all SQL columns for usagecleanuptask fields.
 var Columns = []string{
 	FieldID,
+	FieldBrandID,
 	FieldCreatedAt,
 	FieldUpdatedAt,
 	FieldStatus,
@@ -65,7 +69,16 @@ func ValidColumn(column string) bool {
 	return false
 }
 
+// Note that the variables below are initialized by the runtime
+// package on the initialization of the application. Therefore,
+// it should be imported in the main as follows:
+//
+//	import _ "github.com/Wei-Shaw/sub2api/ent/runtime"
 var (
+	Hooks        [1]ent.Hook
+	Interceptors [1]ent.Interceptor
+	// DefaultBrandID holds the default value on creation for the "brand_id" field.
+	DefaultBrandID int64
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 	// DefaultUpdatedAt holds the default value on creation for the "updated_at" field.
@@ -84,6 +97,11 @@ type OrderOption func(*sql.Selector)
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByBrandID orders the results by the brand_id field.
+func ByBrandID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBrandID, opts...).ToFunc()
 }
 
 // ByCreatedAt orders the results by the created_at field.

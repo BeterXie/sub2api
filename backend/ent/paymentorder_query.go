@@ -300,12 +300,12 @@ func (_q *PaymentOrderQuery) WithUser(opts ...func(*UserQuery)) *PaymentOrderQue
 // Example:
 //
 //	var v []struct {
-//		UserID int64 `json:"user_id,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.PaymentOrder.Query().
-//		GroupBy(paymentorder.FieldUserID).
+//		GroupBy(paymentorder.FieldBrandID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *PaymentOrderQuery) GroupBy(field string, fields ...string) *PaymentOrderGroupBy {
@@ -323,11 +323,11 @@ func (_q *PaymentOrderQuery) GroupBy(field string, fields ...string) *PaymentOrd
 // Example:
 //
 //	var v []struct {
-//		UserID int64 `json:"user_id,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //	}
 //
 //	client.PaymentOrder.Query().
-//		Select(paymentorder.FieldUserID).
+//		Select(paymentorder.FieldBrandID).
 //		Scan(ctx, &v)
 func (_q *PaymentOrderQuery) Select(fields ...string) *PaymentOrderSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

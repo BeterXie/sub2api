@@ -24,6 +24,20 @@ type IdentityAdoptionDecisionCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *IdentityAdoptionDecisionCreate) SetBrandID(v int64) *IdentityAdoptionDecisionCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *IdentityAdoptionDecisionCreate) SetNillableBrandID(v *int64) *IdentityAdoptionDecisionCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *IdentityAdoptionDecisionCreate) SetCreatedAt(v time.Time) *IdentityAdoptionDecisionCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -131,7 +145,9 @@ func (_c *IdentityAdoptionDecisionCreate) Mutation() *IdentityAdoptionDecisionMu
 
 // Save creates the IdentityAdoptionDecision in the database.
 func (_c *IdentityAdoptionDecisionCreate) Save(ctx context.Context) (*IdentityAdoptionDecision, error) {
-	_c.defaults()
+	if err := _c.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -158,12 +174,22 @@ func (_c *IdentityAdoptionDecisionCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *IdentityAdoptionDecisionCreate) defaults() {
+func (_c *IdentityAdoptionDecisionCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := identityadoptiondecision.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
+		if identityadoptiondecision.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized identityadoptiondecision.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := identityadoptiondecision.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		if identityadoptiondecision.DefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized identityadoptiondecision.DefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := identityadoptiondecision.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
@@ -176,13 +202,20 @@ func (_c *IdentityAdoptionDecisionCreate) defaults() {
 		_c.mutation.SetAdoptAvatar(v)
 	}
 	if _, ok := _c.mutation.DecidedAt(); !ok {
+		if identityadoptiondecision.DefaultDecidedAt == nil {
+			return fmt.Errorf("ent: uninitialized identityadoptiondecision.DefaultDecidedAt (forgotten import ent/runtime?)")
+		}
 		v := identityadoptiondecision.DefaultDecidedAt()
 		_c.mutation.SetDecidedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *IdentityAdoptionDecisionCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "IdentityAdoptionDecision.brand_id"`)}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "IdentityAdoptionDecision.created_at"`)}
 	}
@@ -231,6 +264,10 @@ func (_c *IdentityAdoptionDecisionCreate) createSpec() (*IdentityAdoptionDecisio
 		_spec = sqlgraph.NewCreateSpec(identityadoptiondecision.Table, sqlgraph.NewFieldSpec(identityadoptiondecision.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(identityadoptiondecision.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(identityadoptiondecision.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -292,7 +329,7 @@ func (_c *IdentityAdoptionDecisionCreate) createSpec() (*IdentityAdoptionDecisio
 // of the `INSERT` statement. For example:
 //
 //	client.IdentityAdoptionDecision.Create().
-//		SetCreatedAt(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -301,7 +338,7 @@ func (_c *IdentityAdoptionDecisionCreate) createSpec() (*IdentityAdoptionDecisio
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.IdentityAdoptionDecisionUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *IdentityAdoptionDecisionCreate) OnConflict(opts ...sql.ConflictOption) *IdentityAdoptionDecisionUpsertOne {
@@ -414,6 +451,9 @@ func (u *IdentityAdoptionDecisionUpsert) UpdateAdoptAvatar() *IdentityAdoptionDe
 func (u *IdentityAdoptionDecisionUpsertOne) UpdateNewValues() *IdentityAdoptionDecisionUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(identityadoptiondecision.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(identityadoptiondecision.FieldCreatedAt)
 		}
@@ -663,7 +703,7 @@ func (_c *IdentityAdoptionDecisionCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.IdentityAdoptionDecisionUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *IdentityAdoptionDecisionCreateBulk) OnConflict(opts ...sql.ConflictOption) *IdentityAdoptionDecisionUpsertBulk {
@@ -704,6 +744,9 @@ func (u *IdentityAdoptionDecisionUpsertBulk) UpdateNewValues() *IdentityAdoption
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(identityadoptiondecision.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(identityadoptiondecision.FieldCreatedAt)
 			}

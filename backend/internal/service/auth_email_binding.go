@@ -323,6 +323,7 @@ func ensureBoundEmailAuthIdentityWithClient(
 		SetVerifiedAt(time.Now().UTC()).
 		SetMetadata(map[string]any{"source": strings.TrimSpace(source)}).
 		OnConflictColumns(
+			authidentity.FieldBrandID,
 			authidentity.FieldProviderType,
 			authidentity.FieldProviderKey,
 			authidentity.FieldProviderSubject,

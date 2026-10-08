@@ -25,6 +25,7 @@ func (AuthIdentityChannel) Annotations() []schema.Annotation {
 
 func (AuthIdentityChannel) Mixin() []ent.Mixin {
 	return []ent.Mixin{
+		mixins.BrandMixin{},
 		mixins.TimeMixin{},
 	}
 }
@@ -66,7 +67,7 @@ func (AuthIdentityChannel) Edges() []ent.Edge {
 
 func (AuthIdentityChannel) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("provider_type", "provider_key", "channel", "channel_app_id", "channel_subject").Unique(),
+		index.Fields("brand_id", "provider_type", "provider_key", "channel", "channel_app_id", "channel_subject").Unique(),
 		index.Fields("identity_id"),
 	}
 }

@@ -19,6 +19,8 @@ type AnnouncementRead struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int64 `json:"id,omitempty"`
+	// BrandID holds the value of the "brand_id" field.
+	BrandID int64 `json:"brand_id,omitempty"`
 	// AnnouncementID holds the value of the "announcement_id" field.
 	AnnouncementID int64 `json:"announcement_id,omitempty"`
 	// UserID holds the value of the "user_id" field.
@@ -71,7 +73,7 @@ func (*AnnouncementRead) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case announcementread.FieldID, announcementread.FieldAnnouncementID, announcementread.FieldUserID:
+		case announcementread.FieldID, announcementread.FieldBrandID, announcementread.FieldAnnouncementID, announcementread.FieldUserID:
 			values[i] = new(sql.NullInt64)
 		case announcementread.FieldReadAt, announcementread.FieldCreatedAt:
 			values[i] = new(sql.NullTime)
@@ -96,6 +98,12 @@ func (_m *AnnouncementRead) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int64(value.Int64)
+		case announcementread.FieldBrandID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field brand_id", values[i])
+			} else if value.Valid {
+				_m.BrandID = value.Int64
+			}
 		case announcementread.FieldAnnouncementID:
 			if value, ok := values[i].(*sql.NullInt64); !ok {
 				return fmt.Errorf("unexpected type %T for field announcement_id", values[i])
@@ -166,6 +174,9 @@ func (_m *AnnouncementRead) String() string {
 	var builder strings.Builder
 	builder.WriteString("AnnouncementRead(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
+	builder.WriteString("brand_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.BrandID))
+	builder.WriteString(", ")
 	builder.WriteString("announcement_id=")
 	builder.WriteString(fmt.Sprintf("%v", _m.AnnouncementID))
 	builder.WriteString(", ")

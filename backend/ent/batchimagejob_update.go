@@ -787,7 +787,9 @@ func (_u *BatchImageJobUpdate) Mutation() *BatchImageJobMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *BatchImageJobUpdate) Save(ctx context.Context) (int, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return 0, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -814,11 +816,15 @@ func (_u *BatchImageJobUpdate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *BatchImageJobUpdate) defaults() {
+func (_u *BatchImageJobUpdate) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if batchimagejob.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized batchimagejob.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := batchimagejob.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -1927,7 +1933,9 @@ func (_u *BatchImageJobUpdateOne) Select(field string, fields ...string) *BatchI
 
 // Save executes the query and returns the updated BatchImageJob entity.
 func (_u *BatchImageJobUpdateOne) Save(ctx context.Context) (*BatchImageJob, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -1954,11 +1962,15 @@ func (_u *BatchImageJobUpdateOne) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *BatchImageJobUpdateOne) defaults() {
+func (_u *BatchImageJobUpdateOne) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if batchimagejob.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized batchimagejob.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := batchimagejob.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.

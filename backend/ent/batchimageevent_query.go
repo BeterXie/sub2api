@@ -264,12 +264,12 @@ func (_q *BatchImageEventQuery) Clone() *BatchImageEventQuery {
 // Example:
 //
 //	var v []struct {
-//		JobID string `json:"job_id,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.BatchImageEvent.Query().
-//		GroupBy(batchimageevent.FieldJobID).
+//		GroupBy(batchimageevent.FieldBrandID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *BatchImageEventQuery) GroupBy(field string, fields ...string) *BatchImageEventGroupBy {
@@ -287,11 +287,11 @@ func (_q *BatchImageEventQuery) GroupBy(field string, fields ...string) *BatchIm
 // Example:
 //
 //	var v []struct {
-//		JobID string `json:"job_id,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //	}
 //
 //	client.BatchImageEvent.Query().
-//		Select(batchimageevent.FieldJobID).
+//		Select(batchimageevent.FieldBrandID).
 //		Scan(ctx, &v)
 func (_q *BatchImageEventQuery) Select(fields ...string) *BatchImageEventSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

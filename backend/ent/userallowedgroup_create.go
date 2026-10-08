@@ -24,6 +24,20 @@ type UserAllowedGroupCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *UserAllowedGroupCreate) SetBrandID(v int64) *UserAllowedGroupCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *UserAllowedGroupCreate) SetNillableBrandID(v *int64) *UserAllowedGroupCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetUserID sets the "user_id" field.
 func (_c *UserAllowedGroupCreate) SetUserID(v int64) *UserAllowedGroupCreate {
 	_c.mutation.SetUserID(v)
@@ -67,7 +81,9 @@ func (_c *UserAllowedGroupCreate) Mutation() *UserAllowedGroupMutation {
 
 // Save creates the UserAllowedGroup in the database.
 func (_c *UserAllowedGroupCreate) Save(ctx context.Context) (*UserAllowedGroup, error) {
-	_c.defaults()
+	if err := _c.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -94,15 +110,26 @@ func (_c *UserAllowedGroupCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *UserAllowedGroupCreate) defaults() {
+func (_c *UserAllowedGroupCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := userallowedgroup.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
+		if userallowedgroup.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized userallowedgroup.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := userallowedgroup.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *UserAllowedGroupCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "UserAllowedGroup.brand_id"`)}
+	}
 	if _, ok := _c.mutation.UserID(); !ok {
 		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "UserAllowedGroup.user_id"`)}
 	}
@@ -141,6 +168,10 @@ func (_c *UserAllowedGroupCreate) createSpec() (*UserAllowedGroup, *sqlgraph.Cre
 		_spec = sqlgraph.NewCreateSpec(userallowedgroup.Table, nil)
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(userallowedgroup.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(userallowedgroup.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -186,7 +217,7 @@ func (_c *UserAllowedGroupCreate) createSpec() (*UserAllowedGroup, *sqlgraph.Cre
 // of the `INSERT` statement. For example:
 //
 //	client.UserAllowedGroup.Create().
-//		SetUserID(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -195,7 +226,7 @@ func (_c *UserAllowedGroupCreate) createSpec() (*UserAllowedGroup, *sqlgraph.Cre
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.UserAllowedGroupUpsert) {
-//			SetUserID(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *UserAllowedGroupCreate) OnConflict(opts ...sql.ConflictOption) *UserAllowedGroupUpsertOne {
@@ -266,6 +297,9 @@ func (u *UserAllowedGroupUpsert) UpdateGroupID() *UserAllowedGroupUpsert {
 func (u *UserAllowedGroupUpsertOne) UpdateNewValues() *UserAllowedGroupUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(userallowedgroup.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(userallowedgroup.FieldCreatedAt)
 		}
@@ -440,7 +474,7 @@ func (_c *UserAllowedGroupCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.UserAllowedGroupUpsert) {
-//			SetUserID(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *UserAllowedGroupCreateBulk) OnConflict(opts ...sql.ConflictOption) *UserAllowedGroupUpsertBulk {
@@ -481,6 +515,9 @@ func (u *UserAllowedGroupUpsertBulk) UpdateNewValues() *UserAllowedGroupUpsertBu
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(userallowedgroup.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(userallowedgroup.FieldCreatedAt)
 			}

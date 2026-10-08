@@ -5,6 +5,7 @@ package web
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
@@ -665,11 +666,11 @@ func TestFrontendServer_Middleware(t *testing.T) {
 
 		// Request for existing static file
 		w := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/logo.png", nil)
+		req := httptest.NewRequest(http.MethodGet, "/logo.svg", nil)
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
-		assert.Contains(t, w.Header().Get("Content-Type"), "image/png")
+		assert.Contains(t, w.Header().Get("Content-Type"), "image/svg+xml")
 		assert.Empty(t, w.Header().Get("Cache-Control"))
 
 		entries, err := fs.ReadDir(server.distFS, "assets")
@@ -750,11 +751,11 @@ func TestServeEmbeddedFrontend(t *testing.T) {
 		router.Use(middleware)
 
 		w := httptest.NewRecorder()
-		req := httptest.NewRequest(http.MethodGet, "/logo.png", nil)
+		req := httptest.NewRequest(http.MethodGet, "/logo.svg", nil)
 		router.ServeHTTP(w, req)
 
 		assert.Equal(t, http.StatusOK, w.Code)
-		assert.Contains(t, w.Header().Get("Content-Type"), "image/png")
+		assert.Contains(t, w.Header().Get("Content-Type"), "image/svg+xml")
 	})
 
 	t.Run("serves_index_html_for_root", func(t *testing.T) {
@@ -893,6 +894,23 @@ func TestHTMLCache(t *testing.T) {
 		assert.True(t, strings.HasSuffix(result.ETag, `"`))
 		// Should contain dash separator
 		assert.Contains(t, result.ETag[1:len(result.ETag)-1], "-")
+	})
+
+	t.Run("evicts_only_least_recently_used_entry", func(t *testing.T) {
+		cache := NewHTMLCache()
+		cache.SetBaseHTML([]byte("<html></html>"))
+		version := cache.Version()
+		for i := 0; i < 128; i++ {
+			cache.SetFor(fmt.Sprintf("key-%d", i), []byte("html"), []byte("settings"), version)
+		}
+		require.NotNil(t, cache.Get("key-0"))
+
+		cache.SetFor("key-128", []byte("html"), []byte("settings"), version)
+
+		assert.Len(t, cache.entries, 128)
+		assert.Nil(t, cache.Get("key-1"))
+		assert.NotNil(t, cache.Get("key-0"))
+		assert.NotNil(t, cache.Get("key-128"))
 	})
 }
 

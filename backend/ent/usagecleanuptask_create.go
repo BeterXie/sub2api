@@ -23,6 +23,20 @@ type UsageCleanupTaskCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *UsageCleanupTaskCreate) SetBrandID(v int64) *UsageCleanupTaskCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *UsageCleanupTaskCreate) SetNillableBrandID(v *int64) *UsageCleanupTaskCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *UsageCleanupTaskCreate) SetCreatedAt(v time.Time) *UsageCleanupTaskCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -160,7 +174,9 @@ func (_c *UsageCleanupTaskCreate) Mutation() *UsageCleanupTaskMutation {
 
 // Save creates the UsageCleanupTask in the database.
 func (_c *UsageCleanupTaskCreate) Save(ctx context.Context) (*UsageCleanupTask, error) {
-	_c.defaults()
+	if err := _c.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -187,12 +203,22 @@ func (_c *UsageCleanupTaskCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *UsageCleanupTaskCreate) defaults() {
+func (_c *UsageCleanupTaskCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := usagecleanuptask.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
+		if usagecleanuptask.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized usagecleanuptask.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := usagecleanuptask.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		if usagecleanuptask.DefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized usagecleanuptask.DefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := usagecleanuptask.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
@@ -200,10 +226,14 @@ func (_c *UsageCleanupTaskCreate) defaults() {
 		v := usagecleanuptask.DefaultDeletedRows
 		_c.mutation.SetDeletedRows(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *UsageCleanupTaskCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "UsageCleanupTask.brand_id"`)}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "UsageCleanupTask.created_at"`)}
 	}
@@ -254,6 +284,10 @@ func (_c *UsageCleanupTaskCreate) createSpec() (*UsageCleanupTask, *sqlgraph.Cre
 		_spec = sqlgraph.NewCreateSpec(usagecleanuptask.Table, sqlgraph.NewFieldSpec(usagecleanuptask.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(usagecleanuptask.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(usagecleanuptask.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -305,7 +339,7 @@ func (_c *UsageCleanupTaskCreate) createSpec() (*UsageCleanupTask, *sqlgraph.Cre
 // of the `INSERT` statement. For example:
 //
 //	client.UsageCleanupTask.Create().
-//		SetCreatedAt(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -314,7 +348,7 @@ func (_c *UsageCleanupTaskCreate) createSpec() (*UsageCleanupTask, *sqlgraph.Cre
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.UsageCleanupTaskUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *UsageCleanupTaskCreate) OnConflict(opts ...sql.ConflictOption) *UsageCleanupTaskUpsertOne {
@@ -529,6 +563,9 @@ func (u *UsageCleanupTaskUpsert) ClearFinishedAt() *UsageCleanupTaskUpsert {
 func (u *UsageCleanupTaskUpsertOne) UpdateNewValues() *UsageCleanupTaskUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(usagecleanuptask.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(usagecleanuptask.FieldCreatedAt)
 		}
@@ -894,7 +931,7 @@ func (_c *UsageCleanupTaskCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.UsageCleanupTaskUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *UsageCleanupTaskCreateBulk) OnConflict(opts ...sql.ConflictOption) *UsageCleanupTaskUpsertBulk {
@@ -935,6 +972,9 @@ func (u *UsageCleanupTaskUpsertBulk) UpdateNewValues() *UsageCleanupTaskUpsertBu
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(usagecleanuptask.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(usagecleanuptask.FieldCreatedAt)
 			}

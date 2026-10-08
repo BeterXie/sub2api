@@ -4,6 +4,7 @@ import App from './App.vue'
 import router from './router'
 import i18n, { initI18n } from './i18n'
 import { useAppStore } from '@/stores/app'
+import { useBrandStore } from '@/stores/brand'
 import { updateFavicon } from '@/utils/branding'
 import { isIOSDevice } from '@/utils/device'
 import './style.css'
@@ -43,6 +44,16 @@ async function bootstrap() {
   // This must happen after pinia is installed but before router and i18n
   const appStore = useAppStore()
   appStore.initFromInjectedConfig()
+	const setupPath = window.location.pathname === '/setup' || window.location.pathname.startsWith('/setup/')
+	if (!setupPath) {
+		try {
+			await useBrandStore().initialize()
+		} catch {
+			const root = document.getElementById('app')
+			if (root) root.textContent = '站点配置暂时不可用，请刷新重试。'
+			return
+		}
+  }
 
   // Set document title immediately after config is loaded
   if (appStore.siteName && appStore.siteName !== 'Sub2API') {

@@ -55,6 +55,11 @@ func IDLTE(id int64) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldLTE(FieldID, id))
 }
 
+// BrandID applies equality check predicate on the "brand_id" field. It's identical to BrandIDEQ.
+func BrandID(v int64) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldBrandID, v))
+}
+
 // UserID applies equality check predicate on the "user_id" field. It's identical to UserIDEQ.
 func UserID(v int64) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldEQ(FieldUserID, v))
@@ -283,6 +288,46 @@ func CacheTTLOverridden(v bool) predicate.UsageLog {
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.UsageLog {
 	return predicate.UsageLog(sql.FieldEQ(FieldCreatedAt, v))
+}
+
+// BrandIDEQ applies the EQ predicate on the "brand_id" field.
+func BrandIDEQ(v int64) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldEQ(FieldBrandID, v))
+}
+
+// BrandIDNEQ applies the NEQ predicate on the "brand_id" field.
+func BrandIDNEQ(v int64) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNEQ(FieldBrandID, v))
+}
+
+// BrandIDIn applies the In predicate on the "brand_id" field.
+func BrandIDIn(vs ...int64) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldIn(FieldBrandID, vs...))
+}
+
+// BrandIDNotIn applies the NotIn predicate on the "brand_id" field.
+func BrandIDNotIn(vs ...int64) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldNotIn(FieldBrandID, vs...))
+}
+
+// BrandIDGT applies the GT predicate on the "brand_id" field.
+func BrandIDGT(v int64) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldGT(FieldBrandID, v))
+}
+
+// BrandIDGTE applies the GTE predicate on the "brand_id" field.
+func BrandIDGTE(v int64) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldGTE(FieldBrandID, v))
+}
+
+// BrandIDLT applies the LT predicate on the "brand_id" field.
+func BrandIDLT(v int64) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldLT(FieldBrandID, v))
+}
+
+// BrandIDLTE applies the LTE predicate on the "brand_id" field.
+func BrandIDLTE(v int64) predicate.UsageLog {
+	return predicate.UsageLog(sql.FieldLTE(FieldBrandID, v))
 }
 
 // UserIDEQ applies the EQ predicate on the "user_id" field.

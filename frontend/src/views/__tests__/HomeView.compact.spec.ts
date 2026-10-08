@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { mount, RouterLinkStub } from '@vue/test-utils'
+import { flushPromises, mount, RouterLinkStub } from '@vue/test-utils'
 
 import HomeView from '../HomeView.vue'
 
-const { appStore, authStore } = vi.hoisted(() => ({
+const { appStore, authStore, brandStore, brandAPI, localeState } = vi.hoisted(() => ({
   appStore: {
     cachedPublicSettings: {} as Record<string, unknown>,
     siteName: 'Fallback site',
@@ -18,6 +18,15 @@ const { appStore, authStore } = vi.hoisted(() => ({
     user: null as { email?: string } | null,
     checkAuth: vi.fn(),
   },
+	brandStore: {
+		enabled: false,
+		scope: undefined as { brand_id: number } | undefined,
+		settings: {} as Record<string, unknown>,
+		code: 'llmp',
+		apiOrigin: 'https://llmp.org',
+	},
+	brandAPI: { page: vi.fn() },
+	localeState: { value: 'en' },
 }))
 
 vi.mock('@/stores', () => ({
@@ -29,11 +38,17 @@ vi.mock('@/stores/app', () => ({
   useAppStore: () => appStore,
 }))
 
+vi.mock('@/stores/brand', () => ({
+	useBrandStore: () => brandStore,
+}))
+
+vi.mock('@/api/brand', () => ({ brandAPI }))
+
 vi.mock('vue-i18n', async (importOriginal) => {
   const actual = await importOriginal<typeof import('vue-i18n')>()
   return {
     ...actual,
-    useI18n: () => ({ t: (key: string) => key }),
+    useI18n: () => ({ t: (key: string) => key, locale: localeState }),
   }
 })
 
@@ -73,6 +88,12 @@ describe('HomeView compact mode', () => {
     authStore.user = null
     authStore.checkAuth.mockClear()
     appStore.fetchPublicSettings.mockClear()
+		brandStore.enabled = false
+		brandStore.scope = undefined
+		brandStore.settings = {}
+		brandStore.code = 'llmp'
+		brandAPI.page.mockReset()
+		localeState.value = 'en'
     localStorage.clear()
     vi.spyOn(window, 'matchMedia').mockReturnValue({ matches: false } as MediaQueryList)
   })
@@ -181,4 +202,24 @@ describe('HomeView compact mode', () => {
 
     expect(modelPlazaDestination(wrapper)).toBeUndefined()
   })
+
+	it('loads the published CMS home only in multibrand mode', async () => {
+		brandStore.enabled = true
+		brandStore.scope = { brand_id: 1 }
+		brandStore.settings = { home_template: 'llmp' }
+		brandAPI.page.mockResolvedValue({ content_md: '# Published home\n\n<script>alert(1)</script>' })
+
+		const wrapper = mountHome()
+		await flushPromises()
+
+		expect(brandAPI.page).toHaveBeenCalledWith('home', 'en')
+		expect(wrapper.get('[data-testid="brand-cms-home"]').text()).toContain('Published home')
+		expect(wrapper.find('script').exists()).toBe(false)
+	})
+
+	it('does not request CMS home content in single-brand mode', async () => {
+		mountHome()
+		await flushPromises()
+		expect(brandAPI.page).not.toHaveBeenCalled()
+	})
 })

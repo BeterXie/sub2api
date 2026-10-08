@@ -458,7 +458,7 @@ func finalizePostUsageBilling(ctx context.Context, p *postUsageBillingParams, de
 
 	// Notification checks run async — all parameters are already captured,
 	// no dependency on the request context or upstream connection.
-	go notifyBalanceLow(p, deps, result)
+	go notifyBalanceLow(context.WithoutCancel(ctx), p, deps, result)
 	go notifyAccountQuota(p, deps, result)
 }
 
@@ -483,7 +483,7 @@ func syncBalanceCacheAfterDeduction(ctx context.Context, p *postUsageBillingPara
 // notifyBalanceLow sends balance low notification after deduction.
 // When result.NewBalance is available (from DB transaction RETURNING), it is used directly
 // to reconstruct oldBalance, avoiding stale Redis reads and concurrent-deduction races.
-func notifyBalanceLow(p *postUsageBillingParams, deps *billingDeps, result *UsageBillingApplyResult) {
+func notifyBalanceLow(ctx context.Context, p *postUsageBillingParams, deps *billingDeps, result *UsageBillingApplyResult) {
 	defer func() {
 		if r := recover(); r != nil {
 			slog.Error("panic in notifyBalanceLow", "recover", r)
@@ -508,7 +508,7 @@ func notifyBalanceLow(p *postUsageBillingParams, deps *billingDeps, result *Usag
 		"threshold", p.User.BalanceNotifyThreshold,
 		"result_has_new_balance", result != nil && result.NewBalance != nil,
 	)
-	deps.balanceNotifyService.CheckBalanceAfterDeduction(context.Background(), p.User, oldBalance, p.Cost.ActualCost)
+	deps.balanceNotifyService.CheckBalanceAfterDeduction(ctx, p.User, oldBalance, p.Cost.ActualCost)
 }
 
 // resolveOldBalance returns the pre-deduction balance.
@@ -626,7 +626,7 @@ func writeUsageLogBestEffort(ctx context.Context, repo UsageLogRepository, usage
 			if usageCtx.Err() != nil {
 				// usageCtx 已耗尽（best-effort 入队阻塞到期限）：换新的 detached 窗口，避免兜底必然失败。
 				var fallbackCancel context.CancelFunc
-				fallbackCtx, fallbackCancel = detachedBillingContext(context.Background())
+				fallbackCtx, fallbackCancel = detachedBillingContext(ctx)
 				defer fallbackCancel()
 			}
 			if _, syncErr := repo.Create(fallbackCtx, usageLog); syncErr != nil {

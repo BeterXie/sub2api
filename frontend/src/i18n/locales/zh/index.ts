@@ -1,4 +1,5 @@
 import priorityScheduling from './priorityScheduling'
+import brand from './brand'
 import qualityOps from './qualityOps'
 import controlledExperiments from './controlledExperiments'
 import accountOps from './accountOps'
@@ -19,6 +20,7 @@ import requestTiming from './requestTiming'
 import autoConfig from './autoConfig'
 
 export default {
+  brand,
   autoConfig,
   priorityScheduling,
   qualityOps,

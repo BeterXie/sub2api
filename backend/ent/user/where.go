@@ -55,6 +55,11 @@ func IDLTE(id int64) predicate.User {
 	return predicate.User(sql.FieldLTE(FieldID, id))
 }
 
+// BrandID applies equality check predicate on the "brand_id" field. It's identical to BrandIDEQ.
+func BrandID(v int64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBrandID, v))
+}
+
 // CreatedAt applies equality check predicate on the "created_at" field. It's identical to CreatedAtEQ.
 func CreatedAt(v time.Time) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldCreatedAt, v))
@@ -178,6 +183,46 @@ func TotalRecharged(v float64) predicate.User {
 // RpmLimit applies equality check predicate on the "rpm_limit" field. It's identical to RpmLimitEQ.
 func RpmLimit(v int) predicate.User {
 	return predicate.User(sql.FieldEQ(FieldRpmLimit, v))
+}
+
+// BrandIDEQ applies the EQ predicate on the "brand_id" field.
+func BrandIDEQ(v int64) predicate.User {
+	return predicate.User(sql.FieldEQ(FieldBrandID, v))
+}
+
+// BrandIDNEQ applies the NEQ predicate on the "brand_id" field.
+func BrandIDNEQ(v int64) predicate.User {
+	return predicate.User(sql.FieldNEQ(FieldBrandID, v))
+}
+
+// BrandIDIn applies the In predicate on the "brand_id" field.
+func BrandIDIn(vs ...int64) predicate.User {
+	return predicate.User(sql.FieldIn(FieldBrandID, vs...))
+}
+
+// BrandIDNotIn applies the NotIn predicate on the "brand_id" field.
+func BrandIDNotIn(vs ...int64) predicate.User {
+	return predicate.User(sql.FieldNotIn(FieldBrandID, vs...))
+}
+
+// BrandIDGT applies the GT predicate on the "brand_id" field.
+func BrandIDGT(v int64) predicate.User {
+	return predicate.User(sql.FieldGT(FieldBrandID, v))
+}
+
+// BrandIDGTE applies the GTE predicate on the "brand_id" field.
+func BrandIDGTE(v int64) predicate.User {
+	return predicate.User(sql.FieldGTE(FieldBrandID, v))
+}
+
+// BrandIDLT applies the LT predicate on the "brand_id" field.
+func BrandIDLT(v int64) predicate.User {
+	return predicate.User(sql.FieldLT(FieldBrandID, v))
+}
+
+// BrandIDLTE applies the LTE predicate on the "brand_id" field.
+func BrandIDLTE(v int64) predicate.User {
+	return predicate.User(sql.FieldLTE(FieldBrandID, v))
 }
 
 // CreatedAtEQ applies the EQ predicate on the "created_at" field.

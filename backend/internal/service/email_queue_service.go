@@ -17,6 +17,7 @@ const (
 
 // EmailTask 邮件发送任务
 type EmailTask struct {
+	Context  context.Context
 	Email    string
 	SiteName string
 	TaskType string // "verify_code" or "password_reset"
@@ -78,7 +79,11 @@ func (s *EmailQueueService) worker(id int) {
 
 // processTask 处理任务
 func (s *EmailQueueService) processTask(workerID int, task EmailTask) {
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	parent := task.Context
+	if parent == nil {
+		parent = context.Background()
+	}
+	ctx, cancel := context.WithTimeout(parent, 30*time.Second)
 	defer cancel()
 
 	switch task.TaskType {
@@ -101,7 +106,11 @@ func (s *EmailQueueService) processTask(workerID int, task EmailTask) {
 
 // EnqueueVerifyCode 将验证码发送任务加入队列
 func (s *EmailQueueService) EnqueueVerifyCode(email, siteName string, locale ...string) error {
+	return s.EnqueueVerifyCodeWithContext(context.Background(), email, siteName, locale...)
+}
+func (s *EmailQueueService) EnqueueVerifyCodeWithContext(ctx context.Context, email, siteName string, locale ...string) error {
 	task := EmailTask{
+		Context:  context.WithoutCancel(ctx),
 		Email:    email,
 		SiteName: siteName,
 		TaskType: TaskTypeVerifyCode,
@@ -119,7 +128,11 @@ func (s *EmailQueueService) EnqueueVerifyCode(email, siteName string, locale ...
 
 // EnqueuePasswordReset 将密码重置邮件任务加入队列
 func (s *EmailQueueService) EnqueuePasswordReset(email, siteName, resetURL string, locale ...string) error {
+	return s.EnqueuePasswordResetWithContext(context.Background(), email, siteName, resetURL, locale...)
+}
+func (s *EmailQueueService) EnqueuePasswordResetWithContext(ctx context.Context, email, siteName, resetURL string, locale ...string) error {
 	task := EmailTask{
+		Context:  context.WithoutCancel(ctx),
 		Email:    email,
 		SiteName: siteName,
 		TaskType: TaskTypePasswordReset,

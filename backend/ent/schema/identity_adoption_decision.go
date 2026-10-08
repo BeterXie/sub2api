@@ -27,6 +27,7 @@ func (IdentityAdoptionDecision) Annotations() []schema.Annotation {
 
 func (IdentityAdoptionDecision) Mixin() []ent.Mixin {
 	return []ent.Mixin{
+		mixins.BrandMixin{},
 		mixins.TimeMixin{},
 	}
 }

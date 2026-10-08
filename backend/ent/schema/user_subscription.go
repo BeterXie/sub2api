@@ -28,6 +28,7 @@ func (UserSubscription) Annotations() []schema.Annotation {
 
 func (UserSubscription) Mixin() []ent.Mixin {
 	return []ent.Mixin{
+		mixins.BrandMixin{},
 		mixins.TimeMixin{},
 		mixins.SoftDeleteMixin{},
 	}

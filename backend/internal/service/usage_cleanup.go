@@ -42,6 +42,7 @@ type UsageCleanupFilters struct {
 // 状态包含 pending/running/succeeded/failed/canceled
 type UsageCleanupTask struct {
 	ID          int64
+	BrandID     int64
 	Status      string
 	Filters     UsageCleanupFilters
 	CreatedBy   int64

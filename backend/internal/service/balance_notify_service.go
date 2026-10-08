@@ -130,7 +130,7 @@ func (s *BalanceNotifyService) dispatchBalanceLowEmail(ctx context.Context, user
 				slog.Error("panic in balance notification", "recover", r)
 			}
 		}()
-		s.sendBalanceLowEmails(recipients, user.ID, user.Username, user.Email, newBalance, threshold, siteName, rechargeURL)
+		s.sendBalanceLowEmails(context.WithoutCancel(ctx), recipients, user.ID, user.Username, user.Email, newBalance, threshold, siteName, rechargeURL)
 	}()
 }
 
@@ -329,13 +329,13 @@ func (s *BalanceNotifyService) collectBalanceNotifyRecipients(user *User) []stri
 }
 
 // sendEmails sends an email to all recipients with shared timeout and error logging.
-func (s *BalanceNotifyService) sendEmails(recipients []string, subject, body string, logAttrs ...any) {
+func (s *BalanceNotifyService) sendEmails(base context.Context, recipients []string, subject, body string, logAttrs ...any) {
 	if len(recipients) == 0 {
 		slog.Warn("sendEmails: no recipients", "subject", subject)
 		return
 	}
 	for _, to := range recipients {
-		ctx, cancel := context.WithTimeout(context.Background(), emailSendTimeout)
+		ctx, cancel := context.WithTimeout(base, emailSendTimeout)
 		if err := s.emailService.SendEmail(ctx, to, subject, body); err != nil {
 			attrs := append([]any{"to", to, "error", err}, logAttrs...)
 			slog.Error("failed to send notification", attrs...)
@@ -347,7 +347,7 @@ func (s *BalanceNotifyService) sendEmails(recipients []string, subject, body str
 }
 
 // sendBalanceLowEmails sends balance low notification to all recipients.
-func (s *BalanceNotifyService) sendBalanceLowEmails(recipients []string, userID int64, userName, userEmail string, balance, threshold float64, siteName, rechargeURL string) {
+func (s *BalanceNotifyService) sendBalanceLowEmails(base context.Context, recipients []string, userID int64, userName, userEmail string, balance, threshold float64, siteName, rechargeURL string) {
 	displayName := userName
 	if displayName == "" {
 		displayName = userEmail
@@ -355,7 +355,7 @@ func (s *BalanceNotifyService) sendBalanceLowEmails(recipients []string, userID 
 	if s.notificationEmailService != nil {
 		fallbackRecipients := make([]string, 0, len(recipients))
 		for _, to := range recipients {
-			ctx, cancel := context.WithTimeout(context.Background(), emailSendTimeout)
+			ctx, cancel := context.WithTimeout(base, emailSendTimeout)
 			err := s.notificationEmailService.Send(ctx, NotificationEmailSendInput{
 				Event:          NotificationEmailEventBalanceLow,
 				RecipientEmail: to,
@@ -387,7 +387,7 @@ func (s *BalanceNotifyService) sendBalanceLowEmails(recipients []string, userID 
 	}
 	subject := fmt.Sprintf("[%s] 余额不足提醒 / Balance Low Alert", sanitizeEmailHeader(siteName))
 	body := s.buildBalanceLowEmailBody(html.EscapeString(displayName), balance, threshold, html.EscapeString(siteName), rechargeURL)
-	s.sendEmails(recipients, subject, body, "user_email", userEmail, "balance", balance)
+	s.sendEmails(base, recipients, subject, body, "user_email", userEmail, "balance", balance)
 }
 
 // sendQuotaAlertEmails sends quota alert notification to admin emails.
@@ -447,7 +447,7 @@ func (s *BalanceNotifyService) sendQuotaAlertEmails(adminEmails []string, accoun
 
 	subject := fmt.Sprintf("[%s] 账号限额告警 / Account Quota Alert - %s", sanitizeEmailHeader(siteName), sanitizeEmailHeader(accountName))
 	body := s.buildQuotaAlertEmailBody(accountID, html.EscapeString(accountName), html.EscapeString(platform), html.EscapeString(dimLabel), used, dim.limit, remaining, thresholdDisplay, html.EscapeString(siteName))
-	s.sendEmails(adminEmails, subject, body, "account", accountName, "dimension", dim.name)
+	s.sendEmails(context.Background(), adminEmails, subject, body, "account", accountName, "dimension", dim.name)
 }
 
 // sanitizeEmailHeader removes CR/LF characters to prevent SMTP header injection.

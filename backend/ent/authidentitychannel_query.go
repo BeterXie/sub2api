@@ -300,12 +300,12 @@ func (_q *AuthIdentityChannelQuery) WithIdentity(opts ...func(*AuthIdentityQuery
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.AuthIdentityChannel.Query().
-//		GroupBy(authidentitychannel.FieldCreatedAt).
+//		GroupBy(authidentitychannel.FieldBrandID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *AuthIdentityChannelQuery) GroupBy(field string, fields ...string) *AuthIdentityChannelGroupBy {
@@ -323,11 +323,11 @@ func (_q *AuthIdentityChannelQuery) GroupBy(field string, fields ...string) *Aut
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //	}
 //
 //	client.AuthIdentityChannel.Query().
-//		Select(authidentitychannel.FieldCreatedAt).
+//		Select(authidentitychannel.FieldBrandID).
 //		Scan(ctx, &v)
 func (_q *AuthIdentityChannelQuery) Select(fields ...string) *AuthIdentityChannelSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

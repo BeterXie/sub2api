@@ -53,20 +53,30 @@ import (
 // to their package variables.
 func init() {
 	apikeyMixin := schema.APIKey{}.Mixin()
-	apikeyMixinHooks1 := apikeyMixin[1].Hooks()
-	apikey.Hooks[0] = apikeyMixinHooks1[0]
-	apikeyMixinInters1 := apikeyMixin[1].Interceptors()
-	apikey.Interceptors[0] = apikeyMixinInters1[0]
+	apikeyMixinHooks0 := apikeyMixin[0].Hooks()
+	apikeyMixinHooks2 := apikeyMixin[2].Hooks()
+	apikey.Hooks[0] = apikeyMixinHooks0[0]
+	apikey.Hooks[1] = apikeyMixinHooks2[0]
+	apikeyMixinInters0 := apikeyMixin[0].Interceptors()
+	apikeyMixinInters2 := apikeyMixin[2].Interceptors()
+	apikey.Interceptors[0] = apikeyMixinInters0[0]
+	apikey.Interceptors[1] = apikeyMixinInters2[0]
 	apikeyMixinFields0 := apikeyMixin[0].Fields()
 	_ = apikeyMixinFields0
+	apikeyMixinFields1 := apikeyMixin[1].Fields()
+	_ = apikeyMixinFields1
 	apikeyFields := schema.APIKey{}.Fields()
 	_ = apikeyFields
+	// apikeyDescBrandID is the schema descriptor for brand_id field.
+	apikeyDescBrandID := apikeyMixinFields0[0].Descriptor()
+	// apikey.DefaultBrandID holds the default value on creation for the brand_id field.
+	apikey.DefaultBrandID = apikeyDescBrandID.Default.(int64)
 	// apikeyDescCreatedAt is the schema descriptor for created_at field.
-	apikeyDescCreatedAt := apikeyMixinFields0[0].Descriptor()
+	apikeyDescCreatedAt := apikeyMixinFields1[0].Descriptor()
 	// apikey.DefaultCreatedAt holds the default value on creation for the created_at field.
 	apikey.DefaultCreatedAt = apikeyDescCreatedAt.Default.(func() time.Time)
 	// apikeyDescUpdatedAt is the schema descriptor for updated_at field.
-	apikeyDescUpdatedAt := apikeyMixinFields0[1].Descriptor()
+	apikeyDescUpdatedAt := apikeyMixinFields1[1].Descriptor()
 	// apikey.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	apikey.DefaultUpdatedAt = apikeyDescUpdatedAt.Default.(func() time.Time)
 	// apikey.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -276,8 +286,19 @@ func init() {
 	accountgroupDescCreatedAt := accountgroupFields[4].Descriptor()
 	// accountgroup.DefaultCreatedAt holds the default value on creation for the created_at field.
 	accountgroup.DefaultCreatedAt = accountgroupDescCreatedAt.Default.(func() time.Time)
+	announcementMixin := schema.Announcement{}.Mixin()
+	announcementMixinHooks0 := announcementMixin[0].Hooks()
+	announcement.Hooks[0] = announcementMixinHooks0[0]
+	announcementMixinInters0 := announcementMixin[0].Interceptors()
+	announcement.Interceptors[0] = announcementMixinInters0[0]
+	announcementMixinFields0 := announcementMixin[0].Fields()
+	_ = announcementMixinFields0
 	announcementFields := schema.Announcement{}.Fields()
 	_ = announcementFields
+	// announcementDescBrandID is the schema descriptor for brand_id field.
+	announcementDescBrandID := announcementMixinFields0[0].Descriptor()
+	// announcement.DefaultBrandID holds the default value on creation for the brand_id field.
+	announcement.DefaultBrandID = announcementDescBrandID.Default.(int64)
 	// announcementDescTitle is the schema descriptor for title field.
 	announcementDescTitle := announcementFields[0].Descriptor()
 	// announcement.TitleValidator is a validator for the "title" field. It is called by the builders before save.
@@ -322,8 +343,19 @@ func init() {
 	announcement.DefaultUpdatedAt = announcementDescUpdatedAt.Default.(func() time.Time)
 	// announcement.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	announcement.UpdateDefaultUpdatedAt = announcementDescUpdatedAt.UpdateDefault.(func() time.Time)
+	announcementreadMixin := schema.AnnouncementRead{}.Mixin()
+	announcementreadMixinHooks0 := announcementreadMixin[0].Hooks()
+	announcementread.Hooks[0] = announcementreadMixinHooks0[0]
+	announcementreadMixinInters0 := announcementreadMixin[0].Interceptors()
+	announcementread.Interceptors[0] = announcementreadMixinInters0[0]
+	announcementreadMixinFields0 := announcementreadMixin[0].Fields()
+	_ = announcementreadMixinFields0
 	announcementreadFields := schema.AnnouncementRead{}.Fields()
 	_ = announcementreadFields
+	// announcementreadDescBrandID is the schema descriptor for brand_id field.
+	announcementreadDescBrandID := announcementreadMixinFields0[0].Descriptor()
+	// announcementread.DefaultBrandID holds the default value on creation for the brand_id field.
+	announcementread.DefaultBrandID = announcementreadDescBrandID.Default.(int64)
 	// announcementreadDescReadAt is the schema descriptor for read_at field.
 	announcementreadDescReadAt := announcementreadFields[2].Descriptor()
 	// announcementread.DefaultReadAt holds the default value on creation for the read_at field.
@@ -333,16 +365,26 @@ func init() {
 	// announcementread.DefaultCreatedAt holds the default value on creation for the created_at field.
 	announcementread.DefaultCreatedAt = announcementreadDescCreatedAt.Default.(func() time.Time)
 	authidentityMixin := schema.AuthIdentity{}.Mixin()
+	authidentityMixinHooks0 := authidentityMixin[0].Hooks()
+	authidentity.Hooks[0] = authidentityMixinHooks0[0]
+	authidentityMixinInters0 := authidentityMixin[0].Interceptors()
+	authidentity.Interceptors[0] = authidentityMixinInters0[0]
 	authidentityMixinFields0 := authidentityMixin[0].Fields()
 	_ = authidentityMixinFields0
+	authidentityMixinFields1 := authidentityMixin[1].Fields()
+	_ = authidentityMixinFields1
 	authidentityFields := schema.AuthIdentity{}.Fields()
 	_ = authidentityFields
+	// authidentityDescBrandID is the schema descriptor for brand_id field.
+	authidentityDescBrandID := authidentityMixinFields0[0].Descriptor()
+	// authidentity.DefaultBrandID holds the default value on creation for the brand_id field.
+	authidentity.DefaultBrandID = authidentityDescBrandID.Default.(int64)
 	// authidentityDescCreatedAt is the schema descriptor for created_at field.
-	authidentityDescCreatedAt := authidentityMixinFields0[0].Descriptor()
+	authidentityDescCreatedAt := authidentityMixinFields1[0].Descriptor()
 	// authidentity.DefaultCreatedAt holds the default value on creation for the created_at field.
 	authidentity.DefaultCreatedAt = authidentityDescCreatedAt.Default.(func() time.Time)
 	// authidentityDescUpdatedAt is the schema descriptor for updated_at field.
-	authidentityDescUpdatedAt := authidentityMixinFields0[1].Descriptor()
+	authidentityDescUpdatedAt := authidentityMixinFields1[1].Descriptor()
 	// authidentity.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	authidentity.DefaultUpdatedAt = authidentityDescUpdatedAt.Default.(func() time.Time)
 	// authidentity.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -379,16 +421,26 @@ func init() {
 	// authidentity.DefaultMetadata holds the default value on creation for the metadata field.
 	authidentity.DefaultMetadata = authidentityDescMetadata.Default.(func() map[string]interface{})
 	authidentitychannelMixin := schema.AuthIdentityChannel{}.Mixin()
+	authidentitychannelMixinHooks0 := authidentitychannelMixin[0].Hooks()
+	authidentitychannel.Hooks[0] = authidentitychannelMixinHooks0[0]
+	authidentitychannelMixinInters0 := authidentitychannelMixin[0].Interceptors()
+	authidentitychannel.Interceptors[0] = authidentitychannelMixinInters0[0]
 	authidentitychannelMixinFields0 := authidentitychannelMixin[0].Fields()
 	_ = authidentitychannelMixinFields0
+	authidentitychannelMixinFields1 := authidentitychannelMixin[1].Fields()
+	_ = authidentitychannelMixinFields1
 	authidentitychannelFields := schema.AuthIdentityChannel{}.Fields()
 	_ = authidentitychannelFields
+	// authidentitychannelDescBrandID is the schema descriptor for brand_id field.
+	authidentitychannelDescBrandID := authidentitychannelMixinFields0[0].Descriptor()
+	// authidentitychannel.DefaultBrandID holds the default value on creation for the brand_id field.
+	authidentitychannel.DefaultBrandID = authidentitychannelDescBrandID.Default.(int64)
 	// authidentitychannelDescCreatedAt is the schema descriptor for created_at field.
-	authidentitychannelDescCreatedAt := authidentitychannelMixinFields0[0].Descriptor()
+	authidentitychannelDescCreatedAt := authidentitychannelMixinFields1[0].Descriptor()
 	// authidentitychannel.DefaultCreatedAt holds the default value on creation for the created_at field.
 	authidentitychannel.DefaultCreatedAt = authidentitychannelDescCreatedAt.Default.(func() time.Time)
 	// authidentitychannelDescUpdatedAt is the schema descriptor for updated_at field.
-	authidentitychannelDescUpdatedAt := authidentitychannelMixinFields0[1].Descriptor()
+	authidentitychannelDescUpdatedAt := authidentitychannelMixinFields1[1].Descriptor()
 	// authidentitychannel.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	authidentitychannel.DefaultUpdatedAt = authidentitychannelDescUpdatedAt.Default.(func() time.Time)
 	// authidentitychannel.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -446,8 +498,19 @@ func init() {
 	authidentitychannelDescMetadata := authidentitychannelFields[6].Descriptor()
 	// authidentitychannel.DefaultMetadata holds the default value on creation for the metadata field.
 	authidentitychannel.DefaultMetadata = authidentitychannelDescMetadata.Default.(func() map[string]interface{})
+	batchimageeventMixin := schema.BatchImageEvent{}.Mixin()
+	batchimageeventMixinHooks0 := batchimageeventMixin[0].Hooks()
+	batchimageevent.Hooks[0] = batchimageeventMixinHooks0[0]
+	batchimageeventMixinInters0 := batchimageeventMixin[0].Interceptors()
+	batchimageevent.Interceptors[0] = batchimageeventMixinInters0[0]
+	batchimageeventMixinFields0 := batchimageeventMixin[0].Fields()
+	_ = batchimageeventMixinFields0
 	batchimageeventFields := schema.BatchImageEvent{}.Fields()
 	_ = batchimageeventFields
+	// batchimageeventDescBrandID is the schema descriptor for brand_id field.
+	batchimageeventDescBrandID := batchimageeventMixinFields0[0].Descriptor()
+	// batchimageevent.DefaultBrandID holds the default value on creation for the brand_id field.
+	batchimageevent.DefaultBrandID = batchimageeventDescBrandID.Default.(int64)
 	// batchimageeventDescJobID is the schema descriptor for job_id field.
 	batchimageeventDescJobID := batchimageeventFields[0].Descriptor()
 	// batchimageevent.JobIDValidator is a validator for the "job_id" field. It is called by the builders before save.
@@ -464,8 +527,19 @@ func init() {
 	batchimageeventDescCreatedAt := batchimageeventFields[4].Descriptor()
 	// batchimageevent.DefaultCreatedAt holds the default value on creation for the created_at field.
 	batchimageevent.DefaultCreatedAt = batchimageeventDescCreatedAt.Default.(func() time.Time)
+	batchimageitemMixin := schema.BatchImageItem{}.Mixin()
+	batchimageitemMixinHooks0 := batchimageitemMixin[0].Hooks()
+	batchimageitem.Hooks[0] = batchimageitemMixinHooks0[0]
+	batchimageitemMixinInters0 := batchimageitemMixin[0].Interceptors()
+	batchimageitem.Interceptors[0] = batchimageitemMixinInters0[0]
+	batchimageitemMixinFields0 := batchimageitemMixin[0].Fields()
+	_ = batchimageitemMixinFields0
 	batchimageitemFields := schema.BatchImageItem{}.Fields()
 	_ = batchimageitemFields
+	// batchimageitemDescBrandID is the schema descriptor for brand_id field.
+	batchimageitemDescBrandID := batchimageitemMixinFields0[0].Descriptor()
+	// batchimageitem.DefaultBrandID holds the default value on creation for the brand_id field.
+	batchimageitem.DefaultBrandID = batchimageitemDescBrandID.Default.(int64)
 	// batchimageitemDescJobID is the schema descriptor for job_id field.
 	batchimageitemDescJobID := batchimageitemFields[0].Descriptor()
 	// batchimageitem.JobIDValidator is a validator for the "job_id" field. It is called by the builders before save.
@@ -506,8 +580,19 @@ func init() {
 	batchimageitemDescCreatedAt := batchimageitemFields[15].Descriptor()
 	// batchimageitem.DefaultCreatedAt holds the default value on creation for the created_at field.
 	batchimageitem.DefaultCreatedAt = batchimageitemDescCreatedAt.Default.(func() time.Time)
+	batchimagejobMixin := schema.BatchImageJob{}.Mixin()
+	batchimagejobMixinHooks0 := batchimagejobMixin[0].Hooks()
+	batchimagejob.Hooks[0] = batchimagejobMixinHooks0[0]
+	batchimagejobMixinInters0 := batchimagejobMixin[0].Interceptors()
+	batchimagejob.Interceptors[0] = batchimagejobMixinInters0[0]
+	batchimagejobMixinFields0 := batchimagejobMixin[0].Fields()
+	_ = batchimagejobMixinFields0
 	batchimagejobFields := schema.BatchImageJob{}.Fields()
 	_ = batchimagejobFields
+	// batchimagejobDescBrandID is the schema descriptor for brand_id field.
+	batchimagejobDescBrandID := batchimagejobMixinFields0[0].Descriptor()
+	// batchimagejob.DefaultBrandID holds the default value on creation for the brand_id field.
+	batchimagejob.DefaultBrandID = batchimagejobDescBrandID.Default.(int64)
 	// batchimagejobDescBatchID is the schema descriptor for batch_id field.
 	batchimagejobDescBatchID := batchimagejobFields[0].Descriptor()
 	// batchimagejob.BatchIDValidator is a validator for the "batch_id" field. It is called by the builders before save.
@@ -869,20 +954,30 @@ func init() {
 	// channelmonitorrequesttemplate.BodyOverrideModeValidator is a validator for the "body_override_mode" field. It is called by the builders before save.
 	channelmonitorrequesttemplate.BodyOverrideModeValidator = channelmonitorrequesttemplateDescBodyOverrideMode.Validators[0].(func(string) error)
 	compositemodelrouteMixin := schema.CompositeModelRoute{}.Mixin()
-	compositemodelrouteMixinHooks1 := compositemodelrouteMixin[1].Hooks()
-	compositemodelroute.Hooks[0] = compositemodelrouteMixinHooks1[0]
-	compositemodelrouteMixinInters1 := compositemodelrouteMixin[1].Interceptors()
-	compositemodelroute.Interceptors[0] = compositemodelrouteMixinInters1[0]
+	compositemodelrouteMixinHooks0 := compositemodelrouteMixin[0].Hooks()
+	compositemodelrouteMixinHooks2 := compositemodelrouteMixin[2].Hooks()
+	compositemodelroute.Hooks[0] = compositemodelrouteMixinHooks0[0]
+	compositemodelroute.Hooks[1] = compositemodelrouteMixinHooks2[0]
+	compositemodelrouteMixinInters0 := compositemodelrouteMixin[0].Interceptors()
+	compositemodelrouteMixinInters2 := compositemodelrouteMixin[2].Interceptors()
+	compositemodelroute.Interceptors[0] = compositemodelrouteMixinInters0[0]
+	compositemodelroute.Interceptors[1] = compositemodelrouteMixinInters2[0]
 	compositemodelrouteMixinFields0 := compositemodelrouteMixin[0].Fields()
 	_ = compositemodelrouteMixinFields0
+	compositemodelrouteMixinFields1 := compositemodelrouteMixin[1].Fields()
+	_ = compositemodelrouteMixinFields1
 	compositemodelrouteFields := schema.CompositeModelRoute{}.Fields()
 	_ = compositemodelrouteFields
+	// compositemodelrouteDescBrandID is the schema descriptor for brand_id field.
+	compositemodelrouteDescBrandID := compositemodelrouteMixinFields0[0].Descriptor()
+	// compositemodelroute.DefaultBrandID holds the default value on creation for the brand_id field.
+	compositemodelroute.DefaultBrandID = compositemodelrouteDescBrandID.Default.(int64)
 	// compositemodelrouteDescCreatedAt is the schema descriptor for created_at field.
-	compositemodelrouteDescCreatedAt := compositemodelrouteMixinFields0[0].Descriptor()
+	compositemodelrouteDescCreatedAt := compositemodelrouteMixinFields1[0].Descriptor()
 	// compositemodelroute.DefaultCreatedAt holds the default value on creation for the created_at field.
 	compositemodelroute.DefaultCreatedAt = compositemodelrouteDescCreatedAt.Default.(func() time.Time)
 	// compositemodelrouteDescUpdatedAt is the schema descriptor for updated_at field.
-	compositemodelrouteDescUpdatedAt := compositemodelrouteMixinFields0[1].Descriptor()
+	compositemodelrouteDescUpdatedAt := compositemodelrouteMixinFields1[1].Descriptor()
 	// compositemodelroute.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	compositemodelroute.DefaultUpdatedAt = compositemodelrouteDescUpdatedAt.Default.(func() time.Time)
 	// compositemodelroute.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -997,20 +1092,30 @@ func init() {
 	// errorpassthroughrule.DefaultSkipMonitoring holds the default value on creation for the skip_monitoring field.
 	errorpassthroughrule.DefaultSkipMonitoring = errorpassthroughruleDescSkipMonitoring.Default.(bool)
 	groupMixin := schema.Group{}.Mixin()
-	groupMixinHooks1 := groupMixin[1].Hooks()
-	group.Hooks[0] = groupMixinHooks1[0]
-	groupMixinInters1 := groupMixin[1].Interceptors()
-	group.Interceptors[0] = groupMixinInters1[0]
+	groupMixinHooks0 := groupMixin[0].Hooks()
+	groupMixinHooks2 := groupMixin[2].Hooks()
+	group.Hooks[0] = groupMixinHooks0[0]
+	group.Hooks[1] = groupMixinHooks2[0]
+	groupMixinInters0 := groupMixin[0].Interceptors()
+	groupMixinInters2 := groupMixin[2].Interceptors()
+	group.Interceptors[0] = groupMixinInters0[0]
+	group.Interceptors[1] = groupMixinInters2[0]
 	groupMixinFields0 := groupMixin[0].Fields()
 	_ = groupMixinFields0
+	groupMixinFields1 := groupMixin[1].Fields()
+	_ = groupMixinFields1
 	groupFields := schema.Group{}.Fields()
 	_ = groupFields
+	// groupDescBrandID is the schema descriptor for brand_id field.
+	groupDescBrandID := groupMixinFields0[0].Descriptor()
+	// group.DefaultBrandID holds the default value on creation for the brand_id field.
+	group.DefaultBrandID = groupDescBrandID.Default.(int64)
 	// groupDescCreatedAt is the schema descriptor for created_at field.
-	groupDescCreatedAt := groupMixinFields0[0].Descriptor()
+	groupDescCreatedAt := groupMixinFields1[0].Descriptor()
 	// group.DefaultCreatedAt holds the default value on creation for the created_at field.
 	group.DefaultCreatedAt = groupDescCreatedAt.Default.(func() time.Time)
 	// groupDescUpdatedAt is the schema descriptor for updated_at field.
-	groupDescUpdatedAt := groupMixinFields0[1].Descriptor()
+	groupDescUpdatedAt := groupMixinFields1[1].Descriptor()
 	// group.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	group.DefaultUpdatedAt = groupDescUpdatedAt.Default.(func() time.Time)
 	// group.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -1238,16 +1343,26 @@ func init() {
 	// group.DefaultProfitSafetyBuffer holds the default value on creation for the profit_safety_buffer field.
 	group.DefaultProfitSafetyBuffer = groupDescProfitSafetyBuffer.Default.(float64)
 	idempotencyrecordMixin := schema.IdempotencyRecord{}.Mixin()
+	idempotencyrecordMixinHooks0 := idempotencyrecordMixin[0].Hooks()
+	idempotencyrecord.Hooks[0] = idempotencyrecordMixinHooks0[0]
+	idempotencyrecordMixinInters0 := idempotencyrecordMixin[0].Interceptors()
+	idempotencyrecord.Interceptors[0] = idempotencyrecordMixinInters0[0]
 	idempotencyrecordMixinFields0 := idempotencyrecordMixin[0].Fields()
 	_ = idempotencyrecordMixinFields0
+	idempotencyrecordMixinFields1 := idempotencyrecordMixin[1].Fields()
+	_ = idempotencyrecordMixinFields1
 	idempotencyrecordFields := schema.IdempotencyRecord{}.Fields()
 	_ = idempotencyrecordFields
+	// idempotencyrecordDescBrandID is the schema descriptor for brand_id field.
+	idempotencyrecordDescBrandID := idempotencyrecordMixinFields0[0].Descriptor()
+	// idempotencyrecord.DefaultBrandID holds the default value on creation for the brand_id field.
+	idempotencyrecord.DefaultBrandID = idempotencyrecordDescBrandID.Default.(int64)
 	// idempotencyrecordDescCreatedAt is the schema descriptor for created_at field.
-	idempotencyrecordDescCreatedAt := idempotencyrecordMixinFields0[0].Descriptor()
+	idempotencyrecordDescCreatedAt := idempotencyrecordMixinFields1[0].Descriptor()
 	// idempotencyrecord.DefaultCreatedAt holds the default value on creation for the created_at field.
 	idempotencyrecord.DefaultCreatedAt = idempotencyrecordDescCreatedAt.Default.(func() time.Time)
 	// idempotencyrecordDescUpdatedAt is the schema descriptor for updated_at field.
-	idempotencyrecordDescUpdatedAt := idempotencyrecordMixinFields0[1].Descriptor()
+	idempotencyrecordDescUpdatedAt := idempotencyrecordMixinFields1[1].Descriptor()
 	// idempotencyrecord.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	idempotencyrecord.DefaultUpdatedAt = idempotencyrecordDescUpdatedAt.Default.(func() time.Time)
 	// idempotencyrecord.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -1273,16 +1388,26 @@ func init() {
 	// idempotencyrecord.ErrorReasonValidator is a validator for the "error_reason" field. It is called by the builders before save.
 	idempotencyrecord.ErrorReasonValidator = idempotencyrecordDescErrorReason.Validators[0].(func(string) error)
 	identityadoptiondecisionMixin := schema.IdentityAdoptionDecision{}.Mixin()
+	identityadoptiondecisionMixinHooks0 := identityadoptiondecisionMixin[0].Hooks()
+	identityadoptiondecision.Hooks[0] = identityadoptiondecisionMixinHooks0[0]
+	identityadoptiondecisionMixinInters0 := identityadoptiondecisionMixin[0].Interceptors()
+	identityadoptiondecision.Interceptors[0] = identityadoptiondecisionMixinInters0[0]
 	identityadoptiondecisionMixinFields0 := identityadoptiondecisionMixin[0].Fields()
 	_ = identityadoptiondecisionMixinFields0
+	identityadoptiondecisionMixinFields1 := identityadoptiondecisionMixin[1].Fields()
+	_ = identityadoptiondecisionMixinFields1
 	identityadoptiondecisionFields := schema.IdentityAdoptionDecision{}.Fields()
 	_ = identityadoptiondecisionFields
+	// identityadoptiondecisionDescBrandID is the schema descriptor for brand_id field.
+	identityadoptiondecisionDescBrandID := identityadoptiondecisionMixinFields0[0].Descriptor()
+	// identityadoptiondecision.DefaultBrandID holds the default value on creation for the brand_id field.
+	identityadoptiondecision.DefaultBrandID = identityadoptiondecisionDescBrandID.Default.(int64)
 	// identityadoptiondecisionDescCreatedAt is the schema descriptor for created_at field.
-	identityadoptiondecisionDescCreatedAt := identityadoptiondecisionMixinFields0[0].Descriptor()
+	identityadoptiondecisionDescCreatedAt := identityadoptiondecisionMixinFields1[0].Descriptor()
 	// identityadoptiondecision.DefaultCreatedAt holds the default value on creation for the created_at field.
 	identityadoptiondecision.DefaultCreatedAt = identityadoptiondecisionDescCreatedAt.Default.(func() time.Time)
 	// identityadoptiondecisionDescUpdatedAt is the schema descriptor for updated_at field.
-	identityadoptiondecisionDescUpdatedAt := identityadoptiondecisionMixinFields0[1].Descriptor()
+	identityadoptiondecisionDescUpdatedAt := identityadoptiondecisionMixinFields1[1].Descriptor()
 	// identityadoptiondecision.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	identityadoptiondecision.DefaultUpdatedAt = identityadoptiondecisionDescUpdatedAt.Default.(func() time.Time)
 	// identityadoptiondecision.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -1299,8 +1424,19 @@ func init() {
 	identityadoptiondecisionDescDecidedAt := identityadoptiondecisionFields[4].Descriptor()
 	// identityadoptiondecision.DefaultDecidedAt holds the default value on creation for the decided_at field.
 	identityadoptiondecision.DefaultDecidedAt = identityadoptiondecisionDescDecidedAt.Default.(func() time.Time)
+	paymentauditlogMixin := schema.PaymentAuditLog{}.Mixin()
+	paymentauditlogMixinHooks0 := paymentauditlogMixin[0].Hooks()
+	paymentauditlog.Hooks[0] = paymentauditlogMixinHooks0[0]
+	paymentauditlogMixinInters0 := paymentauditlogMixin[0].Interceptors()
+	paymentauditlog.Interceptors[0] = paymentauditlogMixinInters0[0]
+	paymentauditlogMixinFields0 := paymentauditlogMixin[0].Fields()
+	_ = paymentauditlogMixinFields0
 	paymentauditlogFields := schema.PaymentAuditLog{}.Fields()
 	_ = paymentauditlogFields
+	// paymentauditlogDescBrandID is the schema descriptor for brand_id field.
+	paymentauditlogDescBrandID := paymentauditlogMixinFields0[0].Descriptor()
+	// paymentauditlog.DefaultBrandID holds the default value on creation for the brand_id field.
+	paymentauditlog.DefaultBrandID = paymentauditlogDescBrandID.Default.(int64)
 	// paymentauditlogDescOrderID is the schema descriptor for order_id field.
 	paymentauditlogDescOrderID := paymentauditlogFields[0].Descriptor()
 	// paymentauditlog.OrderIDValidator is a validator for the "order_id" field. It is called by the builders before save.
@@ -1323,8 +1459,19 @@ func init() {
 	paymentauditlogDescCreatedAt := paymentauditlogFields[4].Descriptor()
 	// paymentauditlog.DefaultCreatedAt holds the default value on creation for the created_at field.
 	paymentauditlog.DefaultCreatedAt = paymentauditlogDescCreatedAt.Default.(func() time.Time)
+	paymentorderMixin := schema.PaymentOrder{}.Mixin()
+	paymentorderMixinHooks0 := paymentorderMixin[0].Hooks()
+	paymentorder.Hooks[0] = paymentorderMixinHooks0[0]
+	paymentorderMixinInters0 := paymentorderMixin[0].Interceptors()
+	paymentorder.Interceptors[0] = paymentorderMixinInters0[0]
+	paymentorderMixinFields0 := paymentorderMixin[0].Fields()
+	_ = paymentorderMixinFields0
 	paymentorderFields := schema.PaymentOrder{}.Fields()
 	_ = paymentorderFields
+	// paymentorderDescBrandID is the schema descriptor for brand_id field.
+	paymentorderDescBrandID := paymentorderMixinFields0[0].Descriptor()
+	// paymentorder.DefaultBrandID holds the default value on creation for the brand_id field.
+	paymentorder.DefaultBrandID = paymentorderDescBrandID.Default.(int64)
 	// paymentorderDescUserEmail is the schema descriptor for user_email field.
 	paymentorderDescUserEmail := paymentorderFields[1].Descriptor()
 	// paymentorder.UserEmailValidator is a validator for the "user_email" field. It is called by the builders before save.
@@ -1409,8 +1556,19 @@ func init() {
 	paymentorder.DefaultUpdatedAt = paymentorderDescUpdatedAt.Default.(func() time.Time)
 	// paymentorder.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	paymentorder.UpdateDefaultUpdatedAt = paymentorderDescUpdatedAt.UpdateDefault.(func() time.Time)
+	paymentproviderinstanceMixin := schema.PaymentProviderInstance{}.Mixin()
+	paymentproviderinstanceMixinHooks0 := paymentproviderinstanceMixin[0].Hooks()
+	paymentproviderinstance.Hooks[0] = paymentproviderinstanceMixinHooks0[0]
+	paymentproviderinstanceMixinInters0 := paymentproviderinstanceMixin[0].Interceptors()
+	paymentproviderinstance.Interceptors[0] = paymentproviderinstanceMixinInters0[0]
+	paymentproviderinstanceMixinFields0 := paymentproviderinstanceMixin[0].Fields()
+	_ = paymentproviderinstanceMixinFields0
 	paymentproviderinstanceFields := schema.PaymentProviderInstance{}.Fields()
 	_ = paymentproviderinstanceFields
+	// paymentproviderinstanceDescBrandID is the schema descriptor for brand_id field.
+	paymentproviderinstanceDescBrandID := paymentproviderinstanceMixinFields0[0].Descriptor()
+	// paymentproviderinstance.DefaultBrandID holds the default value on creation for the brand_id field.
+	paymentproviderinstance.DefaultBrandID = paymentproviderinstanceDescBrandID.Default.(int64)
 	// paymentproviderinstanceDescProviderKey is the schema descriptor for provider_key field.
 	paymentproviderinstanceDescProviderKey := paymentproviderinstanceFields[0].Descriptor()
 	// paymentproviderinstance.ProviderKeyValidator is a validator for the "provider_key" field. It is called by the builders before save.
@@ -1478,16 +1636,26 @@ func init() {
 	// paymentproviderinstance.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	paymentproviderinstance.UpdateDefaultUpdatedAt = paymentproviderinstanceDescUpdatedAt.UpdateDefault.(func() time.Time)
 	pendingauthsessionMixin := schema.PendingAuthSession{}.Mixin()
+	pendingauthsessionMixinHooks0 := pendingauthsessionMixin[0].Hooks()
+	pendingauthsession.Hooks[0] = pendingauthsessionMixinHooks0[0]
+	pendingauthsessionMixinInters0 := pendingauthsessionMixin[0].Interceptors()
+	pendingauthsession.Interceptors[0] = pendingauthsessionMixinInters0[0]
 	pendingauthsessionMixinFields0 := pendingauthsessionMixin[0].Fields()
 	_ = pendingauthsessionMixinFields0
+	pendingauthsessionMixinFields1 := pendingauthsessionMixin[1].Fields()
+	_ = pendingauthsessionMixinFields1
 	pendingauthsessionFields := schema.PendingAuthSession{}.Fields()
 	_ = pendingauthsessionFields
+	// pendingauthsessionDescBrandID is the schema descriptor for brand_id field.
+	pendingauthsessionDescBrandID := pendingauthsessionMixinFields0[0].Descriptor()
+	// pendingauthsession.DefaultBrandID holds the default value on creation for the brand_id field.
+	pendingauthsession.DefaultBrandID = pendingauthsessionDescBrandID.Default.(int64)
 	// pendingauthsessionDescCreatedAt is the schema descriptor for created_at field.
-	pendingauthsessionDescCreatedAt := pendingauthsessionMixinFields0[0].Descriptor()
+	pendingauthsessionDescCreatedAt := pendingauthsessionMixinFields1[0].Descriptor()
 	// pendingauthsession.DefaultCreatedAt holds the default value on creation for the created_at field.
 	pendingauthsession.DefaultCreatedAt = pendingauthsessionDescCreatedAt.Default.(func() time.Time)
 	// pendingauthsessionDescUpdatedAt is the schema descriptor for updated_at field.
-	pendingauthsessionDescUpdatedAt := pendingauthsessionMixinFields0[1].Descriptor()
+	pendingauthsessionDescUpdatedAt := pendingauthsessionMixinFields1[1].Descriptor()
 	// pendingauthsession.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	pendingauthsession.DefaultUpdatedAt = pendingauthsessionDescUpdatedAt.Default.(func() time.Time)
 	// pendingauthsession.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -1584,8 +1752,19 @@ func init() {
 	pendingauthsessionDescCompletionCodeHash := pendingauthsessionFields[12].Descriptor()
 	// pendingauthsession.DefaultCompletionCodeHash holds the default value on creation for the completion_code_hash field.
 	pendingauthsession.DefaultCompletionCodeHash = pendingauthsessionDescCompletionCodeHash.Default.(string)
+	promocodeMixin := schema.PromoCode{}.Mixin()
+	promocodeMixinHooks0 := promocodeMixin[0].Hooks()
+	promocode.Hooks[0] = promocodeMixinHooks0[0]
+	promocodeMixinInters0 := promocodeMixin[0].Interceptors()
+	promocode.Interceptors[0] = promocodeMixinInters0[0]
+	promocodeMixinFields0 := promocodeMixin[0].Fields()
+	_ = promocodeMixinFields0
 	promocodeFields := schema.PromoCode{}.Fields()
 	_ = promocodeFields
+	// promocodeDescBrandID is the schema descriptor for brand_id field.
+	promocodeDescBrandID := promocodeMixinFields0[0].Descriptor()
+	// promocode.DefaultBrandID holds the default value on creation for the brand_id field.
+	promocode.DefaultBrandID = promocodeDescBrandID.Default.(int64)
 	// promocodeDescCode is the schema descriptor for code field.
 	promocodeDescCode := promocodeFields[0].Descriptor()
 	// promocode.CodeValidator is a validator for the "code" field. It is called by the builders before save.
@@ -1632,8 +1811,19 @@ func init() {
 	promocode.DefaultUpdatedAt = promocodeDescUpdatedAt.Default.(func() time.Time)
 	// promocode.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	promocode.UpdateDefaultUpdatedAt = promocodeDescUpdatedAt.UpdateDefault.(func() time.Time)
+	promocodeusageMixin := schema.PromoCodeUsage{}.Mixin()
+	promocodeusageMixinHooks0 := promocodeusageMixin[0].Hooks()
+	promocodeusage.Hooks[0] = promocodeusageMixinHooks0[0]
+	promocodeusageMixinInters0 := promocodeusageMixin[0].Interceptors()
+	promocodeusage.Interceptors[0] = promocodeusageMixinInters0[0]
+	promocodeusageMixinFields0 := promocodeusageMixin[0].Fields()
+	_ = promocodeusageMixinFields0
 	promocodeusageFields := schema.PromoCodeUsage{}.Fields()
 	_ = promocodeusageFields
+	// promocodeusageDescBrandID is the schema descriptor for brand_id field.
+	promocodeusageDescBrandID := promocodeusageMixinFields0[0].Descriptor()
+	// promocodeusage.DefaultBrandID holds the default value on creation for the brand_id field.
+	promocodeusage.DefaultBrandID = promocodeusageDescBrandID.Default.(int64)
 	// promocodeusageDescUsedAt is the schema descriptor for used_at field.
 	promocodeusageDescUsedAt := promocodeusageFields[3].Descriptor()
 	// promocodeusage.DefaultUsedAt holds the default value on creation for the used_at field.
@@ -1735,8 +1925,19 @@ func init() {
 	proxyDescExpiryWarnDays := proxyFields[10].Descriptor()
 	// proxy.DefaultExpiryWarnDays holds the default value on creation for the expiry_warn_days field.
 	proxy.DefaultExpiryWarnDays = proxyDescExpiryWarnDays.Default.(int)
+	redeemcodeMixin := schema.RedeemCode{}.Mixin()
+	redeemcodeMixinHooks0 := redeemcodeMixin[0].Hooks()
+	redeemcode.Hooks[0] = redeemcodeMixinHooks0[0]
+	redeemcodeMixinInters0 := redeemcodeMixin[0].Interceptors()
+	redeemcode.Interceptors[0] = redeemcodeMixinInters0[0]
+	redeemcodeMixinFields0 := redeemcodeMixin[0].Fields()
+	_ = redeemcodeMixinFields0
 	redeemcodeFields := schema.RedeemCode{}.Fields()
 	_ = redeemcodeFields
+	// redeemcodeDescBrandID is the schema descriptor for brand_id field.
+	redeemcodeDescBrandID := redeemcodeMixinFields0[0].Descriptor()
+	// redeemcode.DefaultBrandID holds the default value on creation for the brand_id field.
+	redeemcode.DefaultBrandID = redeemcodeDescBrandID.Default.(int64)
 	// redeemcodeDescCode is the schema descriptor for code field.
 	redeemcodeDescCode := redeemcodeFields[0].Descriptor()
 	// redeemcode.CodeValidator is a validator for the "code" field. It is called by the builders before save.
@@ -1842,8 +2043,19 @@ func init() {
 	setting.DefaultUpdatedAt = settingDescUpdatedAt.Default.(func() time.Time)
 	// setting.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
 	setting.UpdateDefaultUpdatedAt = settingDescUpdatedAt.UpdateDefault.(func() time.Time)
+	subscriptionplanMixin := schema.SubscriptionPlan{}.Mixin()
+	subscriptionplanMixinHooks0 := subscriptionplanMixin[0].Hooks()
+	subscriptionplan.Hooks[0] = subscriptionplanMixinHooks0[0]
+	subscriptionplanMixinInters0 := subscriptionplanMixin[0].Interceptors()
+	subscriptionplan.Interceptors[0] = subscriptionplanMixinInters0[0]
+	subscriptionplanMixinFields0 := subscriptionplanMixin[0].Fields()
+	_ = subscriptionplanMixinFields0
 	subscriptionplanFields := schema.SubscriptionPlan{}.Fields()
 	_ = subscriptionplanFields
+	// subscriptionplanDescBrandID is the schema descriptor for brand_id field.
+	subscriptionplanDescBrandID := subscriptionplanMixinFields0[0].Descriptor()
+	// subscriptionplan.DefaultBrandID holds the default value on creation for the brand_id field.
+	subscriptionplan.DefaultBrandID = subscriptionplanDescBrandID.Default.(int64)
 	// subscriptionplanDescName is the schema descriptor for name field.
 	subscriptionplanDescName := subscriptionplanFields[1].Descriptor()
 	// subscriptionplan.NameValidator is a validator for the "name" field. It is called by the builders before save.
@@ -1948,16 +2160,26 @@ func init() {
 	// tlsfingerprintprofile.DefaultEnableGrease holds the default value on creation for the enable_grease field.
 	tlsfingerprintprofile.DefaultEnableGrease = tlsfingerprintprofileDescEnableGrease.Default.(bool)
 	usagecleanuptaskMixin := schema.UsageCleanupTask{}.Mixin()
+	usagecleanuptaskMixinHooks0 := usagecleanuptaskMixin[0].Hooks()
+	usagecleanuptask.Hooks[0] = usagecleanuptaskMixinHooks0[0]
+	usagecleanuptaskMixinInters0 := usagecleanuptaskMixin[0].Interceptors()
+	usagecleanuptask.Interceptors[0] = usagecleanuptaskMixinInters0[0]
 	usagecleanuptaskMixinFields0 := usagecleanuptaskMixin[0].Fields()
 	_ = usagecleanuptaskMixinFields0
+	usagecleanuptaskMixinFields1 := usagecleanuptaskMixin[1].Fields()
+	_ = usagecleanuptaskMixinFields1
 	usagecleanuptaskFields := schema.UsageCleanupTask{}.Fields()
 	_ = usagecleanuptaskFields
+	// usagecleanuptaskDescBrandID is the schema descriptor for brand_id field.
+	usagecleanuptaskDescBrandID := usagecleanuptaskMixinFields0[0].Descriptor()
+	// usagecleanuptask.DefaultBrandID holds the default value on creation for the brand_id field.
+	usagecleanuptask.DefaultBrandID = usagecleanuptaskDescBrandID.Default.(int64)
 	// usagecleanuptaskDescCreatedAt is the schema descriptor for created_at field.
-	usagecleanuptaskDescCreatedAt := usagecleanuptaskMixinFields0[0].Descriptor()
+	usagecleanuptaskDescCreatedAt := usagecleanuptaskMixinFields1[0].Descriptor()
 	// usagecleanuptask.DefaultCreatedAt holds the default value on creation for the created_at field.
 	usagecleanuptask.DefaultCreatedAt = usagecleanuptaskDescCreatedAt.Default.(func() time.Time)
 	// usagecleanuptaskDescUpdatedAt is the schema descriptor for updated_at field.
-	usagecleanuptaskDescUpdatedAt := usagecleanuptaskMixinFields0[1].Descriptor()
+	usagecleanuptaskDescUpdatedAt := usagecleanuptaskMixinFields1[1].Descriptor()
 	// usagecleanuptask.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	usagecleanuptask.DefaultUpdatedAt = usagecleanuptaskDescUpdatedAt.Default.(func() time.Time)
 	// usagecleanuptask.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -1984,8 +2206,19 @@ func init() {
 	usagecleanuptaskDescDeletedRows := usagecleanuptaskFields[3].Descriptor()
 	// usagecleanuptask.DefaultDeletedRows holds the default value on creation for the deleted_rows field.
 	usagecleanuptask.DefaultDeletedRows = usagecleanuptaskDescDeletedRows.Default.(int64)
+	usagelogMixin := schema.UsageLog{}.Mixin()
+	usagelogMixinHooks0 := usagelogMixin[0].Hooks()
+	usagelog.Hooks[0] = usagelogMixinHooks0[0]
+	usagelogMixinInters0 := usagelogMixin[0].Interceptors()
+	usagelog.Interceptors[0] = usagelogMixinInters0[0]
+	usagelogMixinFields0 := usagelogMixin[0].Fields()
+	_ = usagelogMixinFields0
 	usagelogFields := schema.UsageLog{}.Fields()
 	_ = usagelogFields
+	// usagelogDescBrandID is the schema descriptor for brand_id field.
+	usagelogDescBrandID := usagelogMixinFields0[0].Descriptor()
+	// usagelog.DefaultBrandID holds the default value on creation for the brand_id field.
+	usagelog.DefaultBrandID = usagelogDescBrandID.Default.(int64)
 	// usagelogDescRequestID is the schema descriptor for request_id field.
 	usagelogDescRequestID := usagelogFields[3].Descriptor()
 	// usagelog.RequestIDValidator is a validator for the "request_id" field. It is called by the builders before save.
@@ -2155,20 +2388,30 @@ func init() {
 	// usagelog.DefaultCreatedAt holds the default value on creation for the created_at field.
 	usagelog.DefaultCreatedAt = usagelogDescCreatedAt.Default.(func() time.Time)
 	userMixin := schema.User{}.Mixin()
-	userMixinHooks1 := userMixin[1].Hooks()
-	user.Hooks[0] = userMixinHooks1[0]
-	userMixinInters1 := userMixin[1].Interceptors()
-	user.Interceptors[0] = userMixinInters1[0]
+	userMixinHooks0 := userMixin[0].Hooks()
+	userMixinHooks2 := userMixin[2].Hooks()
+	user.Hooks[0] = userMixinHooks0[0]
+	user.Hooks[1] = userMixinHooks2[0]
+	userMixinInters0 := userMixin[0].Interceptors()
+	userMixinInters2 := userMixin[2].Interceptors()
+	user.Interceptors[0] = userMixinInters0[0]
+	user.Interceptors[1] = userMixinInters2[0]
 	userMixinFields0 := userMixin[0].Fields()
 	_ = userMixinFields0
+	userMixinFields1 := userMixin[1].Fields()
+	_ = userMixinFields1
 	userFields := schema.User{}.Fields()
 	_ = userFields
+	// userDescBrandID is the schema descriptor for brand_id field.
+	userDescBrandID := userMixinFields0[0].Descriptor()
+	// user.DefaultBrandID holds the default value on creation for the brand_id field.
+	user.DefaultBrandID = userDescBrandID.Default.(int64)
 	// userDescCreatedAt is the schema descriptor for created_at field.
-	userDescCreatedAt := userMixinFields0[0].Descriptor()
+	userDescCreatedAt := userMixinFields1[0].Descriptor()
 	// user.DefaultCreatedAt holds the default value on creation for the created_at field.
 	user.DefaultCreatedAt = userDescCreatedAt.Default.(func() time.Time)
 	// userDescUpdatedAt is the schema descriptor for updated_at field.
-	userDescUpdatedAt := userMixinFields0[1].Descriptor()
+	userDescUpdatedAt := userMixinFields1[1].Descriptor()
 	// user.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	user.DefaultUpdatedAt = userDescUpdatedAt.Default.(func() time.Time)
 	// user.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -2281,27 +2524,48 @@ func init() {
 	userDescRpmLimit := userFields[22].Descriptor()
 	// user.DefaultRpmLimit holds the default value on creation for the rpm_limit field.
 	user.DefaultRpmLimit = userDescRpmLimit.Default.(int)
+	userallowedgroupMixin := schema.UserAllowedGroup{}.Mixin()
+	userallowedgroupMixinHooks0 := userallowedgroupMixin[0].Hooks()
+	userallowedgroup.Hooks[0] = userallowedgroupMixinHooks0[0]
+	userallowedgroupMixinInters0 := userallowedgroupMixin[0].Interceptors()
+	userallowedgroup.Interceptors[0] = userallowedgroupMixinInters0[0]
+	userallowedgroupMixinFields0 := userallowedgroupMixin[0].Fields()
+	_ = userallowedgroupMixinFields0
 	userallowedgroupFields := schema.UserAllowedGroup{}.Fields()
 	_ = userallowedgroupFields
+	// userallowedgroupDescBrandID is the schema descriptor for brand_id field.
+	userallowedgroupDescBrandID := userallowedgroupMixinFields0[0].Descriptor()
+	// userallowedgroup.DefaultBrandID holds the default value on creation for the brand_id field.
+	userallowedgroup.DefaultBrandID = userallowedgroupDescBrandID.Default.(int64)
 	// userallowedgroupDescCreatedAt is the schema descriptor for created_at field.
 	userallowedgroupDescCreatedAt := userallowedgroupFields[2].Descriptor()
 	// userallowedgroup.DefaultCreatedAt holds the default value on creation for the created_at field.
 	userallowedgroup.DefaultCreatedAt = userallowedgroupDescCreatedAt.Default.(func() time.Time)
 	userattributedefinitionMixin := schema.UserAttributeDefinition{}.Mixin()
-	userattributedefinitionMixinHooks1 := userattributedefinitionMixin[1].Hooks()
-	userattributedefinition.Hooks[0] = userattributedefinitionMixinHooks1[0]
-	userattributedefinitionMixinInters1 := userattributedefinitionMixin[1].Interceptors()
-	userattributedefinition.Interceptors[0] = userattributedefinitionMixinInters1[0]
+	userattributedefinitionMixinHooks0 := userattributedefinitionMixin[0].Hooks()
+	userattributedefinitionMixinHooks2 := userattributedefinitionMixin[2].Hooks()
+	userattributedefinition.Hooks[0] = userattributedefinitionMixinHooks0[0]
+	userattributedefinition.Hooks[1] = userattributedefinitionMixinHooks2[0]
+	userattributedefinitionMixinInters0 := userattributedefinitionMixin[0].Interceptors()
+	userattributedefinitionMixinInters2 := userattributedefinitionMixin[2].Interceptors()
+	userattributedefinition.Interceptors[0] = userattributedefinitionMixinInters0[0]
+	userattributedefinition.Interceptors[1] = userattributedefinitionMixinInters2[0]
 	userattributedefinitionMixinFields0 := userattributedefinitionMixin[0].Fields()
 	_ = userattributedefinitionMixinFields0
+	userattributedefinitionMixinFields1 := userattributedefinitionMixin[1].Fields()
+	_ = userattributedefinitionMixinFields1
 	userattributedefinitionFields := schema.UserAttributeDefinition{}.Fields()
 	_ = userattributedefinitionFields
+	// userattributedefinitionDescBrandID is the schema descriptor for brand_id field.
+	userattributedefinitionDescBrandID := userattributedefinitionMixinFields0[0].Descriptor()
+	// userattributedefinition.DefaultBrandID holds the default value on creation for the brand_id field.
+	userattributedefinition.DefaultBrandID = userattributedefinitionDescBrandID.Default.(int64)
 	// userattributedefinitionDescCreatedAt is the schema descriptor for created_at field.
-	userattributedefinitionDescCreatedAt := userattributedefinitionMixinFields0[0].Descriptor()
+	userattributedefinitionDescCreatedAt := userattributedefinitionMixinFields1[0].Descriptor()
 	// userattributedefinition.DefaultCreatedAt holds the default value on creation for the created_at field.
 	userattributedefinition.DefaultCreatedAt = userattributedefinitionDescCreatedAt.Default.(func() time.Time)
 	// userattributedefinitionDescUpdatedAt is the schema descriptor for updated_at field.
-	userattributedefinitionDescUpdatedAt := userattributedefinitionMixinFields0[1].Descriptor()
+	userattributedefinitionDescUpdatedAt := userattributedefinitionMixinFields1[1].Descriptor()
 	// userattributedefinition.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	userattributedefinition.DefaultUpdatedAt = userattributedefinitionDescUpdatedAt.Default.(func() time.Time)
 	// userattributedefinition.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -2391,16 +2655,26 @@ func init() {
 	// userattributedefinition.DefaultEnabled holds the default value on creation for the enabled field.
 	userattributedefinition.DefaultEnabled = userattributedefinitionDescEnabled.Default.(bool)
 	userattributevalueMixin := schema.UserAttributeValue{}.Mixin()
+	userattributevalueMixinHooks0 := userattributevalueMixin[0].Hooks()
+	userattributevalue.Hooks[0] = userattributevalueMixinHooks0[0]
+	userattributevalueMixinInters0 := userattributevalueMixin[0].Interceptors()
+	userattributevalue.Interceptors[0] = userattributevalueMixinInters0[0]
 	userattributevalueMixinFields0 := userattributevalueMixin[0].Fields()
 	_ = userattributevalueMixinFields0
+	userattributevalueMixinFields1 := userattributevalueMixin[1].Fields()
+	_ = userattributevalueMixinFields1
 	userattributevalueFields := schema.UserAttributeValue{}.Fields()
 	_ = userattributevalueFields
+	// userattributevalueDescBrandID is the schema descriptor for brand_id field.
+	userattributevalueDescBrandID := userattributevalueMixinFields0[0].Descriptor()
+	// userattributevalue.DefaultBrandID holds the default value on creation for the brand_id field.
+	userattributevalue.DefaultBrandID = userattributevalueDescBrandID.Default.(int64)
 	// userattributevalueDescCreatedAt is the schema descriptor for created_at field.
-	userattributevalueDescCreatedAt := userattributevalueMixinFields0[0].Descriptor()
+	userattributevalueDescCreatedAt := userattributevalueMixinFields1[0].Descriptor()
 	// userattributevalue.DefaultCreatedAt holds the default value on creation for the created_at field.
 	userattributevalue.DefaultCreatedAt = userattributevalueDescCreatedAt.Default.(func() time.Time)
 	// userattributevalueDescUpdatedAt is the schema descriptor for updated_at field.
-	userattributevalueDescUpdatedAt := userattributevalueMixinFields0[1].Descriptor()
+	userattributevalueDescUpdatedAt := userattributevalueMixinFields1[1].Descriptor()
 	// userattributevalue.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	userattributevalue.DefaultUpdatedAt = userattributevalueDescUpdatedAt.Default.(func() time.Time)
 	// userattributevalue.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -2410,20 +2684,30 @@ func init() {
 	// userattributevalue.DefaultValue holds the default value on creation for the value field.
 	userattributevalue.DefaultValue = userattributevalueDescValue.Default.(string)
 	userplatformquotaMixin := schema.UserPlatformQuota{}.Mixin()
-	userplatformquotaMixinHooks1 := userplatformquotaMixin[1].Hooks()
-	userplatformquota.Hooks[0] = userplatformquotaMixinHooks1[0]
-	userplatformquotaMixinInters1 := userplatformquotaMixin[1].Interceptors()
-	userplatformquota.Interceptors[0] = userplatformquotaMixinInters1[0]
+	userplatformquotaMixinHooks0 := userplatformquotaMixin[0].Hooks()
+	userplatformquotaMixinHooks2 := userplatformquotaMixin[2].Hooks()
+	userplatformquota.Hooks[0] = userplatformquotaMixinHooks0[0]
+	userplatformquota.Hooks[1] = userplatformquotaMixinHooks2[0]
+	userplatformquotaMixinInters0 := userplatformquotaMixin[0].Interceptors()
+	userplatformquotaMixinInters2 := userplatformquotaMixin[2].Interceptors()
+	userplatformquota.Interceptors[0] = userplatformquotaMixinInters0[0]
+	userplatformquota.Interceptors[1] = userplatformquotaMixinInters2[0]
 	userplatformquotaMixinFields0 := userplatformquotaMixin[0].Fields()
 	_ = userplatformquotaMixinFields0
+	userplatformquotaMixinFields1 := userplatformquotaMixin[1].Fields()
+	_ = userplatformquotaMixinFields1
 	userplatformquotaFields := schema.UserPlatformQuota{}.Fields()
 	_ = userplatformquotaFields
+	// userplatformquotaDescBrandID is the schema descriptor for brand_id field.
+	userplatformquotaDescBrandID := userplatformquotaMixinFields0[0].Descriptor()
+	// userplatformquota.DefaultBrandID holds the default value on creation for the brand_id field.
+	userplatformquota.DefaultBrandID = userplatformquotaDescBrandID.Default.(int64)
 	// userplatformquotaDescCreatedAt is the schema descriptor for created_at field.
-	userplatformquotaDescCreatedAt := userplatformquotaMixinFields0[0].Descriptor()
+	userplatformquotaDescCreatedAt := userplatformquotaMixinFields1[0].Descriptor()
 	// userplatformquota.DefaultCreatedAt holds the default value on creation for the created_at field.
 	userplatformquota.DefaultCreatedAt = userplatformquotaDescCreatedAt.Default.(func() time.Time)
 	// userplatformquotaDescUpdatedAt is the schema descriptor for updated_at field.
-	userplatformquotaDescUpdatedAt := userplatformquotaMixinFields0[1].Descriptor()
+	userplatformquotaDescUpdatedAt := userplatformquotaMixinFields1[1].Descriptor()
 	// userplatformquota.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	userplatformquota.DefaultUpdatedAt = userplatformquotaDescUpdatedAt.Default.(func() time.Time)
 	// userplatformquota.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.
@@ -2460,20 +2744,30 @@ func init() {
 	// userplatformquota.DefaultMonthlyUsageUsd holds the default value on creation for the monthly_usage_usd field.
 	userplatformquota.DefaultMonthlyUsageUsd = userplatformquotaDescMonthlyUsageUsd.Default.(float64)
 	usersubscriptionMixin := schema.UserSubscription{}.Mixin()
-	usersubscriptionMixinHooks1 := usersubscriptionMixin[1].Hooks()
-	usersubscription.Hooks[0] = usersubscriptionMixinHooks1[0]
-	usersubscriptionMixinInters1 := usersubscriptionMixin[1].Interceptors()
-	usersubscription.Interceptors[0] = usersubscriptionMixinInters1[0]
+	usersubscriptionMixinHooks0 := usersubscriptionMixin[0].Hooks()
+	usersubscriptionMixinHooks2 := usersubscriptionMixin[2].Hooks()
+	usersubscription.Hooks[0] = usersubscriptionMixinHooks0[0]
+	usersubscription.Hooks[1] = usersubscriptionMixinHooks2[0]
+	usersubscriptionMixinInters0 := usersubscriptionMixin[0].Interceptors()
+	usersubscriptionMixinInters2 := usersubscriptionMixin[2].Interceptors()
+	usersubscription.Interceptors[0] = usersubscriptionMixinInters0[0]
+	usersubscription.Interceptors[1] = usersubscriptionMixinInters2[0]
 	usersubscriptionMixinFields0 := usersubscriptionMixin[0].Fields()
 	_ = usersubscriptionMixinFields0
+	usersubscriptionMixinFields1 := usersubscriptionMixin[1].Fields()
+	_ = usersubscriptionMixinFields1
 	usersubscriptionFields := schema.UserSubscription{}.Fields()
 	_ = usersubscriptionFields
+	// usersubscriptionDescBrandID is the schema descriptor for brand_id field.
+	usersubscriptionDescBrandID := usersubscriptionMixinFields0[0].Descriptor()
+	// usersubscription.DefaultBrandID holds the default value on creation for the brand_id field.
+	usersubscription.DefaultBrandID = usersubscriptionDescBrandID.Default.(int64)
 	// usersubscriptionDescCreatedAt is the schema descriptor for created_at field.
-	usersubscriptionDescCreatedAt := usersubscriptionMixinFields0[0].Descriptor()
+	usersubscriptionDescCreatedAt := usersubscriptionMixinFields1[0].Descriptor()
 	// usersubscription.DefaultCreatedAt holds the default value on creation for the created_at field.
 	usersubscription.DefaultCreatedAt = usersubscriptionDescCreatedAt.Default.(func() time.Time)
 	// usersubscriptionDescUpdatedAt is the schema descriptor for updated_at field.
-	usersubscriptionDescUpdatedAt := usersubscriptionMixinFields0[1].Descriptor()
+	usersubscriptionDescUpdatedAt := usersubscriptionMixinFields1[1].Descriptor()
 	// usersubscription.DefaultUpdatedAt holds the default value on creation for the updated_at field.
 	usersubscription.DefaultUpdatedAt = usersubscriptionDescUpdatedAt.Default.(func() time.Time)
 	// usersubscription.UpdateDefaultUpdatedAt holds the default value on update for the updated_at field.

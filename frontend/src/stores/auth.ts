@@ -4,6 +4,7 @@
  */
 
 import { defineStore } from 'pinia'
+import { useBrandStore } from './brand'
 import { ref, computed, readonly } from 'vue'
 import { authAPI, isTotp2FARequired, passkeyAPI, type LoginResponse } from '@/api'
 import type {
@@ -93,11 +94,12 @@ export const useAuthStore = defineStore('auth', () => {
   })
 
   const isAdmin = computed(() => {
-    return user.value?.role === 'admin'
+    const brand = useBrandStore()
+    return brand.enabled ? brand.role !== '' : user.value?.role === 'admin'
   })
 
   const isObserver = computed(() => user.value?.role === 'observer')
-  const canManageAccounts = computed(() => isAdmin.value || isObserver.value)
+  const canManageAccounts = computed(() => useBrandStore().enabled ? useBrandStore().isPlatformAdmin : isAdmin.value || isObserver.value)
 
   const isSimpleMode = computed(() => runMode.value === 'simple')
   const hasPendingAuthSession = computed(() => pendingAuthSession.value !== null)
@@ -257,6 +259,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       // Set auth state from the response
       setAuthFromResponse(response)
+      await useBrandStore().loadAccess(true)
 
       return response
     } catch (error) {
@@ -277,6 +280,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await authAPI.login2FA({ temp_token: tempToken, totp_code: totpCode })
       setAuthFromResponse(response)
+      await useBrandStore().loadAccess(true)
       return user.value!
     } catch (error) {
       clearAuth({ preservePendingAuthSession: pendingAuthSession.value !== null })
@@ -288,6 +292,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await passkeyAPI.login(proof)
       setAuthFromResponse(response)
+      await useBrandStore().loadAccess(true)
       return user.value!
     } catch (error) {
       clearAuth({ preservePendingAuthSession: pendingAuthSession.value !== null })
@@ -343,6 +348,7 @@ export const useAuthStore = defineStore('auth', () => {
 
       // Use the common helper to set auth state
       setAuthFromResponse(response)
+      await useBrandStore().loadAccess(true)
 
       return user.value!
     } catch (error) {
@@ -381,6 +387,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     try {
       const userData = await refreshUser()
+      await useBrandStore().loadAccess(true)
       startAutoRefresh()
 
       // Start proactive token refresh if we have refresh token and expiry info
@@ -466,6 +473,7 @@ export const useAuthStore = defineStore('auth', () => {
    * Internal helper function
    */
   function clearAuth(options?: { preservePendingAuthSession?: boolean }): void {
+    useBrandStore().resetAccess()
     // Stop auto-refresh
     stopAutoRefresh()
     // Stop token refresh

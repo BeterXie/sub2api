@@ -209,6 +209,7 @@
 import { computed, h, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
+import { useBrandStore } from '@/stores/brand'
 import { useAdminSettingsStore, useAppStore, useAuthStore, useOnboardingStore } from '@/stores'
 import VersionBadge from '@/components/common/VersionBadge.vue'
 import FeatureSearch from './FeatureSearch.vue'
@@ -826,7 +827,25 @@ const customMenuItemsForAdmin = computed(() => {
 
 // Admin navigation items
 const adminNavItems = computed((): NavItem[] => {
+  const brand = useBrandStore()
+  if (brand.enabled && !brand.isPlatformAdmin) {
+		return finalizeNav([
+      { path: '/admin/dashboard', label: t('nav.dashboard'), icon: DashboardIcon },
+      { path: '/admin/brand-content', label: t('brand.content'), icon: FolderIcon },
+			{ path: '/admin/users', label: t('nav.users'), icon: UsersIcon, hideInSimpleMode: true },
+      { path: '/admin/groups', label: t('nav.groups'), icon: FolderIcon },
+			{ path: '/admin/subscriptions', label: t('nav.subscriptions'), icon: CreditCardIcon, hideInSimpleMode: true, featureFlag: flagSubscription },
+			{ path: '/admin/redeem', label: t('nav.redeemCodes'), icon: TicketIcon, hideInSimpleMode: true },
+			{ path: '/admin/promo-codes', label: t('nav.promoCodes'), icon: GiftIcon, hideInSimpleMode: true },
+			{ path: '/admin/orders', label: t('brand.revenue'), icon: CreditCardIcon, hideInSimpleMode: true, featureFlag: flagPayment },
+      { path: '/admin/usage', label: t('nav.usage'), icon: DashboardIcon }
+		])
+  }
   const baseItems: NavItem[] = [
+    ...(brand.enabled ? [
+      { path: '/admin/brands', label: t('brand.management'), icon: GlobeIcon },
+      { path: '/admin/brand-content', label: t('brand.content'), icon: FolderIcon }
+    ] : []),
     { path: '/admin/dashboard', label: t('nav.dashboard'), icon: DashboardIcon },
     { path: '/admin/ops', label: t('nav.ops'), icon: OpsMonitoringIcon, featureFlag: flagOpsMonitoring },
     { path: '/admin/users', label: t('nav.users'), icon: UsersIcon, hideInSimpleMode: true },

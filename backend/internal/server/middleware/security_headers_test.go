@@ -302,6 +302,46 @@ func TestCSPNonceKey(t *testing.T) {
 	})
 }
 
+func TestNeedsDynamicCSPOrigins(t *testing.T) {
+	tests := []struct {
+		name   string
+		method string
+		path   string
+		accept string
+		want   bool
+	}{
+		{name: "html document", method: http.MethodGet, path: "/", accept: "text/html,application/xhtml+xml", want: true},
+		{name: "static asset", method: http.MethodGet, path: "/assets/app.js", accept: "*/*", want: false},
+		{name: "panel API", method: http.MethodGet, path: "/api/v1/public/brand-config", accept: "text/html", want: false},
+		{name: "gateway API", method: http.MethodPost, path: "/v1/messages", accept: "text/html", want: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			w := httptest.NewRecorder()
+			c, _ := gin.CreateTestContext(w)
+			c.Request = httptest.NewRequest(tt.method, tt.path, nil)
+			c.Request.Header.Set("Accept", tt.accept)
+			assert.Equal(t, tt.want, NeedsDynamicCSPOrigins(c))
+		})
+	}
+}
+
+func TestSecurityHeadersSkipsDynamicOriginsForGatewayAPI(t *testing.T) {
+	called := false
+	middleware := SecurityHeaders(config.CSPConfig{Enabled: true}, nil, func(*gin.Context) []string {
+		called = true
+		return []string{"https://frame.example.com"}
+	})
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request = httptest.NewRequest(http.MethodPost, "/v1/messages", nil)
+
+	middleware(c)
+
+	assert.False(t, called)
+	assert.Empty(t, w.Header().Get("Content-Security-Policy"))
+}
+
 func TestNonceTemplate(t *testing.T) {
 	t.Run("constant_value", func(t *testing.T) {
 		assert.Equal(t, "__CSP_NONCE__", NonceTemplate)

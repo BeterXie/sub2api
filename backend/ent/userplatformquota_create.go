@@ -23,6 +23,20 @@ type UserPlatformQuotaCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *UserPlatformQuotaCreate) SetBrandID(v int64) *UserPlatformQuotaCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *UserPlatformQuotaCreate) SetNillableBrandID(v *int64) *UserPlatformQuotaCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *UserPlatformQuotaCreate) SetCreatedAt(v time.Time) *UserPlatformQuotaCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -245,6 +259,10 @@ func (_c *UserPlatformQuotaCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *UserPlatformQuotaCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := userplatformquota.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		if userplatformquota.DefaultCreatedAt == nil {
 			return fmt.Errorf("ent: uninitialized userplatformquota.DefaultCreatedAt (forgotten import ent/runtime?)")
@@ -276,6 +294,9 @@ func (_c *UserPlatformQuotaCreate) defaults() error {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *UserPlatformQuotaCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "UserPlatformQuota.brand_id"`)}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "UserPlatformQuota.created_at"`)}
 	}
@@ -332,6 +353,10 @@ func (_c *UserPlatformQuotaCreate) createSpec() (*UserPlatformQuota, *sqlgraph.C
 		_spec = sqlgraph.NewCreateSpec(userplatformquota.Table, sqlgraph.NewFieldSpec(userplatformquota.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(userplatformquota.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(userplatformquota.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -408,7 +433,7 @@ func (_c *UserPlatformQuotaCreate) createSpec() (*UserPlatformQuota, *sqlgraph.C
 // of the `INSERT` statement. For example:
 //
 //	client.UserPlatformQuota.Create().
-//		SetCreatedAt(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -417,7 +442,7 @@ func (_c *UserPlatformQuotaCreate) createSpec() (*UserPlatformQuota, *sqlgraph.C
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.UserPlatformQuotaUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *UserPlatformQuotaCreate) OnConflict(opts ...sql.ConflictOption) *UserPlatformQuotaUpsertOne {
@@ -698,6 +723,9 @@ func (u *UserPlatformQuotaUpsert) ClearMonthlyWindowStart() *UserPlatformQuotaUp
 func (u *UserPlatformQuotaUpsertOne) UpdateNewValues() *UserPlatformQuotaUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(userplatformquota.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(userplatformquota.FieldCreatedAt)
 		}
@@ -1140,7 +1168,7 @@ func (_c *UserPlatformQuotaCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.UserPlatformQuotaUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *UserPlatformQuotaCreateBulk) OnConflict(opts ...sql.ConflictOption) *UserPlatformQuotaUpsertBulk {
@@ -1181,6 +1209,9 @@ func (u *UserPlatformQuotaUpsertBulk) UpdateNewValues() *UserPlatformQuotaUpsert
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(userplatformquota.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(userplatformquota.FieldCreatedAt)
 			}

@@ -249,7 +249,9 @@ func (_u *AnnouncementUpdate) RemoveReads(v ...*AnnouncementRead) *AnnouncementU
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *AnnouncementUpdate) Save(ctx context.Context) (int, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return 0, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -276,11 +278,15 @@ func (_u *AnnouncementUpdate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *AnnouncementUpdate) defaults() {
+func (_u *AnnouncementUpdate) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if announcement.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized announcement.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := announcement.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -668,7 +674,9 @@ func (_u *AnnouncementUpdateOne) Select(field string, fields ...string) *Announc
 
 // Save executes the query and returns the updated Announcement entity.
 func (_u *AnnouncementUpdateOne) Save(ctx context.Context) (*Announcement, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -695,11 +703,15 @@ func (_u *AnnouncementUpdateOne) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *AnnouncementUpdateOne) defaults() {
+func (_u *AnnouncementUpdateOne) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if announcement.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized announcement.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := announcement.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.

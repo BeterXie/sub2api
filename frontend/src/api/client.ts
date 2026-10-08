@@ -40,6 +40,11 @@ const getUserTimezone = (): string => {
 
 apiClient.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
+    const selectedBrand = sessionStorage.getItem('admin_selected_brand')
+    if (selectedBrand && String(config.url || '').startsWith('/admin/') &&
+        !String(config.url || '').startsWith('/admin/brands')) {
+      config.params = { ...config.params, brand_id: Number(selectedBrand) }
+    }
     // Attach token from localStorage
     const token = localStorage.getItem('auth_token')
     if (token && config.headers) {

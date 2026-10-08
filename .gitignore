@@ -122,6 +122,9 @@ tests
 CLAUDE.md
 .claude
 scripts
+!scripts/
+scripts/*
+!scripts/verify-multibrand.ps1
 !backend/scripts/
 !backend/scripts/resolve-version.sh
 .code-review-state
@@ -133,6 +136,7 @@ deploy/docker-compose.override.yml
 .gocache/
 vite.config.js
 docs/*
+!docs/multibrand-implementation.md
 !docs/openai-ws-sse-acceleration.md
 !docs/openai-outbound-identity.md
 !docs/PAYMENT.md

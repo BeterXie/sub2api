@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/ctxkey"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
@@ -224,6 +225,7 @@ func NewAuditLogMiddleware(auditService *service.AuditLogService) AuditLogMiddle
 		}
 
 		entry := &service.AuditLog{
+			BrandID:     brand.ID(c.Request.Context()),
 			CreatedAt:   time.Now().UTC(),
 			Action:      action,
 			Method:      c.Request.Method,

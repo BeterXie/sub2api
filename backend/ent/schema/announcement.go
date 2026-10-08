@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"github.com/Wei-Shaw/sub2api/ent/schema/mixins"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/domain"
@@ -26,6 +27,8 @@ func (Announcement) Annotations() []schema.Annotation {
 		entsql.Annotation{Table: "announcements"},
 	}
 }
+
+func (Announcement) Mixin() []ent.Mixin { return []ent.Mixin{mixins.BrandMixin{}} }
 
 func (Announcement) Fields() []ent.Field {
 	return []ent.Field{

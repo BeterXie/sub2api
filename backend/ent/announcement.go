@@ -19,6 +19,8 @@ type Announcement struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int64 `json:"id,omitempty"`
+	// BrandID holds the value of the "brand_id" field.
+	BrandID int64 `json:"brand_id,omitempty"`
 	// 公告标题
 	Title string `json:"title,omitempty"`
 	// 公告内容（支持 Markdown）
@@ -72,7 +74,7 @@ func (*Announcement) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case announcement.FieldTargeting:
 			values[i] = new([]byte)
-		case announcement.FieldID, announcement.FieldCreatedBy, announcement.FieldUpdatedBy:
+		case announcement.FieldID, announcement.FieldBrandID, announcement.FieldCreatedBy, announcement.FieldUpdatedBy:
 			values[i] = new(sql.NullInt64)
 		case announcement.FieldTitle, announcement.FieldContent, announcement.FieldStatus, announcement.FieldNotifyMode:
 			values[i] = new(sql.NullString)
@@ -99,6 +101,12 @@ func (_m *Announcement) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int64(value.Int64)
+		case announcement.FieldBrandID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field brand_id", values[i])
+			} else if value.Valid {
+				_m.BrandID = value.Int64
+			}
 		case announcement.FieldTitle:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field title", values[i])
@@ -212,6 +220,9 @@ func (_m *Announcement) String() string {
 	var builder strings.Builder
 	builder.WriteString("Announcement(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
+	builder.WriteString("brand_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.BrandID))
+	builder.WriteString(", ")
 	builder.WriteString("title=")
 	builder.WriteString(_m.Title)
 	builder.WriteString(", ")

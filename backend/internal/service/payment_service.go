@@ -14,6 +14,7 @@ import (
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/paymentproviderinstance"
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 	"github.com/Wei-Shaw/sub2api/internal/payment/provider"
 )
@@ -199,6 +200,7 @@ type PaymentService struct {
 	resumeService            *PaymentResumeService
 	affiliateService         *AffiliateService
 	notificationEmailService *NotificationEmailService
+	brandStore               *brand.Store
 }
 
 func NewPaymentService(entClient *dbent.Client, registry *payment.Registry, loadBalancer payment.LoadBalancer, redeemService *RedeemService, subscriptionSvc *SubscriptionService, configService *PaymentConfigService, userRepo UserRepository, groupRepo GroupRepository, affiliateService *AffiliateService) *PaymentService {
@@ -233,6 +235,13 @@ func (s *PaymentService) RefreshProviders(ctx context.Context) {
 }
 
 func (s *PaymentService) loadProviders(ctx context.Context) {
+	if s.brandStore != nil {
+		scope, err := s.brandStore.ScopeForBrand(brand.CredentialContext(ctx), brand.LegacyID)
+		if err != nil {
+			return
+		}
+		ctx = brand.WithScope(ctx, scope)
+	}
 	instances, err := s.entClient.PaymentProviderInstance.Query().
 		Where(paymentproviderinstance.EnabledEQ(true)).
 		All(ctx)

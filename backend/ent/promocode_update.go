@@ -209,7 +209,9 @@ func (_u *PromoCodeUpdate) RemoveUsageRecords(v ...*PromoCodeUsage) *PromoCodeUp
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *PromoCodeUpdate) Save(ctx context.Context) (int, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return 0, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -236,11 +238,15 @@ func (_u *PromoCodeUpdate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *PromoCodeUpdate) defaults() {
+func (_u *PromoCodeUpdate) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if promocode.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized promocode.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := promocode.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -567,7 +573,9 @@ func (_u *PromoCodeUpdateOne) Select(field string, fields ...string) *PromoCodeU
 
 // Save executes the query and returns the updated PromoCode entity.
 func (_u *PromoCodeUpdateOne) Save(ctx context.Context) (*PromoCode, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -594,11 +602,15 @@ func (_u *PromoCodeUpdateOne) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *PromoCodeUpdateOne) defaults() {
+func (_u *PromoCodeUpdateOne) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if promocode.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized promocode.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := promocode.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.

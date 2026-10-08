@@ -17,6 +17,8 @@ type PaymentProviderInstance struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int64 `json:"id,omitempty"`
+	// BrandID holds the value of the "brand_id" field.
+	BrandID int64 `json:"brand_id,omitempty"`
 	// ProviderKey holds the value of the "provider_key" field.
 	ProviderKey string `json:"provider_key,omitempty"`
 	// Name holds the value of the "name" field.
@@ -51,7 +53,7 @@ func (*PaymentProviderInstance) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case paymentproviderinstance.FieldEnabled, paymentproviderinstance.FieldRefundEnabled, paymentproviderinstance.FieldAllowUserRefund:
 			values[i] = new(sql.NullBool)
-		case paymentproviderinstance.FieldID, paymentproviderinstance.FieldSortOrder:
+		case paymentproviderinstance.FieldID, paymentproviderinstance.FieldBrandID, paymentproviderinstance.FieldSortOrder:
 			values[i] = new(sql.NullInt64)
 		case paymentproviderinstance.FieldProviderKey, paymentproviderinstance.FieldName, paymentproviderinstance.FieldConfig, paymentproviderinstance.FieldSupportedTypes, paymentproviderinstance.FieldPaymentMode, paymentproviderinstance.FieldLimits:
 			values[i] = new(sql.NullString)
@@ -78,6 +80,12 @@ func (_m *PaymentProviderInstance) assignValues(columns []string, values []any) 
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int64(value.Int64)
+		case paymentproviderinstance.FieldBrandID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field brand_id", values[i])
+			} else if value.Valid {
+				_m.BrandID = value.Int64
+			}
 		case paymentproviderinstance.FieldProviderKey:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field provider_key", values[i])
@@ -186,6 +194,9 @@ func (_m *PaymentProviderInstance) String() string {
 	var builder strings.Builder
 	builder.WriteString("PaymentProviderInstance(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
+	builder.WriteString("brand_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.BrandID))
+	builder.WriteString(", ")
 	builder.WriteString("provider_key=")
 	builder.WriteString(_m.ProviderKey)
 	builder.WriteString(", ")

@@ -47,7 +47,11 @@ func (s *PaymentService) getOrderProviderInstance(ctx context.Context, o *dbent.
 	if err != nil {
 		return nil, nil
 	}
-	return s.entClient.PaymentProviderInstance.Get(ctx, instID)
+	inst, err := s.entClient.PaymentProviderInstance.Get(ctx, instID)
+	if err == nil && inst.BrandID != o.BrandID {
+		return nil, fmt.Errorf("order provider brand mismatch")
+	}
+	return inst, err
 }
 
 // getRefundOrderProviderInstance resolves the provider instance for refund paths.
@@ -78,6 +82,9 @@ func (s *PaymentService) getRefundOrderProviderInstance(ctx context.Context, o *
 		}
 		return nil, err
 	}
+	if inst.BrandID != o.BrandID {
+		return nil, fmt.Errorf("order provider brand mismatch")
+	}
 	return inst, nil
 }
 
@@ -86,7 +93,7 @@ func (s *PaymentService) resolveUniqueLegacyOrderProviderInstance(ctx context.Co
 	providerKey := strings.TrimSpace(psStringValue(o.ProviderKey))
 	if providerKey != "" {
 		instances, err := s.entClient.PaymentProviderInstance.Query().
-			Where(paymentproviderinstance.ProviderKeyEQ(providerKey)).
+			Where(paymentproviderinstance.ProviderKeyEQ(providerKey), paymentproviderinstance.BrandIDEQ(o.BrandID)).
 			All(ctx)
 		if err != nil {
 			return nil, err
@@ -103,7 +110,7 @@ func (s *PaymentService) resolveUniqueLegacyOrderProviderInstance(ctx context.Co
 	}
 
 	instances, err := s.entClient.PaymentProviderInstance.Query().
-		All(ctx)
+		Where(paymentproviderinstance.BrandIDEQ(o.BrandID)).All(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -210,6 +217,10 @@ func (s *PaymentService) PrepareRefund(ctx context.Context, oid int64, amt float
 	if err != nil {
 		return nil, nil, infraerrors.NotFound("NOT_FOUND", "order not found")
 	}
+	ctx, err = s.paymentOrderBrandContext(ctx, o)
+	if err != nil {
+		return nil, nil, err
+	}
 	ok := []string{OrderStatusCompleted, OrderStatusRefundRequested, OrderStatusRefundPending, OrderStatusRefundFailed}
 	if !psSliceContains(ok, o.Status) {
 		return nil, nil, infraerrors.BadRequest("INVALID_STATUS", "order status does not allow refund")
@@ -296,6 +307,14 @@ func (s *PaymentService) deductAvailableBalance(ctx context.Context, userID int6
 }
 
 func (s *PaymentService) ExecuteRefund(ctx context.Context, p *RefundPlan) (*RefundResult, error) {
+	if p == nil || p.Order == nil {
+		return nil, fmt.Errorf("missing refund order")
+	}
+	var scopeErr error
+	ctx, scopeErr = s.paymentOrderBrandContext(ctx, p.Order)
+	if scopeErr != nil {
+		return nil, scopeErr
+	}
 	c, err := s.entClient.PaymentOrder.Update().Where(paymentorder.IDEQ(p.OrderID), paymentorder.StatusIn(OrderStatusCompleted, OrderStatusRefundRequested, OrderStatusRefundPending, OrderStatusRefundFailed)).SetStatus(OrderStatusRefunding).Save(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("lock: %w", err)
@@ -425,6 +444,10 @@ func (s *PaymentService) QueryAndFinalizeRefund(ctx context.Context, oid int64) 
 	}
 	if o.Status != OrderStatusRefundPending {
 		return nil, infraerrors.BadRequest("INVALID_STATUS", "only refund pending orders can be finalized")
+	}
+	ctx, err = s.paymentOrderBrandContext(ctx, o)
+	if err != nil {
+		return nil, err
 	}
 
 	prov, err := s.getRefundProvider(ctx, o)

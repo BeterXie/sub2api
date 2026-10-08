@@ -6,6 +6,7 @@ import { settingsLocation } from '@/utils/settingsSearch'
 
 import { createRouter, createWebHistory, type RouteRecordRaw } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
+import { useBrandStore } from '@/stores/brand'
 import { useAppStore } from '@/stores/app'
 import { useAdminSettingsStore } from '@/stores/adminSettings'
 import { useAdminComplianceStore } from '@/stores/adminCompliance'
@@ -19,6 +20,9 @@ import { resolveRouteDocumentTitle } from './title'
  * Route definitions with lazy loading
  */
 const routes: RouteRecordRaw[] = [
+  { path: '/docs/:slug?', name: 'BrandDocs', component: () => import('@/views/public/DocsView.vue'), meta: { requiresAuth: false, titleKey: 'brand.docs' } },
+  { path: '/admin/brands', name: 'AdminBrands', component: () => import('@/views/admin/BrandsView.vue'), meta: { requiresAuth: true, requiresAdmin: true, titleKey: 'brand.management' } },
+  { path: '/admin/brand-content', name: 'AdminBrandContent', component: () => import('@/views/admin/BrandContentView.vue'), meta: { requiresAuth: true, requiresAdmin: true, titleKey: 'brand.content' } },
   // ==================== Setup Routes ====================
   {
     path: '/setup',
@@ -838,6 +842,9 @@ router.beforeEach(async (to, _from, next) => {
     authStore.checkAuth()
     authInitialized = true
   }
+  const brandStore = useBrandStore()
+  if (authStore.isAuthenticated) await brandStore.loadAccess()
+  if (to.path.startsWith('/admin/') && !brandStore.canVisit(to.path)) { next('/admin/dashboard'); return }
 
   // Set page title
   const appStore = useAppStore()
@@ -952,7 +959,7 @@ router.beforeEach(async (to, _from, next) => {
     if (!adminSettingsStore.requestCaptureEnabled) { next('/admin/settings'); return }
   }
 
-  if ((requiresAdmin || to.meta.requiresAccountManagement) && authStore.isAdmin) {
+  if ((requiresAdmin || to.meta.requiresAccountManagement) && authStore.isAdmin && (!brandStore.enabled || brandStore.isPlatformAdmin)) {
     const adminComplianceStore = useAdminComplianceStore()
     if (!adminComplianceStore.initialized) {
       try {

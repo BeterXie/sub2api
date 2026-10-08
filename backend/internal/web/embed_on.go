@@ -5,7 +5,9 @@ package web
 import (
 	"bytes"
 	"context"
+	"crypto/sha256"
 	"embed"
+	"encoding/hex"
 	"encoding/json"
 	htmlpkg "html"
 	"io"
@@ -14,16 +16,19 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/server/middleware"
 	"github.com/gin-gonic/gin"
 )
 
 const (
 	// NonceHTMLPlaceholder is the placeholder for nonce in HTML script tags
-	NonceHTMLPlaceholder = "__CSP_NONCE_VALUE__"
+	NonceHTMLPlaceholder         = "__CSP_NONCE_VALUE__"
+	canonicalPathHTMLPlaceholder = "__SUB2API_CANONICAL_PATH__"
 )
 
 //go:embed all:dist
@@ -133,6 +138,15 @@ func (s *FrontendServer) tryServeOverride(c *gin.Context, cleanPath string) bool
 		return false
 	}
 	filePath := filepath.Join(s.overrideDir, filepath.Clean("/"+cleanPath))
+	if scope, ok := brand.FromContext(c.Request.Context()); ok {
+		filePath = filepath.Join(s.overrideDir, scope.Code, filepath.Clean("/"+cleanPath))
+		// Only LLMP may read its established legacy asset directory.
+		if scope.ID == brand.LegacyID {
+			if _, err := os.Stat(filePath); os.IsNotExist(err) {
+				filePath = filepath.Join(s.overrideDir, filepath.Clean("/"+cleanPath))
+			}
+		}
+	}
 	info, err := os.Stat(filePath)
 	if err != nil || info.IsDir() {
 		return false
@@ -147,19 +161,26 @@ func (s *FrontendServer) serveIndexHTML(c *gin.Context) {
 	nonce := middleware.GetNonceFromContext(c)
 
 	// Check cache first
-	cached := s.cache.Get()
+	key := "legacy"
+	_, branded := brand.FromContext(c.Request.Context())
+	if scope, ok := brand.FromContext(c.Request.Context()); ok {
+		key = strconv.FormatInt(scope.ID, 10) + ":" + strconv.FormatInt(scope.DomainID, 10) + ":" + scope.Hostname
+	}
+	version := s.cache.Version()
+	cached := s.cache.Get(key)
 	if cached != nil {
 		// Check If-None-Match for 304 response
-		if match := c.GetHeader("If-None-Match"); match == cached.ETag {
+		etag := responseETag(cached.ETag, c.Request.URL.EscapedPath(), branded)
+		if match := c.GetHeader("If-None-Match"); match == etag {
 			c.Status(http.StatusNotModified)
 			c.Abort()
 			return
 		}
 
 		// Replace nonce placeholder with actual nonce before serving
-		content := replaceNoncePlaceholder(cached.Content, nonce)
+		content := renderIndexResponse(cached.Content, nonce, c.Request.URL.EscapedPath())
 
-		c.Header("ETag", cached.ETag)
+		c.Header("ETag", etag)
 		c.Header("Cache-Control", "no-cache") // Must revalidate
 		c.Data(http.StatusOK, "text/html; charset=utf-8", content)
 		c.Abort()
@@ -172,6 +193,10 @@ func (s *FrontendServer) serveIndexHTML(c *gin.Context) {
 
 	settings, err := s.settings.GetPublicSettingsForInjection(ctx)
 	if err != nil {
+		if _, scoped := brand.FromContext(ctx); scoped {
+			c.AbortWithStatus(http.StatusServiceUnavailable)
+			return
+		}
 		// Fallback: serve without injection
 		c.Data(http.StatusOK, "text/html; charset=utf-8", s.baseHTML)
 		c.Abort()
@@ -180,6 +205,10 @@ func (s *FrontendServer) serveIndexHTML(c *gin.Context) {
 
 	settingsJSON, err := json.Marshal(settings)
 	if err != nil {
+		if _, scoped := brand.FromContext(ctx); scoped {
+			c.AbortWithStatus(http.StatusServiceUnavailable)
+			return
+		}
 		// Fallback: serve without injection
 		c.Data(http.StatusOK, "text/html; charset=utf-8", s.baseHTML)
 		c.Abort()
@@ -187,18 +216,53 @@ func (s *FrontendServer) serveIndexHTML(c *gin.Context) {
 	}
 
 	rendered := s.injectSettings(settingsJSON)
-	s.cache.Set(rendered, settingsJSON)
+	cacheSettings := settingsJSON
+	if scope, ok := brand.FromContext(ctx); ok {
+		store := brand.StoreFromContext(ctx)
+		if store == nil {
+			c.AbortWithStatus(http.StatusServiceUnavailable)
+			return
+		}
+		values, err := store.Settings(ctx, scope)
+		if err != nil {
+			c.AbortWithStatus(http.StatusServiceUnavailable)
+			return
+		}
+		brandJSON, err := json.Marshal(gin.H{"enabled": true, "brand": scope, "settings": brand.PublicPresentation(values)})
+		if err != nil {
+			c.AbortWithStatus(http.StatusServiceUnavailable)
+			return
+		}
+		script := []byte(`<script nonce="` + NonceHTMLPlaceholder + `">window.__BRAND_CONFIG__=` + string(brandJSON) + `;</script>`)
+		rendered = bytes.Replace(rendered, []byte("</head>"), append(script, []byte("</head>")...), 1)
+		rendered = injectBrandSEO(rendered, scope, values, canonicalPathHTMLPlaceholder)
+		cacheSettings = append(append([]byte{}, settingsJSON...), brandJSON...)
+	}
+	s.cache.SetFor(key, rendered, cacheSettings, version)
 
 	// Replace nonce placeholder with actual nonce before serving
-	content := replaceNoncePlaceholder(rendered, nonce)
+	content := renderIndexResponse(rendered, nonce, c.Request.URL.EscapedPath())
 
-	cached = s.cache.Get()
+	cached = s.cache.Get(key)
 	if cached != nil {
-		c.Header("ETag", cached.ETag)
+		c.Header("ETag", responseETag(cached.ETag, c.Request.URL.EscapedPath(), branded))
 	}
 	c.Header("Cache-Control", "no-cache")
 	c.Data(http.StatusOK, "text/html; charset=utf-8", content)
 	c.Abort()
+}
+
+func injectBrandSEO(html []byte, scope brand.Scope, values map[string]any, path string) []byte {
+	title, _ := values["seo_title"].(string)
+	if title != "" {
+		start, end := bytes.Index(html, []byte("<title>")), bytes.Index(html, []byte("</title>"))
+		if start >= 0 && end > start {
+			html = append(append(append([]byte{}, html[:start]...), []byte("<title>"+htmlpkg.EscapeString(title)+"</title>")...), html[end+8:]...)
+		}
+	}
+	description, _ := values["seo_description"].(string)
+	meta := `<meta name="description" content="` + htmlpkg.EscapeString(description) + `" /><link rel="canonical" href="https://` + htmlpkg.EscapeString(scope.Hostname) + htmlpkg.EscapeString(path) + `" />`
+	return bytes.Replace(html, []byte("</head>"), append([]byte(meta), []byte("</head>")...), 1)
 }
 
 func (s *FrontendServer) injectSettings(settingsJSON []byte) []byte {
@@ -296,6 +360,19 @@ func injectSiteTitle(html, settingsJSON []byte) []byte {
 // replaceNoncePlaceholder replaces the nonce placeholder with actual nonce value
 func replaceNoncePlaceholder(html []byte, nonce string) []byte {
 	return bytes.ReplaceAll(html, []byte(NonceHTMLPlaceholder), []byte(nonce))
+}
+
+func renderIndexResponse(html []byte, nonce, escapedPath string) []byte {
+	rendered := replaceNoncePlaceholder(html, nonce)
+	return bytes.ReplaceAll(rendered, []byte(canonicalPathHTMLPlaceholder), []byte(htmlpkg.EscapeString(escapedPath)))
+}
+
+func responseETag(baseETag, escapedPath string, branded bool) string {
+	if !branded {
+		return baseETag
+	}
+	hash := sha256.Sum256([]byte(escapedPath))
+	return strings.TrimSuffix(baseETag, `"`) + "-" + hex.EncodeToString(hash[:4]) + `"`
 }
 
 // ServeEmbeddedFrontend returns a middleware for serving embedded frontend

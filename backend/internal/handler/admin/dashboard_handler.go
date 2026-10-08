@@ -3,6 +3,7 @@ package admin
 import (
 	"encoding/json"
 	"errors"
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"strconv"
 	"strings"
 	"time"
@@ -554,7 +555,7 @@ func (h *DashboardHandler) GetUserSpendingRanking(c *gin.Context) {
 		End:   endTime.UTC().Format(time.RFC3339),
 		Limit: limit,
 	})
-	cacheKey := string(keyRaw)
+	cacheKey := brand.CacheKey(c.Request.Context(), string(keyRaw))
 	if cached, ok := dashboardUsersRankingCache.Get(cacheKey); ok {
 		c.Header("X-Snapshot-Cache", "hit")
 		response.Success(c, cached.Payload)
@@ -605,7 +606,7 @@ func (h *DashboardHandler) GetBatchUsersUsage(c *gin.Context) {
 		Day:     timezone.Today().Format("2006-01-02"),
 		UserIDs: userIDs,
 	})
-	cacheKey := string(keyRaw)
+	cacheKey := brand.CacheKey(c.Request.Context(), string(keyRaw))
 	if cached, ok := dashboardBatchUsersUsageCache.Get(cacheKey); ok {
 		c.Header("X-Snapshot-Cache", "hit")
 		response.Success(c, cached.Payload)
@@ -649,7 +650,7 @@ func (h *DashboardHandler) GetBatchAPIKeysUsage(c *gin.Context) {
 	}{
 		APIKeyIDs: apiKeyIDs,
 	})
-	cacheKey := string(keyRaw)
+	cacheKey := brand.CacheKey(c.Request.Context(), string(keyRaw))
 	if cached, ok := dashboardBatchAPIKeysUsageCache.Get(cacheKey); ok {
 		c.Header("X-Snapshot-Cache", "hit")
 		response.Success(c, cached.Payload)

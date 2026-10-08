@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"github.com/Wei-Shaw/sub2api/ent/schema/mixins"
 	"time"
 
 	"github.com/Wei-Shaw/sub2api/internal/domain"
@@ -30,12 +31,13 @@ func (PromoCode) Annotations() []schema.Annotation {
 	}
 }
 
+func (PromoCode) Mixin() []ent.Mixin { return []ent.Mixin{mixins.BrandMixin{}} }
+
 func (PromoCode) Fields() []ent.Field {
 	return []ent.Field{
 		field.String("code").
 			MaxLen(32).
 			NotEmpty().
-			Unique().
 			Comment("优惠码"),
 		field.Float("bonus_amount").
 			SchemaType(map[string]string{dialect.Postgres: "decimal(20,8)"}).
@@ -80,7 +82,7 @@ func (PromoCode) Edges() []ent.Edge {
 
 func (PromoCode) Indexes() []ent.Index {
 	return []ent.Index{
-		// code 字段已在 Fields() 中声明 Unique()，无需重复索引
+		index.Fields("brand_id", "code").Unique(),
 		index.Fields("status"),
 		index.Fields("expires_at"),
 	}

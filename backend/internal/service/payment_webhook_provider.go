@@ -9,6 +9,7 @@ import (
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/paymentorder"
 	"github.com/Wei-Shaw/sub2api/ent/paymentproviderinstance"
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 )
 
@@ -33,6 +34,10 @@ func (s *PaymentService) GetWebhookProviders(ctx context.Context, providerKey, o
 	if outTradeNo != "" {
 		order, err := s.entClient.PaymentOrder.Query().Where(paymentorder.OutTradeNo(outTradeNo)).Only(ctx)
 		if err == nil {
+			ctx, err = s.paymentOrderBrandContext(ctx, order)
+			if err != nil {
+				return nil, err
+			}
 			if psHasPinnedProviderInstance(order) {
 				prov, err := s.getPinnedOrderProvider(ctx, order)
 				if err != nil {
@@ -54,6 +59,9 @@ func (s *PaymentService) GetWebhookProviders(ctx context.Context, providerKey, o
 			if strings.TrimSpace(providerKey) == payment.TypeWxpay {
 				return s.getEnabledWebhookProvidersByKey(ctx, providerKey)
 			}
+			if scope, ok := brand.FromContext(ctx); ok && scope.ID != brand.LegacyID {
+				return nil, payment.ErrProviderNotFound
+			}
 			if !s.webhookRegistryFallbackAllowed(ctx, providerKey) {
 				return nil, fmt.Errorf("webhook provider fallback is ambiguous for %s", providerKey)
 			}
@@ -69,7 +77,11 @@ func (s *PaymentService) GetWebhookProviders(ctx context.Context, providerKey, o
 	if strings.TrimSpace(providerKey) == payment.TypeWxpay {
 		return s.getEnabledWebhookProvidersByKey(ctx, providerKey)
 	}
-
+	// Stripe/encrypted callbacks can lack an order ID before verification.
+	// Search all configured merchants, then reverify against the saved order.
+	if s.brandStore != nil {
+		return s.getEnabledWebhookProvidersByKey(ctx, providerKey)
+	}
 	if !s.webhookRegistryFallbackAllowed(ctx, providerKey) {
 		return nil, fmt.Errorf("webhook provider fallback is ambiguous for %s", providerKey)
 	}

@@ -58,6 +58,7 @@ const refreshTokenPrefix = "rt_"
 
 // JWTClaims JWT载荷数据
 type JWTClaims struct {
+	BrandID      int64  `json:"brand_id"`
 	UserID       int64  `json:"user_id"`
 	Email        string `json:"email"`
 	Role         string `json:"role"`
@@ -382,7 +383,7 @@ func (s *AuthService) SendVerifyCodeAsync(ctx context.Context, email string, loc
 
 	// 异步发送
 	logger.LegacyPrintf("service.auth", "[Auth] Enqueueing verify code for: %s", email)
-	if err := s.emailQueueService.EnqueueVerifyCode(email, siteName, firstEmailLocale(locale)); err != nil {
+	if err := s.emailQueueService.EnqueueVerifyCodeWithContext(ctx, email, siteName, firstEmailLocale(locale)); err != nil {
 		logger.LegacyPrintf("service.auth", "[Auth] Failed to enqueue: %v", err)
 		return nil, fmt.Errorf("enqueue verify code: %w", err)
 	}
@@ -1047,6 +1048,9 @@ func (s *AuthService) shouldApplyEmailFirstBindDefaults(
 	identity *dbent.AuthIdentity,
 	created bool,
 ) bool {
+	if s == nil || s.entClient == nil || userID <= 0 || identity == nil || identity.UserID != userID {
+		return false
+	}
 	source := emailAuthIdentitySource(identity.Metadata)
 	if source == "auth_service_login_backfill" {
 		return false
@@ -1147,6 +1151,7 @@ func (s *AuthService) ensureEmailAuthIdentity(ctx context.Context, user *User, s
 				"source": strings.TrimSpace(source),
 			}).
 			OnConflictColumns(
+				authidentity.FieldBrandID,
 				authidentity.FieldProviderType,
 				authidentity.FieldProviderKey,
 				authidentity.FieldProviderSubject,
@@ -1428,6 +1433,7 @@ func (s *AuthService) generateAccessToken(user *User, sessionID, bindingHash str
 	}
 
 	claims := &JWTClaims{
+		BrandID:      user.BrandID,
 		UserID:       user.ID,
 		Email:        user.Email,
 		Role:         user.Role,
@@ -1493,6 +1499,9 @@ func (s *AuthService) RefreshToken(ctx context.Context, oldTokenString string) (
 	}
 
 	// 检查用户状态
+	if !s.RequestBrandMatches(ctx, claims, user) {
+		return "", ErrInvalidToken
+	}
 	if !user.IsActive() {
 		return "", ErrUserNotActive
 	}
@@ -1601,7 +1610,7 @@ func (s *AuthService) RequestPasswordResetAsync(ctx context.Context, email, fron
 		return nil // Silent success to prevent enumeration
 	}
 
-	if err := s.emailQueueService.EnqueuePasswordReset(email, siteName, resetURL, firstEmailLocale(locale)); err != nil {
+	if err := s.emailQueueService.EnqueuePasswordResetWithContext(ctx, email, siteName, resetURL, firstEmailLocale(locale)); err != nil {
 		logger.LegacyPrintf("service.auth", "[Auth] Failed to enqueue password reset email for %s: %v", email, err)
 		return nil // Silent success to prevent enumeration
 	}
@@ -1746,6 +1755,7 @@ func (s *AuthService) generateRefreshToken(ctx context.Context, user *User, fami
 	ttl := time.Duration(s.cfg.JWT.RefreshTokenExpireDays) * 24 * time.Hour
 
 	data := &RefreshTokenData{
+		BrandID:      user.BrandID,
 		UserID:       user.ID,
 		TokenVersion: resolvedTokenVersion(user),
 		FamilyID:     familyID,
@@ -1802,6 +1812,9 @@ func (s *AuthService) RefreshTokenPair(ctx context.Context, refreshToken string)
 	}
 
 	// 检查Token是否过期
+	if !s.refreshBrandMatches(ctx, data) {
+		return nil, ErrRefreshTokenInvalid
+	}
 	if time.Now().After(data.ExpiresAt) {
 		// 删除过期Token
 		_ = s.refreshTokenCache.DeleteRefreshToken(ctx, tokenHash)
@@ -1871,6 +1884,9 @@ func (s *AuthService) RevokeRefreshToken(ctx context.Context, refreshToken strin
 	}
 
 	tokenHash := hashToken(refreshToken)
+	if data, err := s.refreshTokenCache.GetRefreshToken(ctx, tokenHash); err != nil || !s.refreshBrandMatches(ctx, data) {
+		return ErrRefreshTokenInvalid
+	}
 	return s.refreshTokenCache.DeleteRefreshToken(ctx, tokenHash)
 }
 

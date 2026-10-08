@@ -22,6 +22,20 @@ type SubscriptionPlanCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *SubscriptionPlanCreate) SetBrandID(v int64) *SubscriptionPlanCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *SubscriptionPlanCreate) SetNillableBrandID(v *int64) *SubscriptionPlanCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetGroupID sets the "group_id" field.
 func (_c *SubscriptionPlanCreate) SetGroupID(v int64) *SubscriptionPlanCreate {
 	_c.mutation.SetGroupID(v)
@@ -201,7 +215,9 @@ func (_c *SubscriptionPlanCreate) Mutation() *SubscriptionPlanMutation {
 
 // Save creates the SubscriptionPlan in the database.
 func (_c *SubscriptionPlanCreate) Save(ctx context.Context) (*SubscriptionPlan, error) {
-	_c.defaults()
+	if err := _c.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -228,7 +244,11 @@ func (_c *SubscriptionPlanCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *SubscriptionPlanCreate) defaults() {
+func (_c *SubscriptionPlanCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := subscriptionplan.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.Description(); !ok {
 		v := subscriptionplan.DefaultDescription
 		_c.mutation.SetDescription(v)
@@ -262,17 +282,27 @@ func (_c *SubscriptionPlanCreate) defaults() {
 		_c.mutation.SetSortOrder(v)
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
+		if subscriptionplan.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized subscriptionplan.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := subscriptionplan.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		if subscriptionplan.DefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized subscriptionplan.DefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := subscriptionplan.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *SubscriptionPlanCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "SubscriptionPlan.brand_id"`)}
+	}
 	if _, ok := _c.mutation.GroupID(); !ok {
 		return &ValidationError{Name: "group_id", err: errors.New(`ent: missing required field "SubscriptionPlan.group_id"`)}
 	}
@@ -359,6 +389,10 @@ func (_c *SubscriptionPlanCreate) createSpec() (*SubscriptionPlan, *sqlgraph.Cre
 		_spec = sqlgraph.NewCreateSpec(subscriptionplan.Table, sqlgraph.NewFieldSpec(subscriptionplan.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(subscriptionplan.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.GroupID(); ok {
 		_spec.SetField(subscriptionplan.FieldGroupID, field.TypeInt64, value)
 		_node.GroupID = value
@@ -422,7 +456,7 @@ func (_c *SubscriptionPlanCreate) createSpec() (*SubscriptionPlan, *sqlgraph.Cre
 // of the `INSERT` statement. For example:
 //
 //	client.SubscriptionPlan.Create().
-//		SetGroupID(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -431,7 +465,7 @@ func (_c *SubscriptionPlanCreate) createSpec() (*SubscriptionPlan, *sqlgraph.Cre
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.SubscriptionPlanUpsert) {
-//			SetGroupID(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *SubscriptionPlanCreate) OnConflict(opts ...sql.ConflictOption) *SubscriptionPlanUpsertOne {
@@ -670,6 +704,9 @@ func (u *SubscriptionPlanUpsert) UpdateUpdatedAt() *SubscriptionPlanUpsert {
 func (u *SubscriptionPlanUpsertOne) UpdateNewValues() *SubscriptionPlanUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(subscriptionplan.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(subscriptionplan.FieldCreatedAt)
 		}
@@ -1063,7 +1100,7 @@ func (_c *SubscriptionPlanCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.SubscriptionPlanUpsert) {
-//			SetGroupID(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *SubscriptionPlanCreateBulk) OnConflict(opts ...sql.ConflictOption) *SubscriptionPlanUpsertBulk {
@@ -1104,6 +1141,9 @@ func (u *SubscriptionPlanUpsertBulk) UpdateNewValues() *SubscriptionPlanUpsertBu
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(subscriptionplan.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(subscriptionplan.FieldCreatedAt)
 			}

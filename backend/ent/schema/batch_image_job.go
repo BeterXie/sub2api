@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"github.com/Wei-Shaw/sub2api/ent/schema/mixins"
 	"time"
 
 	"entgo.io/ent"
@@ -25,6 +26,8 @@ func (BatchImageJob) Annotations() []schema.Annotation {
 		entsql.Annotation{Table: "batch_image_jobs"},
 	}
 }
+
+func (BatchImageJob) Mixin() []ent.Mixin { return []ent.Mixin{mixins.BrandMixin{}} }
 
 func (BatchImageJob) Fields() []ent.Field {
 	return []ent.Field{

@@ -373,12 +373,12 @@ func (_q *AuthIdentityQuery) WithAdoptionDecisions(opts ...func(*IdentityAdoptio
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.AuthIdentity.Query().
-//		GroupBy(authidentity.FieldCreatedAt).
+//		GroupBy(authidentity.FieldBrandID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *AuthIdentityQuery) GroupBy(field string, fields ...string) *AuthIdentityGroupBy {
@@ -396,11 +396,11 @@ func (_q *AuthIdentityQuery) GroupBy(field string, fields ...string) *AuthIdenti
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //	}
 //
 //	client.AuthIdentity.Query().
-//		Select(authidentity.FieldCreatedAt).
+//		Select(authidentity.FieldBrandID).
 //		Scan(ctx, &v)
 func (_q *AuthIdentityQuery) Select(fields ...string) *AuthIdentitySelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

@@ -264,12 +264,12 @@ func (_q *UsageCleanupTaskQuery) Clone() *UsageCleanupTaskQuery {
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.UsageCleanupTask.Query().
-//		GroupBy(usagecleanuptask.FieldCreatedAt).
+//		GroupBy(usagecleanuptask.FieldBrandID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *UsageCleanupTaskQuery) GroupBy(field string, fields ...string) *UsageCleanupTaskGroupBy {
@@ -287,11 +287,11 @@ func (_q *UsageCleanupTaskQuery) GroupBy(field string, fields ...string) *UsageC
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //	}
 //
 //	client.UsageCleanupTask.Query().
-//		Select(usagecleanuptask.FieldCreatedAt).
+//		Select(usagecleanuptask.FieldBrandID).
 //		Scan(ctx, &v)
 func (_q *UsageCleanupTaskQuery) Select(fields ...string) *UsageCleanupTaskSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

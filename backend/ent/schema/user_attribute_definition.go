@@ -32,6 +32,7 @@ func (UserAttributeDefinition) Annotations() []schema.Annotation {
 
 func (UserAttributeDefinition) Mixin() []ent.Mixin {
 	return []ent.Mixin{
+		mixins.BrandMixin{},
 		mixins.TimeMixin{},
 		mixins.SoftDeleteMixin{},
 	}

@@ -23,6 +23,20 @@ type AuthIdentityChannelCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *AuthIdentityChannelCreate) SetBrandID(v int64) *AuthIdentityChannelCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *AuthIdentityChannelCreate) SetNillableBrandID(v *int64) *AuthIdentityChannelCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *AuthIdentityChannelCreate) SetCreatedAt(v time.Time) *AuthIdentityChannelCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -105,7 +119,9 @@ func (_c *AuthIdentityChannelCreate) Mutation() *AuthIdentityChannelMutation {
 
 // Save creates the AuthIdentityChannel in the database.
 func (_c *AuthIdentityChannelCreate) Save(ctx context.Context) (*AuthIdentityChannel, error) {
-	_c.defaults()
+	if err := _c.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -132,23 +148,40 @@ func (_c *AuthIdentityChannelCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *AuthIdentityChannelCreate) defaults() {
+func (_c *AuthIdentityChannelCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := authidentitychannel.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
+		if authidentitychannel.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized authidentitychannel.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := authidentitychannel.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		if authidentitychannel.DefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized authidentitychannel.DefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := authidentitychannel.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
 	if _, ok := _c.mutation.Metadata(); !ok {
+		if authidentitychannel.DefaultMetadata == nil {
+			return fmt.Errorf("ent: uninitialized authidentitychannel.DefaultMetadata (forgotten import ent/runtime?)")
+		}
 		v := authidentitychannel.DefaultMetadata()
 		_c.mutation.SetMetadata(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *AuthIdentityChannelCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "AuthIdentityChannel.brand_id"`)}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "AuthIdentityChannel.created_at"`)}
 	}
@@ -231,6 +264,10 @@ func (_c *AuthIdentityChannelCreate) createSpec() (*AuthIdentityChannel, *sqlgra
 		_spec = sqlgraph.NewCreateSpec(authidentitychannel.Table, sqlgraph.NewFieldSpec(authidentitychannel.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(authidentitychannel.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(authidentitychannel.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -287,7 +324,7 @@ func (_c *AuthIdentityChannelCreate) createSpec() (*AuthIdentityChannel, *sqlgra
 // of the `INSERT` statement. For example:
 //
 //	client.AuthIdentityChannel.Create().
-//		SetCreatedAt(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -296,7 +333,7 @@ func (_c *AuthIdentityChannelCreate) createSpec() (*AuthIdentityChannel, *sqlgra
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.AuthIdentityChannelUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *AuthIdentityChannelCreate) OnConflict(opts ...sql.ConflictOption) *AuthIdentityChannelUpsertOne {
@@ -439,6 +476,9 @@ func (u *AuthIdentityChannelUpsert) UpdateMetadata() *AuthIdentityChannelUpsert 
 func (u *AuthIdentityChannelUpsertOne) UpdateNewValues() *AuthIdentityChannelUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(authidentitychannel.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(authidentitychannel.FieldCreatedAt)
 		}
@@ -720,7 +760,7 @@ func (_c *AuthIdentityChannelCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.AuthIdentityChannelUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *AuthIdentityChannelCreateBulk) OnConflict(opts ...sql.ConflictOption) *AuthIdentityChannelUpsertBulk {
@@ -761,6 +801,9 @@ func (u *AuthIdentityChannelUpsertBulk) UpdateNewValues() *AuthIdentityChannelUp
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(authidentitychannel.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(authidentitychannel.FieldCreatedAt)
 			}

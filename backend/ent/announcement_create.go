@@ -24,6 +24,20 @@ type AnnouncementCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *AnnouncementCreate) SetBrandID(v int64) *AnnouncementCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *AnnouncementCreate) SetNillableBrandID(v *int64) *AnnouncementCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetTitle sets the "title" field.
 func (_c *AnnouncementCreate) SetTitle(v string) *AnnouncementCreate {
 	_c.mutation.SetTitle(v)
@@ -184,7 +198,9 @@ func (_c *AnnouncementCreate) Mutation() *AnnouncementMutation {
 
 // Save creates the Announcement in the database.
 func (_c *AnnouncementCreate) Save(ctx context.Context) (*Announcement, error) {
-	_c.defaults()
+	if err := _c.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -211,7 +227,11 @@ func (_c *AnnouncementCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *AnnouncementCreate) defaults() {
+func (_c *AnnouncementCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := announcement.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.Status(); !ok {
 		v := announcement.DefaultStatus
 		_c.mutation.SetStatus(v)
@@ -221,17 +241,27 @@ func (_c *AnnouncementCreate) defaults() {
 		_c.mutation.SetNotifyMode(v)
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
+		if announcement.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized announcement.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := announcement.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		if announcement.DefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized announcement.DefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := announcement.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *AnnouncementCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "Announcement.brand_id"`)}
+	}
 	if _, ok := _c.mutation.Title(); !ok {
 		return &ValidationError{Name: "title", err: errors.New(`ent: missing required field "Announcement.title"`)}
 	}
@@ -297,6 +327,10 @@ func (_c *AnnouncementCreate) createSpec() (*Announcement, *sqlgraph.CreateSpec)
 		_spec = sqlgraph.NewCreateSpec(announcement.Table, sqlgraph.NewFieldSpec(announcement.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(announcement.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.Title(); ok {
 		_spec.SetField(announcement.FieldTitle, field.TypeString, value)
 		_node.Title = value
@@ -364,7 +398,7 @@ func (_c *AnnouncementCreate) createSpec() (*Announcement, *sqlgraph.CreateSpec)
 // of the `INSERT` statement. For example:
 //
 //	client.Announcement.Create().
-//		SetTitle(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -373,7 +407,7 @@ func (_c *AnnouncementCreate) createSpec() (*Announcement, *sqlgraph.CreateSpec)
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.AnnouncementUpsert) {
-//			SetTitle(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *AnnouncementCreate) OnConflict(opts ...sql.ConflictOption) *AnnouncementUpsertOne {
@@ -582,6 +616,9 @@ func (u *AnnouncementUpsert) UpdateUpdatedAt() *AnnouncementUpsert {
 func (u *AnnouncementUpsertOne) UpdateNewValues() *AnnouncementUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(announcement.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(announcement.FieldCreatedAt)
 		}
@@ -940,7 +977,7 @@ func (_c *AnnouncementCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.AnnouncementUpsert) {
-//			SetTitle(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *AnnouncementCreateBulk) OnConflict(opts ...sql.ConflictOption) *AnnouncementUpsertBulk {
@@ -981,6 +1018,9 @@ func (u *AnnouncementUpsertBulk) UpdateNewValues() *AnnouncementUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(announcement.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(announcement.FieldCreatedAt)
 			}

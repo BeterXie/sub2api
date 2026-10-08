@@ -113,7 +113,9 @@ func (_u *UserAttributeValueUpdate) ClearDefinition() *UserAttributeValueUpdate 
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *UserAttributeValueUpdate) Save(ctx context.Context) (int, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return 0, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -140,11 +142,15 @@ func (_u *UserAttributeValueUpdate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *UserAttributeValueUpdate) defaults() {
+func (_u *UserAttributeValueUpdate) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if userattributevalue.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized userattributevalue.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := userattributevalue.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -350,7 +356,9 @@ func (_u *UserAttributeValueUpdateOne) Select(field string, fields ...string) *U
 
 // Save executes the query and returns the updated UserAttributeValue entity.
 func (_u *UserAttributeValueUpdateOne) Save(ctx context.Context) (*UserAttributeValue, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -377,11 +385,15 @@ func (_u *UserAttributeValueUpdateOne) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *UserAttributeValueUpdateOne) defaults() {
+func (_u *UserAttributeValueUpdateOne) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if userattributevalue.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized userattributevalue.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := userattributevalue.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.

@@ -18,6 +18,8 @@ type UserPlatformQuota struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int64 `json:"id,omitempty"`
+	// BrandID holds the value of the "brand_id" field.
+	BrandID int64 `json:"brand_id,omitempty"`
 	// CreatedAt holds the value of the "created_at" field.
 	CreatedAt time.Time `json:"created_at,omitempty"`
 	// UpdatedAt holds the value of the "updated_at" field.
@@ -79,7 +81,7 @@ func (*UserPlatformQuota) scanValues(columns []string) ([]any, error) {
 		switch columns[i] {
 		case userplatformquota.FieldDailyLimitUsd, userplatformquota.FieldWeeklyLimitUsd, userplatformquota.FieldMonthlyLimitUsd, userplatformquota.FieldDailyUsageUsd, userplatformquota.FieldWeeklyUsageUsd, userplatformquota.FieldMonthlyUsageUsd:
 			values[i] = new(sql.NullFloat64)
-		case userplatformquota.FieldID, userplatformquota.FieldUserID:
+		case userplatformquota.FieldID, userplatformquota.FieldBrandID, userplatformquota.FieldUserID:
 			values[i] = new(sql.NullInt64)
 		case userplatformquota.FieldPlatform:
 			values[i] = new(sql.NullString)
@@ -106,6 +108,12 @@ func (_m *UserPlatformQuota) assignValues(columns []string, values []any) error 
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int64(value.Int64)
+		case userplatformquota.FieldBrandID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field brand_id", values[i])
+			} else if value.Valid {
+				_m.BrandID = value.Int64
+			}
 		case userplatformquota.FieldCreatedAt:
 			if value, ok := values[i].(*sql.NullTime); !ok {
 				return fmt.Errorf("unexpected type %T for field created_at", values[i])
@@ -238,6 +246,9 @@ func (_m *UserPlatformQuota) String() string {
 	var builder strings.Builder
 	builder.WriteString("UserPlatformQuota(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
+	builder.WriteString("brand_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.BrandID))
+	builder.WriteString(", ")
 	builder.WriteString("created_at=")
 	builder.WriteString(_m.CreatedAt.Format(time.ANSIC))
 	builder.WriteString(", ")

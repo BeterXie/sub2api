@@ -14,7 +14,7 @@ import (
 	"github.com/dgraph-io/ristretto"
 )
 
-const apiKeyAuthSnapshotVersion = 27 // v27: include API key concurrency limit; retain stream_only and user-group denied models
+const apiKeyAuthSnapshotVersion = 28 // v28: key, user and group brand ownership
 
 type apiKeyAuthCacheConfig struct {
 	l1Size        int
@@ -355,6 +355,7 @@ func (s *APIKeyService) snapshotFromAPIKey(ctx context.Context, apiKey *APIKey) 
 	snapshot := &APIKeyAuthSnapshot{
 		Version:          apiKeyAuthSnapshotVersion,
 		APIKeyID:         apiKey.ID,
+		BrandID:          apiKey.BrandID,
 		UserID:           apiKey.UserID,
 		GroupID:          apiKey.GroupID,
 		Name:             apiKey.Name,
@@ -370,6 +371,7 @@ func (s *APIKeyService) snapshotFromAPIKey(ctx context.Context, apiKey *APIKey) 
 		RateLimit7d:      apiKey.RateLimit7d,
 		User: APIKeyAuthUserSnapshot{
 			ID:                         apiKey.User.ID,
+			BrandID:                    apiKey.User.BrandID,
 			Status:                     apiKey.User.Status,
 			Role:                       apiKey.User.Role,
 			Balance:                    apiKey.User.Balance,
@@ -399,6 +401,7 @@ func (s *APIKeyService) snapshotFromAPIKey(ctx context.Context, apiKey *APIKey) 
 	if apiKey.Group != nil {
 		snapshot.Group = &APIKeyAuthGroupSnapshot{
 			ID:                              apiKey.Group.ID,
+			BrandID:                         apiKey.Group.BrandID,
 			Name:                            apiKey.Group.Name,
 			Platform:                        apiKey.Group.Platform,
 			IsExclusive:                     apiKey.Group.IsExclusive,
@@ -466,6 +469,7 @@ func (s *APIKeyService) snapshotToAPIKey(key string, snapshot *APIKeyAuthSnapsho
 	}
 	apiKey := &APIKey{
 		ID:               snapshot.APIKeyID,
+		BrandID:          snapshot.BrandID,
 		UserID:           snapshot.UserID,
 		GroupID:          snapshot.GroupID,
 		Key:              key,
@@ -482,6 +486,7 @@ func (s *APIKeyService) snapshotToAPIKey(key string, snapshot *APIKeyAuthSnapsho
 		RateLimit7d:      snapshot.RateLimit7d,
 		User: &User{
 			ID:                         snapshot.User.ID,
+			BrandID:                    snapshot.User.BrandID,
 			Status:                     snapshot.User.Status,
 			Role:                       snapshot.User.Role,
 			Balance:                    snapshot.User.Balance,
@@ -503,6 +508,7 @@ func (s *APIKeyService) snapshotToAPIKey(key string, snapshot *APIKeyAuthSnapsho
 	if snapshot.Group != nil {
 		apiKey.Group = &Group{
 			ID:                              snapshot.Group.ID,
+			BrandID:                         snapshot.Group.BrandID,
 			Name:                            snapshot.Group.Name,
 			Platform:                        snapshot.Group.Platform,
 			IsExclusive:                     snapshot.Group.IsExclusive,

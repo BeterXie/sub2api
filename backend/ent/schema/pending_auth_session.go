@@ -40,6 +40,7 @@ func (PendingAuthSession) Annotations() []schema.Annotation {
 
 func (PendingAuthSession) Mixin() []ent.Mixin {
 	return []ent.Mixin{
+		mixins.BrandMixin{},
 		mixins.TimeMixin{},
 	}
 }

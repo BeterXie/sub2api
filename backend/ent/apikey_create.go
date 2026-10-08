@@ -25,6 +25,20 @@ type APIKeyCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *APIKeyCreate) SetBrandID(v int64) *APIKeyCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *APIKeyCreate) SetNillableBrandID(v *int64) *APIKeyCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *APIKeyCreate) SetCreatedAt(v time.Time) *APIKeyCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -383,6 +397,10 @@ func (_c *APIKeyCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *APIKeyCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := apikey.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		if apikey.DefaultCreatedAt == nil {
 			return fmt.Errorf("ent: uninitialized apikey.DefaultCreatedAt (forgotten import ent/runtime?)")
@@ -442,6 +460,9 @@ func (_c *APIKeyCreate) defaults() error {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *APIKeyCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "APIKey.brand_id"`)}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "APIKey.created_at"`)}
 	}
@@ -537,6 +558,10 @@ func (_c *APIKeyCreate) createSpec() (*APIKey, *sqlgraph.CreateSpec) {
 		_spec = sqlgraph.NewCreateSpec(apikey.Table, sqlgraph.NewFieldSpec(apikey.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(apikey.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(apikey.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -682,7 +707,7 @@ func (_c *APIKeyCreate) createSpec() (*APIKey, *sqlgraph.CreateSpec) {
 // of the `INSERT` statement. For example:
 //
 //	client.APIKey.Create().
-//		SetCreatedAt(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -691,7 +716,7 @@ func (_c *APIKeyCreate) createSpec() (*APIKey, *sqlgraph.CreateSpec) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.APIKeyUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *APIKeyCreate) OnConflict(opts ...sql.ConflictOption) *APIKeyUpsertOne {
@@ -1122,6 +1147,9 @@ func (u *APIKeyUpsert) ClearWindow7dStart() *APIKeyUpsert {
 func (u *APIKeyUpsertOne) UpdateNewValues() *APIKeyUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(apikey.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(apikey.FieldCreatedAt)
 		}
@@ -1739,7 +1767,7 @@ func (_c *APIKeyCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.APIKeyUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *APIKeyCreateBulk) OnConflict(opts ...sql.ConflictOption) *APIKeyUpsertBulk {
@@ -1780,6 +1808,9 @@ func (u *APIKeyUpsertBulk) UpdateNewValues() *APIKeyUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(apikey.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(apikey.FieldCreatedAt)
 			}

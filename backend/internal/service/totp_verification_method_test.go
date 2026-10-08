@@ -7,6 +7,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/stretchr/testify/require"
 )
 
@@ -104,4 +105,20 @@ func TestTotpDisableRegularUserStillRequiresEmailCode(t *testing.T) {
 
 	err := svc.Disable(context.Background(), user.ID, "", "whatever")
 	require.ErrorIs(t, err, ErrVerifyCodeRequired)
+}
+
+func TestTotpSendVerifyCodePreservesBrandContext(t *testing.T) {
+	user := &User{ID: 2, Email: "user@example.com", Role: RoleUser}
+	userRepo := &totpVMUserRepoStub{user: user}
+	settingSvc := NewSettingService(&totpVMSettingRepoStub{values: map[string]string{
+		SettingKeyEmailVerifyEnabled: "true",
+	}}, nil)
+	queue := &EmailQueueService{taskChan: make(chan EmailTask, 1)}
+	svc := NewTotpService(userRepo, nil, nil, settingSvc, nil, queue)
+	ctx := brand.WithScope(context.Background(), brand.Scope{ID: 2, Code: "mues"})
+
+	require.NoError(t, svc.SendVerifyCode(ctx, user.ID, "zh-CN"))
+	task := <-queue.taskChan
+	require.Equal(t, int64(2), brand.ID(task.Context))
+	require.Equal(t, "zh-CN", task.Locale)
 }

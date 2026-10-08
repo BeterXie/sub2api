@@ -55,6 +55,11 @@ func IDLTE(id int64) predicate.PromoCodeUsage {
 	return predicate.PromoCodeUsage(sql.FieldLTE(FieldID, id))
 }
 
+// BrandID applies equality check predicate on the "brand_id" field. It's identical to BrandIDEQ.
+func BrandID(v int64) predicate.PromoCodeUsage {
+	return predicate.PromoCodeUsage(sql.FieldEQ(FieldBrandID, v))
+}
+
 // PromoCodeID applies equality check predicate on the "promo_code_id" field. It's identical to PromoCodeIDEQ.
 func PromoCodeID(v int64) predicate.PromoCodeUsage {
 	return predicate.PromoCodeUsage(sql.FieldEQ(FieldPromoCodeID, v))
@@ -73,6 +78,46 @@ func BonusAmount(v float64) predicate.PromoCodeUsage {
 // UsedAt applies equality check predicate on the "used_at" field. It's identical to UsedAtEQ.
 func UsedAt(v time.Time) predicate.PromoCodeUsage {
 	return predicate.PromoCodeUsage(sql.FieldEQ(FieldUsedAt, v))
+}
+
+// BrandIDEQ applies the EQ predicate on the "brand_id" field.
+func BrandIDEQ(v int64) predicate.PromoCodeUsage {
+	return predicate.PromoCodeUsage(sql.FieldEQ(FieldBrandID, v))
+}
+
+// BrandIDNEQ applies the NEQ predicate on the "brand_id" field.
+func BrandIDNEQ(v int64) predicate.PromoCodeUsage {
+	return predicate.PromoCodeUsage(sql.FieldNEQ(FieldBrandID, v))
+}
+
+// BrandIDIn applies the In predicate on the "brand_id" field.
+func BrandIDIn(vs ...int64) predicate.PromoCodeUsage {
+	return predicate.PromoCodeUsage(sql.FieldIn(FieldBrandID, vs...))
+}
+
+// BrandIDNotIn applies the NotIn predicate on the "brand_id" field.
+func BrandIDNotIn(vs ...int64) predicate.PromoCodeUsage {
+	return predicate.PromoCodeUsage(sql.FieldNotIn(FieldBrandID, vs...))
+}
+
+// BrandIDGT applies the GT predicate on the "brand_id" field.
+func BrandIDGT(v int64) predicate.PromoCodeUsage {
+	return predicate.PromoCodeUsage(sql.FieldGT(FieldBrandID, v))
+}
+
+// BrandIDGTE applies the GTE predicate on the "brand_id" field.
+func BrandIDGTE(v int64) predicate.PromoCodeUsage {
+	return predicate.PromoCodeUsage(sql.FieldGTE(FieldBrandID, v))
+}
+
+// BrandIDLT applies the LT predicate on the "brand_id" field.
+func BrandIDLT(v int64) predicate.PromoCodeUsage {
+	return predicate.PromoCodeUsage(sql.FieldLT(FieldBrandID, v))
+}
+
+// BrandIDLTE applies the LTE predicate on the "brand_id" field.
+func BrandIDLTE(v int64) predicate.PromoCodeUsage {
+	return predicate.PromoCodeUsage(sql.FieldLTE(FieldBrandID, v))
 }
 
 // PromoCodeIDEQ applies the EQ predicate on the "promo_code_id" field.

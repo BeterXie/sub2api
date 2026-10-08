@@ -553,12 +553,12 @@ func (_q *GroupQuery) WithUserAllowedGroups(opts ...func(*UserAllowedGroupQuery)
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Group.Query().
-//		GroupBy(group.FieldCreatedAt).
+//		GroupBy(group.FieldBrandID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *GroupQuery) GroupBy(field string, fields ...string) *GroupGroupBy {
@@ -576,11 +576,11 @@ func (_q *GroupQuery) GroupBy(field string, fields ...string) *GroupGroupBy {
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //	}
 //
 //	client.Group.Query().
-//		Select(group.FieldCreatedAt).
+//		Select(group.FieldBrandID).
 //		Scan(ctx, &v)
 func (_q *GroupQuery) Select(fields ...string) *GroupSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

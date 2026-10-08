@@ -264,12 +264,12 @@ func (_q *IdempotencyRecordQuery) Clone() *IdempotencyRecordQuery {
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.IdempotencyRecord.Query().
-//		GroupBy(idempotencyrecord.FieldCreatedAt).
+//		GroupBy(idempotencyrecord.FieldBrandID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *IdempotencyRecordQuery) GroupBy(field string, fields ...string) *IdempotencyRecordGroupBy {
@@ -287,11 +287,11 @@ func (_q *IdempotencyRecordQuery) GroupBy(field string, fields ...string) *Idemp
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //	}
 //
 //	client.IdempotencyRecord.Query().
-//		Select(idempotencyrecord.FieldCreatedAt).
+//		Select(idempotencyrecord.FieldBrandID).
 //		Scan(ctx, &v)
 func (_q *IdempotencyRecordQuery) Select(fields ...string) *IdempotencyRecordSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

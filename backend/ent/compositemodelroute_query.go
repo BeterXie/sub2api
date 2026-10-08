@@ -300,12 +300,12 @@ func (_q *CompositeModelRouteQuery) WithGroup(opts ...func(*GroupQuery)) *Compos
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.CompositeModelRoute.Query().
-//		GroupBy(compositemodelroute.FieldCreatedAt).
+//		GroupBy(compositemodelroute.FieldBrandID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *CompositeModelRouteQuery) GroupBy(field string, fields ...string) *CompositeModelRouteGroupBy {
@@ -323,11 +323,11 @@ func (_q *CompositeModelRouteQuery) GroupBy(field string, fields ...string) *Com
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //	}
 //
 //	client.CompositeModelRoute.Query().
-//		Select(compositemodelroute.FieldCreatedAt).
+//		Select(compositemodelroute.FieldBrandID).
 //		Scan(ctx, &v)
 func (_q *CompositeModelRouteQuery) Select(fields ...string) *CompositeModelRouteSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

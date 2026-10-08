@@ -753,7 +753,9 @@ func (_u *PaymentOrderUpdate) ClearUser() *PaymentOrderUpdate {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *PaymentOrderUpdate) Save(ctx context.Context) (int, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return 0, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -780,11 +782,15 @@ func (_u *PaymentOrderUpdate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *PaymentOrderUpdate) defaults() {
+func (_u *PaymentOrderUpdate) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if paymentorder.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized paymentorder.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := paymentorder.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -1856,7 +1862,9 @@ func (_u *PaymentOrderUpdateOne) Select(field string, fields ...string) *Payment
 
 // Save executes the query and returns the updated PaymentOrder entity.
 func (_u *PaymentOrderUpdateOne) Save(ctx context.Context) (*PaymentOrder, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -1883,11 +1891,15 @@ func (_u *PaymentOrderUpdateOne) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *PaymentOrderUpdateOne) defaults() {
+func (_u *PaymentOrderUpdateOne) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if paymentorder.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized paymentorder.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := paymentorder.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.

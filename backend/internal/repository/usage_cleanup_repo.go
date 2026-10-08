@@ -143,7 +143,7 @@ func (r *usageCleanupRepository) ClaimNextPendingTask(ctx context.Context, stale
 		FROM next
 		WHERE tasks.id = next.id
 		RETURNING tasks.id, tasks.status, tasks.filters, tasks.created_by, tasks.deleted_rows, tasks.error_message,
-			tasks.started_at, tasks.finished_at, tasks.created_at, tasks.updated_at
+			tasks.started_at, tasks.finished_at, tasks.created_at, tasks.updated_at,tasks.brand_id
 	`
 	var task service.UsageCleanupTask
 	var filtersJSON []byte
@@ -170,6 +170,7 @@ func (r *usageCleanupRepository) ClaimNextPendingTask(ctx context.Context, stale
 		&finishedAt,
 		&task.CreatedAt,
 		&task.UpdatedAt,
+		&task.BrandID,
 	); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
@@ -591,6 +592,7 @@ func (r *usageCleanupRepository) markTaskFailedWithEnt(ctx context.Context, task
 func usageCleanupTaskFromEnt(row *dbent.UsageCleanupTask) (service.UsageCleanupTask, error) {
 	task := service.UsageCleanupTask{
 		ID:          row.ID,
+		BrandID:     row.BrandID,
 		Status:      row.Status,
 		CreatedBy:   row.CreatedBy,
 		DeletedRows: row.DeletedRows,

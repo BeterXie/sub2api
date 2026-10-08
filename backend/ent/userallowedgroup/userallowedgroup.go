@@ -5,6 +5,7 @@ package userallowedgroup
 import (
 	"time"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 )
@@ -12,6 +13,8 @@ import (
 const (
 	// Label holds the string label denoting the userallowedgroup type in the database.
 	Label = "user_allowed_group"
+	// FieldBrandID holds the string denoting the brand_id field in the database.
+	FieldBrandID = "brand_id"
 	// FieldUserID holds the string denoting the user_id field in the database.
 	FieldUserID = "user_id"
 	// FieldGroupID holds the string denoting the group_id field in the database.
@@ -46,6 +49,7 @@ const (
 
 // Columns holds all SQL columns for userallowedgroup fields.
 var Columns = []string{
+	FieldBrandID,
 	FieldUserID,
 	FieldGroupID,
 	FieldCreatedAt,
@@ -61,13 +65,27 @@ func ValidColumn(column string) bool {
 	return false
 }
 
+// Note that the variables below are initialized by the runtime
+// package on the initialization of the application. Therefore,
+// it should be imported in the main as follows:
+//
+//	import _ "github.com/Wei-Shaw/sub2api/ent/runtime"
 var (
+	Hooks        [1]ent.Hook
+	Interceptors [1]ent.Interceptor
+	// DefaultBrandID holds the default value on creation for the "brand_id" field.
+	DefaultBrandID int64
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
 	DefaultCreatedAt func() time.Time
 )
 
 // OrderOption defines the ordering options for the UserAllowedGroup queries.
 type OrderOption func(*sql.Selector)
+
+// ByBrandID orders the results by the brand_id field.
+func ByBrandID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBrandID, opts...).ToFunc()
+}
 
 // ByUserID orders the results by the user_id field.
 func ByUserID(opts ...sql.OrderTermOption) OrderOption {

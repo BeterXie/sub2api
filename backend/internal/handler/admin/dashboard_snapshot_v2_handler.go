@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"net/http"
 	"strconv"
 	"strings"
@@ -117,7 +118,7 @@ func (h *DashboardHandler) GetSnapshotV2(c *gin.Context) {
 		IncludeUsersTrend:     includeUsersTrend,
 		UsersTrendLimit:       usersTrendLimit,
 	})
-	cacheKey := string(keyRaw)
+	cacheKey := brand.CacheKey(c.Request.Context(), string(keyRaw))
 
 	cached, hit, err := dashboardSnapshotV2Cache.GetOrLoad(cacheKey, func() (any, error) {
 		return h.buildSnapshotV2Response(

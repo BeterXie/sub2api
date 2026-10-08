@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"log"
 	"strconv"
 	"sync"
@@ -30,6 +31,7 @@ type SubscriptionExpiryService struct {
 	userSubRepo              UserSubscriptionRepository
 	settingRepo              SettingRepository
 	notificationEmailService *NotificationEmailService
+	multiBrandEnabled        bool
 	interval                 time.Duration
 	stopCh                   chan struct{}
 	stopOnce                 sync.Once
@@ -122,13 +124,9 @@ func (s *SubscriptionExpiryService) sendExpiryReminders(ctx context.Context) {
 	if s == nil || s.userSubRepo == nil || s.notificationEmailService == nil {
 		return
 	}
-	if !s.expiryReminderEnabled(ctx) {
+	if !s.multiBrandEnabled && (!s.expiryReminderEnabled(ctx) || !s.smtpConfigured(ctx)) {
 		return
 	}
-	if !s.smtpConfigured(ctx) {
-		return
-	}
-
 	// Multi-instance guard: only the leader walks every active subscription and
 	// sends reminders, avoiding N× full scans and duplicate reminder emails.
 	release, ok := tryAcquireSingletonLeaderLock(ctx, s.lockCache, s.db, subscriptionExpiryReminderLeaderLockKey, s.instanceID, subscriptionExpiryReminderLeaderLockTTL)
@@ -190,6 +188,12 @@ func (s *SubscriptionExpiryService) smtpConfigured(ctx context.Context) bool {
 
 func (s *SubscriptionExpiryService) sendExpiryReminderIfDue(ctx context.Context, sub *UserSubscription) {
 	if sub == nil || sub.User == nil || sub.Group == nil || sub.User.Email == "" {
+		return
+	}
+	if s.multiBrandEnabled && sub.User.BrandID > 0 {
+		ctx = brand.WithScope(ctx, brand.Scope{ID: sub.User.BrandID})
+	}
+	if !s.expiryReminderEnabled(ctx) || !s.smtpConfigured(ctx) {
 		return
 	}
 	daysRemaining := sub.DaysRemaining()

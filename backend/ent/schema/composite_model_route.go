@@ -26,6 +26,7 @@ func (CompositeModelRoute) Annotations() []schema.Annotation {
 
 func (CompositeModelRoute) Mixin() []ent.Mixin {
 	return []ent.Mixin{
+		mixins.BrandMixin{},
 		mixins.TimeMixin{},
 		mixins.SoftDeleteMixin{},
 	}

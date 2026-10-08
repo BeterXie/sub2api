@@ -25,6 +25,20 @@ type UserSubscriptionCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *UserSubscriptionCreate) SetBrandID(v int64) *UserSubscriptionCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *UserSubscriptionCreate) SetNillableBrandID(v *int64) *UserSubscriptionCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *UserSubscriptionCreate) SetCreatedAt(v time.Time) *UserSubscriptionCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -312,6 +326,10 @@ func (_c *UserSubscriptionCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *UserSubscriptionCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := usersubscription.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		if usersubscription.DefaultCreatedAt == nil {
 			return fmt.Errorf("ent: uninitialized usersubscription.DefaultCreatedAt (forgotten import ent/runtime?)")
@@ -354,6 +372,9 @@ func (_c *UserSubscriptionCreate) defaults() error {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *UserSubscriptionCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "UserSubscription.brand_id"`)}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "UserSubscription.created_at"`)}
 	}
@@ -425,6 +446,10 @@ func (_c *UserSubscriptionCreate) createSpec() (*UserSubscription, *sqlgraph.Cre
 		_spec = sqlgraph.NewCreateSpec(usersubscription.Table, sqlgraph.NewFieldSpec(usersubscription.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(usersubscription.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(usersubscription.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -555,7 +580,7 @@ func (_c *UserSubscriptionCreate) createSpec() (*UserSubscription, *sqlgraph.Cre
 // of the `INSERT` statement. For example:
 //
 //	client.UserSubscription.Create().
-//		SetCreatedAt(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -564,7 +589,7 @@ func (_c *UserSubscriptionCreate) createSpec() (*UserSubscription, *sqlgraph.Cre
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.UserSubscriptionUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *UserSubscriptionCreate) OnConflict(opts ...sql.ConflictOption) *UserSubscriptionUpsertOne {
@@ -857,6 +882,9 @@ func (u *UserSubscriptionUpsert) ClearNotes() *UserSubscriptionUpsert {
 func (u *UserSubscriptionUpsertOne) UpdateNewValues() *UserSubscriptionUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(usersubscription.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(usersubscription.FieldCreatedAt)
 		}
@@ -1313,7 +1341,7 @@ func (_c *UserSubscriptionCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.UserSubscriptionUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *UserSubscriptionCreateBulk) OnConflict(opts ...sql.ConflictOption) *UserSubscriptionUpsertBulk {
@@ -1354,6 +1382,9 @@ func (u *UserSubscriptionUpsertBulk) UpdateNewValues() *UserSubscriptionUpsertBu
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(usersubscription.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(usersubscription.FieldCreatedAt)
 			}

@@ -23,6 +23,20 @@ type PaymentOrderCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *PaymentOrderCreate) SetBrandID(v int64) *PaymentOrderCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *PaymentOrderCreate) SetNillableBrandID(v *int64) *PaymentOrderCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetUserID sets the "user_id" field.
 func (_c *PaymentOrderCreate) SetUserID(v int64) *PaymentOrderCreate {
 	_c.mutation.SetUserID(v)
@@ -499,7 +513,9 @@ func (_c *PaymentOrderCreate) Mutation() *PaymentOrderMutation {
 
 // Save creates the PaymentOrder in the database.
 func (_c *PaymentOrderCreate) Save(ctx context.Context) (*PaymentOrder, error) {
-	_c.defaults()
+	if err := _c.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -526,7 +542,11 @@ func (_c *PaymentOrderCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *PaymentOrderCreate) defaults() {
+func (_c *PaymentOrderCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := paymentorder.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.FeeRate(); !ok {
 		v := paymentorder.DefaultFeeRate
 		_c.mutation.SetFeeRate(v)
@@ -556,17 +576,27 @@ func (_c *PaymentOrderCreate) defaults() {
 		_c.mutation.SetForceRefund(v)
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
+		if paymentorder.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized paymentorder.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := paymentorder.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		if paymentorder.DefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized paymentorder.DefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := paymentorder.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *PaymentOrderCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "PaymentOrder.brand_id"`)}
+	}
 	if _, ok := _c.mutation.UserID(); !ok {
 		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "PaymentOrder.user_id"`)}
 	}
@@ -722,6 +752,10 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 		_spec = sqlgraph.NewCreateSpec(paymentorder.Table, sqlgraph.NewFieldSpec(paymentorder.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(paymentorder.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.UserEmail(); ok {
 		_spec.SetField(paymentorder.FieldUserEmail, field.TypeString, value)
 		_node.UserEmail = value
@@ -902,7 +936,7 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 // of the `INSERT` statement. For example:
 //
 //	client.PaymentOrder.Create().
-//		SetUserID(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -911,7 +945,7 @@ func (_c *PaymentOrderCreate) createSpec() (*PaymentOrder, *sqlgraph.CreateSpec)
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.PaymentOrderUpsert) {
-//			SetUserID(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *PaymentOrderCreate) OnConflict(opts ...sql.ConflictOption) *PaymentOrderUpsertOne {
@@ -1594,6 +1628,9 @@ func (u *PaymentOrderUpsert) UpdateUpdatedAt() *PaymentOrderUpsert {
 func (u *PaymentOrderUpsertOne) UpdateNewValues() *PaymentOrderUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(paymentorder.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(paymentorder.FieldCreatedAt)
 		}
@@ -2505,7 +2542,7 @@ func (_c *PaymentOrderCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.PaymentOrderUpsert) {
-//			SetUserID(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *PaymentOrderCreateBulk) OnConflict(opts ...sql.ConflictOption) *PaymentOrderUpsertBulk {
@@ -2546,6 +2583,9 @@ func (u *PaymentOrderUpsertBulk) UpdateNewValues() *PaymentOrderUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(paymentorder.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(paymentorder.FieldCreatedAt)
 			}

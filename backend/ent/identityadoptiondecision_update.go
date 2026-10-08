@@ -127,7 +127,9 @@ func (_u *IdentityAdoptionDecisionUpdate) ClearIdentity() *IdentityAdoptionDecis
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *IdentityAdoptionDecisionUpdate) Save(ctx context.Context) (int, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return 0, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -154,11 +156,15 @@ func (_u *IdentityAdoptionDecisionUpdate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *IdentityAdoptionDecisionUpdate) defaults() {
+func (_u *IdentityAdoptionDecisionUpdate) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if identityadoptiondecision.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized identityadoptiondecision.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := identityadoptiondecision.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -378,7 +384,9 @@ func (_u *IdentityAdoptionDecisionUpdateOne) Select(field string, fields ...stri
 
 // Save executes the query and returns the updated IdentityAdoptionDecision entity.
 func (_u *IdentityAdoptionDecisionUpdateOne) Save(ctx context.Context) (*IdentityAdoptionDecision, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -405,11 +413,15 @@ func (_u *IdentityAdoptionDecisionUpdateOne) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *IdentityAdoptionDecisionUpdateOne) defaults() {
+func (_u *IdentityAdoptionDecisionUpdateOne) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if identityadoptiondecision.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized identityadoptiondecision.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := identityadoptiondecision.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.

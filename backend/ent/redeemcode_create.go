@@ -24,6 +24,20 @@ type RedeemCodeCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *RedeemCodeCreate) SetBrandID(v int64) *RedeemCodeCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *RedeemCodeCreate) SetNillableBrandID(v *int64) *RedeemCodeCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetCode sets the "code" field.
 func (_c *RedeemCodeCreate) SetCode(v string) *RedeemCodeCreate {
 	_c.mutation.SetCode(v)
@@ -201,7 +215,9 @@ func (_c *RedeemCodeCreate) Mutation() *RedeemCodeMutation {
 
 // Save creates the RedeemCode in the database.
 func (_c *RedeemCodeCreate) Save(ctx context.Context) (*RedeemCode, error) {
-	_c.defaults()
+	if err := _c.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -228,7 +244,11 @@ func (_c *RedeemCodeCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *RedeemCodeCreate) defaults() {
+func (_c *RedeemCodeCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := redeemcode.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.GetType(); !ok {
 		v := redeemcode.DefaultType
 		_c.mutation.SetType(v)
@@ -242,6 +262,9 @@ func (_c *RedeemCodeCreate) defaults() {
 		_c.mutation.SetStatus(v)
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
+		if redeemcode.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized redeemcode.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := redeemcode.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
@@ -249,10 +272,14 @@ func (_c *RedeemCodeCreate) defaults() {
 		v := redeemcode.DefaultValidityDays
 		_c.mutation.SetValidityDays(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *RedeemCodeCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "RedeemCode.brand_id"`)}
+	}
 	if _, ok := _c.mutation.Code(); !ok {
 		return &ValidationError{Name: "code", err: errors.New(`ent: missing required field "RedeemCode.code"`)}
 	}
@@ -313,6 +340,10 @@ func (_c *RedeemCodeCreate) createSpec() (*RedeemCode, *sqlgraph.CreateSpec) {
 		_spec = sqlgraph.NewCreateSpec(redeemcode.Table, sqlgraph.NewFieldSpec(redeemcode.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(redeemcode.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.Code(); ok {
 		_spec.SetField(redeemcode.FieldCode, field.TypeString, value)
 		_node.Code = value
@@ -390,7 +421,7 @@ func (_c *RedeemCodeCreate) createSpec() (*RedeemCode, *sqlgraph.CreateSpec) {
 // of the `INSERT` statement. For example:
 //
 //	client.RedeemCode.Create().
-//		SetCode(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -399,7 +430,7 @@ func (_c *RedeemCodeCreate) createSpec() (*RedeemCode, *sqlgraph.CreateSpec) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.RedeemCodeUpsert) {
-//			SetCode(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *RedeemCodeCreate) OnConflict(opts ...sql.ConflictOption) *RedeemCodeUpsertOne {
@@ -608,6 +639,9 @@ func (u *RedeemCodeUpsert) AddValidityDays(v int) *RedeemCodeUpsert {
 func (u *RedeemCodeUpsertOne) UpdateNewValues() *RedeemCodeUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(redeemcode.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(redeemcode.FieldCreatedAt)
 		}
@@ -966,7 +1000,7 @@ func (_c *RedeemCodeCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.RedeemCodeUpsert) {
-//			SetCode(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *RedeemCodeCreateBulk) OnConflict(opts ...sql.ConflictOption) *RedeemCodeUpsertBulk {
@@ -1007,6 +1041,9 @@ func (u *RedeemCodeUpsertBulk) UpdateNewValues() *RedeemCodeUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(redeemcode.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(redeemcode.FieldCreatedAt)
 			}

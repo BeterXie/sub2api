@@ -264,12 +264,12 @@ func (_q *PaymentAuditLogQuery) Clone() *PaymentAuditLogQuery {
 // Example:
 //
 //	var v []struct {
-//		OrderID string `json:"order_id,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.PaymentAuditLog.Query().
-//		GroupBy(paymentauditlog.FieldOrderID).
+//		GroupBy(paymentauditlog.FieldBrandID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *PaymentAuditLogQuery) GroupBy(field string, fields ...string) *PaymentAuditLogGroupBy {
@@ -287,11 +287,11 @@ func (_q *PaymentAuditLogQuery) GroupBy(field string, fields ...string) *Payment
 // Example:
 //
 //	var v []struct {
-//		OrderID string `json:"order_id,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //	}
 //
 //	client.PaymentAuditLog.Query().
-//		Select(paymentauditlog.FieldOrderID).
+//		Select(paymentauditlog.FieldBrandID).
 //		Scan(ctx, &v)
 func (_q *PaymentAuditLogQuery) Select(fields ...string) *PaymentAuditLogSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

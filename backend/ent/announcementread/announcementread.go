@@ -5,6 +5,7 @@ package announcementread
 import (
 	"time"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 	"entgo.io/ent/dialect/sql/sqlgraph"
 )
@@ -14,6 +15,8 @@ const (
 	Label = "announcement_read"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldBrandID holds the string denoting the brand_id field in the database.
+	FieldBrandID = "brand_id"
 	// FieldAnnouncementID holds the string denoting the announcement_id field in the database.
 	FieldAnnouncementID = "announcement_id"
 	// FieldUserID holds the string denoting the user_id field in the database.
@@ -47,6 +50,7 @@ const (
 // Columns holds all SQL columns for announcementread fields.
 var Columns = []string{
 	FieldID,
+	FieldBrandID,
 	FieldAnnouncementID,
 	FieldUserID,
 	FieldReadAt,
@@ -63,7 +67,16 @@ func ValidColumn(column string) bool {
 	return false
 }
 
+// Note that the variables below are initialized by the runtime
+// package on the initialization of the application. Therefore,
+// it should be imported in the main as follows:
+//
+//	import _ "github.com/Wei-Shaw/sub2api/ent/runtime"
 var (
+	Hooks        [1]ent.Hook
+	Interceptors [1]ent.Interceptor
+	// DefaultBrandID holds the default value on creation for the "brand_id" field.
+	DefaultBrandID int64
 	// DefaultReadAt holds the default value on creation for the "read_at" field.
 	DefaultReadAt func() time.Time
 	// DefaultCreatedAt holds the default value on creation for the "created_at" field.
@@ -76,6 +89,11 @@ type OrderOption func(*sql.Selector)
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByBrandID orders the results by the brand_id field.
+func ByBrandID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBrandID, opts...).ToFunc()
 }
 
 // ByAnnouncementID orders the results by the announcement_id field.

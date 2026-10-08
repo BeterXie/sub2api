@@ -6,6 +6,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
 	"github.com/gin-gonic/gin"
@@ -41,6 +42,9 @@ func adminAuth(
 				if !validateJWTForAdmin(c, token, authService, userService, settingService, auditService) {
 					return
 				}
+				if !authorizeBrandAdmin(c) {
+					return
+				}
 				c.Next()
 				return
 			}
@@ -50,6 +54,9 @@ func adminAuth(
 		apiKey := c.GetHeader("x-api-key")
 		if apiKey != "" {
 			if !validateAdminAPIKey(c, apiKey, settingService, userService) {
+				return
+			}
+			if !authorizeBrandAdmin(c) {
 				return
 			}
 			c.Next()
@@ -67,6 +74,9 @@ func adminAuth(
 					return
 				}
 				if !validateJWTForAdmin(c, token, authService, userService, settingService, auditService) {
+					return
+				}
+				if !authorizeBrandAdmin(c) {
 					return
 				}
 				c.Next()
@@ -124,6 +134,11 @@ func validateAdminAPIKey(
 	settingService *service.SettingService,
 	userService *service.UserService,
 ) bool {
+	if scope, ok := brand.FromContext(c.Request.Context()); ok &&
+		(scope.ID != brand.LegacyID || scope.Hostname != "llmp.org") {
+		AbortWithError(c, 401, "INVALID_ADMIN_KEY", "Invalid admin API key")
+		return false
+	}
 	storedKey, err := settingService.GetAdminAPIKey(c.Request.Context())
 	if err != nil {
 		AbortWithError(c, 500, "INTERNAL_ERROR", "Internal server error")
@@ -150,6 +165,14 @@ func validateAdminAPIKey(
 	c.Set(string(ContextKeyUserRole), admin.Role)
 	c.Set(ContextKeyAuthEmail, admin.Email)
 	c.Set("auth_method", "admin_api_key")
+	if store := brand.StoreFromContext(c.Request.Context()); store != nil {
+		role, err := store.AdminRole(c.Request.Context(), admin.ID, brand.ID(c.Request.Context()))
+		if err != nil || role != "super_admin" {
+			AbortWithError(c, 403, "FORBIDDEN", "Platform permission required")
+			return false
+		}
+		c.Set("brand_admin_role", role)
+	}
 	return true
 }
 
@@ -185,6 +208,10 @@ func validateJWTForAdmin(
 	}
 
 	// 检查用户状态
+	if !authService.RequestBrandMatches(c.Request.Context(), claims, user) {
+		AbortWithError(c, 401, "INVALID_TOKEN", "Invalid token")
+		return false
+	}
 	if !user.IsActive() {
 		AbortWithError(c, 401, "USER_INACTIVE", "User account is not active")
 		return false
@@ -202,7 +229,14 @@ func validateJWTForAdmin(
 	}
 
 	// 检查管理员权限
-	if user.Role == service.RoleObserver && ObserverAccountRouteAllowed(c.Request.Method, c.FullPath()) {
+	if store := brand.StoreFromContext(c.Request.Context()); store != nil {
+		role, err := store.AdminRole(c.Request.Context(), user.ID, brand.ID(c.Request.Context()))
+		if err != nil || role == "" {
+			AbortWithError(c, 403, "FORBIDDEN", "Admin access required")
+			return false
+		}
+		c.Set("brand_admin_role", role)
+	} else if user.Role == service.RoleObserver && ObserverAccountRouteAllowed(c.Request.Method, c.FullPath()) {
 		c.Request = c.Request.WithContext(service.WithObserverScope(c.Request.Context(), user.ObserverGroupIDs))
 	} else if !user.IsAdmin() {
 		AbortWithError(c, 403, "FORBIDDEN", "Admin access required")

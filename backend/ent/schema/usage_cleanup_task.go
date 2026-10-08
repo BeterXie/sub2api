@@ -26,6 +26,7 @@ func (UsageCleanupTask) Annotations() []schema.Annotation {
 
 func (UsageCleanupTask) Mixin() []ent.Mixin {
 	return []ent.Mixin{
+		mixins.BrandMixin{},
 		mixins.TimeMixin{},
 	}
 }

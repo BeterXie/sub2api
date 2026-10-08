@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/handler"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/websearch"
@@ -46,6 +47,7 @@ func ProvideRouter(
 	compositeResolver *service.CompositeRouteResolver,
 	redisClient *redis.Client,
 	lifecycle *Lifecycle,
+	brandStore *brand.Store,
 ) *gin.Engine {
 	if cfg.Server.Mode == "release" {
 		gin.SetMode(gin.ReleaseMode)
@@ -53,6 +55,7 @@ func ProvideRouter(
 
 	r := gin.New()
 	r.Use(middleware2.Recovery())
+	r.Use(middleware2.BrandResolver(cfg, brandStore))
 	configureTrustedProxies(r, cfg.Server)
 
 	// Wire up websearch Manager builder so it initializes on startup and rebuilds on config save.
@@ -105,7 +108,7 @@ func ProvideRouter(
 	lifecycle.onDrain = append(lifecycle.onDrain, manager.Stop)
 	r.Use(manager.Ingress())
 	r.GET("/internal/serverless/probe", manager.ProbeHandler)
-	return SetupRouter(r, handlers, jwtAuth, optionalJWTAuth, adminAuth, apiKeyAuth, auditLog, stepUpAuth, apiKeyService, subscriptionService, opsService, settingService, compositeResolver, cfg, redisClient)
+	return SetupRouter(r, handlers, jwtAuth, optionalJWTAuth, adminAuth, apiKeyAuth, auditLog, stepUpAuth, apiKeyService, subscriptionService, opsService, settingService, compositeResolver, cfg, redisClient, brandStore)
 }
 
 func configureTrustedProxies(r *gin.Engine, cfg config.ServerConfig) {

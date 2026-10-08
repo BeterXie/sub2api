@@ -22,6 +22,20 @@ type PaymentProviderInstanceCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *PaymentProviderInstanceCreate) SetBrandID(v int64) *PaymentProviderInstanceCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *PaymentProviderInstanceCreate) SetNillableBrandID(v *int64) *PaymentProviderInstanceCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetProviderKey sets the "provider_key" field.
 func (_c *PaymentProviderInstanceCreate) SetProviderKey(v string) *PaymentProviderInstanceCreate {
 	_c.mutation.SetProviderKey(v)
@@ -181,7 +195,9 @@ func (_c *PaymentProviderInstanceCreate) Mutation() *PaymentProviderInstanceMuta
 
 // Save creates the PaymentProviderInstance in the database.
 func (_c *PaymentProviderInstanceCreate) Save(ctx context.Context) (*PaymentProviderInstance, error) {
-	_c.defaults()
+	if err := _c.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -208,7 +224,11 @@ func (_c *PaymentProviderInstanceCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *PaymentProviderInstanceCreate) defaults() {
+func (_c *PaymentProviderInstanceCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := paymentproviderinstance.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.Name(); !ok {
 		v := paymentproviderinstance.DefaultName
 		_c.mutation.SetName(v)
@@ -242,17 +262,27 @@ func (_c *PaymentProviderInstanceCreate) defaults() {
 		_c.mutation.SetAllowUserRefund(v)
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
+		if paymentproviderinstance.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized paymentproviderinstance.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := paymentproviderinstance.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
 	if _, ok := _c.mutation.UpdatedAt(); !ok {
+		if paymentproviderinstance.DefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized paymentproviderinstance.DefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := paymentproviderinstance.DefaultUpdatedAt()
 		_c.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *PaymentProviderInstanceCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "PaymentProviderInstance.brand_id"`)}
+	}
 	if _, ok := _c.mutation.ProviderKey(); !ok {
 		return &ValidationError{Name: "provider_key", err: errors.New(`ent: missing required field "PaymentProviderInstance.provider_key"`)}
 	}
@@ -336,6 +366,10 @@ func (_c *PaymentProviderInstanceCreate) createSpec() (*PaymentProviderInstance,
 		_spec = sqlgraph.NewCreateSpec(paymentproviderinstance.Table, sqlgraph.NewFieldSpec(paymentproviderinstance.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(paymentproviderinstance.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.ProviderKey(); ok {
 		_spec.SetField(paymentproviderinstance.FieldProviderKey, field.TypeString, value)
 		_node.ProviderKey = value
@@ -391,7 +425,7 @@ func (_c *PaymentProviderInstanceCreate) createSpec() (*PaymentProviderInstance,
 // of the `INSERT` statement. For example:
 //
 //	client.PaymentProviderInstance.Create().
-//		SetProviderKey(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -400,7 +434,7 @@ func (_c *PaymentProviderInstanceCreate) createSpec() (*PaymentProviderInstance,
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.PaymentProviderInstanceUpsert) {
-//			SetProviderKey(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *PaymentProviderInstanceCreate) OnConflict(opts ...sql.ConflictOption) *PaymentProviderInstanceUpsertOne {
@@ -585,6 +619,9 @@ func (u *PaymentProviderInstanceUpsert) UpdateUpdatedAt() *PaymentProviderInstan
 func (u *PaymentProviderInstanceUpsertOne) UpdateNewValues() *PaymentProviderInstanceUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(paymentproviderinstance.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(paymentproviderinstance.FieldCreatedAt)
 		}
@@ -915,7 +952,7 @@ func (_c *PaymentProviderInstanceCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.PaymentProviderInstanceUpsert) {
-//			SetProviderKey(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *PaymentProviderInstanceCreateBulk) OnConflict(opts ...sql.ConflictOption) *PaymentProviderInstanceUpsertBulk {
@@ -956,6 +993,9 @@ func (u *PaymentProviderInstanceUpsertBulk) UpdateNewValues() *PaymentProviderIn
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(paymentproviderinstance.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(paymentproviderinstance.FieldCreatedAt)
 			}

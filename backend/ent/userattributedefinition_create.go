@@ -23,6 +23,20 @@ type UserAttributeDefinitionCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *UserAttributeDefinitionCreate) SetBrandID(v int64) *UserAttributeDefinitionCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *UserAttributeDefinitionCreate) SetNillableBrandID(v *int64) *UserAttributeDefinitionCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetCreatedAt sets the "created_at" field.
 func (_c *UserAttributeDefinitionCreate) SetCreatedAt(v time.Time) *UserAttributeDefinitionCreate {
 	_c.mutation.SetCreatedAt(v)
@@ -217,6 +231,10 @@ func (_c *UserAttributeDefinitionCreate) ExecX(ctx context.Context) {
 
 // defaults sets the default values of the builder before save.
 func (_c *UserAttributeDefinitionCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := userattributedefinition.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		if userattributedefinition.DefaultCreatedAt == nil {
 			return fmt.Errorf("ent: uninitialized userattributedefinition.DefaultCreatedAt (forgotten import ent/runtime?)")
@@ -264,6 +282,9 @@ func (_c *UserAttributeDefinitionCreate) defaults() error {
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *UserAttributeDefinitionCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "UserAttributeDefinition.brand_id"`)}
+	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
 		return &ValidationError{Name: "created_at", err: errors.New(`ent: missing required field "UserAttributeDefinition.created_at"`)}
 	}
@@ -347,6 +368,10 @@ func (_c *UserAttributeDefinitionCreate) createSpec() (*UserAttributeDefinition,
 		_spec = sqlgraph.NewCreateSpec(userattributedefinition.Table, sqlgraph.NewFieldSpec(userattributedefinition.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(userattributedefinition.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.CreatedAt(); ok {
 		_spec.SetField(userattributedefinition.FieldCreatedAt, field.TypeTime, value)
 		_node.CreatedAt = value
@@ -422,7 +447,7 @@ func (_c *UserAttributeDefinitionCreate) createSpec() (*UserAttributeDefinition,
 // of the `INSERT` statement. For example:
 //
 //	client.UserAttributeDefinition.Create().
-//		SetCreatedAt(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -431,7 +456,7 @@ func (_c *UserAttributeDefinitionCreate) createSpec() (*UserAttributeDefinition,
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.UserAttributeDefinitionUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *UserAttributeDefinitionCreate) OnConflict(opts ...sql.ConflictOption) *UserAttributeDefinitionUpsertOne {
@@ -634,6 +659,9 @@ func (u *UserAttributeDefinitionUpsert) UpdateEnabled() *UserAttributeDefinition
 func (u *UserAttributeDefinitionUpsertOne) UpdateNewValues() *UserAttributeDefinitionUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(userattributedefinition.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(userattributedefinition.FieldCreatedAt)
 		}
@@ -985,7 +1013,7 @@ func (_c *UserAttributeDefinitionCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.UserAttributeDefinitionUpsert) {
-//			SetCreatedAt(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *UserAttributeDefinitionCreateBulk) OnConflict(opts ...sql.ConflictOption) *UserAttributeDefinitionUpsertBulk {
@@ -1026,6 +1054,9 @@ func (u *UserAttributeDefinitionUpsertBulk) UpdateNewValues() *UserAttributeDefi
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(userattributedefinition.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(userattributedefinition.FieldCreatedAt)
 			}

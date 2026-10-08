@@ -24,6 +24,20 @@ type AnnouncementReadCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *AnnouncementReadCreate) SetBrandID(v int64) *AnnouncementReadCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *AnnouncementReadCreate) SetNillableBrandID(v *int64) *AnnouncementReadCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetAnnouncementID sets the "announcement_id" field.
 func (_c *AnnouncementReadCreate) SetAnnouncementID(v int64) *AnnouncementReadCreate {
 	_c.mutation.SetAnnouncementID(v)
@@ -81,7 +95,9 @@ func (_c *AnnouncementReadCreate) Mutation() *AnnouncementReadMutation {
 
 // Save creates the AnnouncementRead in the database.
 func (_c *AnnouncementReadCreate) Save(ctx context.Context) (*AnnouncementRead, error) {
-	_c.defaults()
+	if err := _c.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -108,19 +124,33 @@ func (_c *AnnouncementReadCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *AnnouncementReadCreate) defaults() {
+func (_c *AnnouncementReadCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := announcementread.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.ReadAt(); !ok {
+		if announcementread.DefaultReadAt == nil {
+			return fmt.Errorf("ent: uninitialized announcementread.DefaultReadAt (forgotten import ent/runtime?)")
+		}
 		v := announcementread.DefaultReadAt()
 		_c.mutation.SetReadAt(v)
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
+		if announcementread.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized announcementread.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := announcementread.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *AnnouncementReadCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "AnnouncementRead.brand_id"`)}
+	}
 	if _, ok := _c.mutation.AnnouncementID(); !ok {
 		return &ValidationError{Name: "announcement_id", err: errors.New(`ent: missing required field "AnnouncementRead.announcement_id"`)}
 	}
@@ -166,6 +196,10 @@ func (_c *AnnouncementReadCreate) createSpec() (*AnnouncementRead, *sqlgraph.Cre
 		_spec = sqlgraph.NewCreateSpec(announcementread.Table, sqlgraph.NewFieldSpec(announcementread.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(announcementread.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.ReadAt(); ok {
 		_spec.SetField(announcementread.FieldReadAt, field.TypeTime, value)
 		_node.ReadAt = value
@@ -215,7 +249,7 @@ func (_c *AnnouncementReadCreate) createSpec() (*AnnouncementRead, *sqlgraph.Cre
 // of the `INSERT` statement. For example:
 //
 //	client.AnnouncementRead.Create().
-//		SetAnnouncementID(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -224,7 +258,7 @@ func (_c *AnnouncementReadCreate) createSpec() (*AnnouncementRead, *sqlgraph.Cre
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.AnnouncementReadUpsert) {
-//			SetAnnouncementID(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *AnnouncementReadCreate) OnConflict(opts ...sql.ConflictOption) *AnnouncementReadUpsertOne {
@@ -307,6 +341,9 @@ func (u *AnnouncementReadUpsert) UpdateReadAt() *AnnouncementReadUpsert {
 func (u *AnnouncementReadUpsertOne) UpdateNewValues() *AnnouncementReadUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(announcementread.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(announcementread.FieldCreatedAt)
 		}
@@ -518,7 +555,7 @@ func (_c *AnnouncementReadCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.AnnouncementReadUpsert) {
-//			SetAnnouncementID(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *AnnouncementReadCreateBulk) OnConflict(opts ...sql.ConflictOption) *AnnouncementReadUpsertBulk {
@@ -559,6 +596,9 @@ func (u *AnnouncementReadUpsertBulk) UpdateNewValues() *AnnouncementReadUpsertBu
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(announcementread.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(announcementread.FieldCreatedAt)
 			}

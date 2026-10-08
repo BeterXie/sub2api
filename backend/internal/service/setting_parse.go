@@ -475,7 +475,7 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 	// - 兼容 config.yaml/env（避免老部署因为未迁移到数据库设置而被意外关闭）
 	// - 支持在后台“系统设置”中覆盖并持久化（存储于 DB）
 	linuxDoBase := config.LinuxDoConnectConfig{}
-	if s.cfg != nil {
+	if s.cfg != nil && settings["_brand_isolated"] != "true" {
 		linuxDoBase = s.cfg.LinuxDo
 	}
 
@@ -507,7 +507,7 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 	// - 兼容 config.yaml/env
 	// - 支持后台系统设置覆盖并持久化（存储于 DB）
 	dingTalkBase := config.DingTalkConnectConfig{}
-	if s.cfg != nil {
+	if s.cfg != nil && settings["_brand_isolated"] != "true" {
 		dingTalkBase = s.cfg.DingTalk
 	}
 
@@ -637,7 +637,7 @@ func (s *SettingService) parseSettings(settings map[string]string) *SystemSettin
 	// - 兼容 config.yaml/env
 	// - 支持后台系统设置覆盖并持久化（存储于 DB）
 	oidcBase := config.OIDCConnectConfig{}
-	if s.cfg != nil {
+	if s.cfg != nil && settings["_brand_isolated"] != "true" {
 		oidcBase = s.cfg.OIDC
 	}
 

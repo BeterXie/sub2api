@@ -5,6 +5,7 @@ package subscriptionplan
 import (
 	"time"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 )
 
@@ -13,6 +14,8 @@ const (
 	Label = "subscription_plan"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldBrandID holds the string denoting the brand_id field in the database.
+	FieldBrandID = "brand_id"
 	// FieldGroupID holds the string denoting the group_id field in the database.
 	FieldGroupID = "group_id"
 	// FieldName holds the string denoting the name field in the database.
@@ -48,6 +51,7 @@ const (
 // Columns holds all SQL columns for subscriptionplan fields.
 var Columns = []string{
 	FieldID,
+	FieldBrandID,
 	FieldGroupID,
 	FieldName,
 	FieldDescription,
@@ -74,7 +78,16 @@ func ValidColumn(column string) bool {
 	return false
 }
 
+// Note that the variables below are initialized by the runtime
+// package on the initialization of the application. Therefore,
+// it should be imported in the main as follows:
+//
+//	import _ "github.com/Wei-Shaw/sub2api/ent/runtime"
 var (
+	Hooks        [1]ent.Hook
+	Interceptors [1]ent.Interceptor
+	// DefaultBrandID holds the default value on creation for the "brand_id" field.
+	DefaultBrandID int64
 	// NameValidator is a validator for the "name" field. It is called by the builders before save.
 	NameValidator func(string) error
 	// DefaultDescription holds the default value on creation for the "description" field.
@@ -113,6 +126,11 @@ type OrderOption func(*sql.Selector)
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByBrandID orders the results by the brand_id field.
+func ByBrandID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBrandID, opts...).ToFunc()
 }
 
 // ByGroupID orders the results by the group_id field.

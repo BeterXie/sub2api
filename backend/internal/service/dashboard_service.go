@@ -8,6 +8,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/logger"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/usagestats"
@@ -103,6 +104,25 @@ func NewDashboardService(usageRepo UsageLogRepository, aggRepo DashboardAggregat
 }
 
 func (s *DashboardService) GetDashboardStats(ctx context.Context) (*usagestats.DashboardStats, error) {
+	if scope, ok := brand.FromContext(ctx); ok && !scope.Platform {
+		fetcher, supported := s.usageRepo.(dashboardStatsRangeFetcher)
+		if !supported {
+			return nil, brand.ErrScope
+		}
+		stats, err := fetcher.GetDashboardStatsWithRange(ctx, time.Time{}, time.Now())
+		if err != nil {
+			return nil, err
+		}
+		// Shared account health and platform aggregates are platform information.
+		stats.TotalAccounts = 0
+		stats.NormalAccounts = 0
+		stats.ErrorAccounts = 0
+		stats.RateLimitAccounts = 0
+		stats.OverloadAccounts = 0
+		stats.StatsUpdatedAt = time.Now().UTC().Format(time.RFC3339)
+		stats.StatsStale = false
+		return stats, nil
+	}
 	if s.cache != nil {
 		cached, fresh, err := s.getCachedDashboardStats(ctx)
 		if err == nil && cached != nil {

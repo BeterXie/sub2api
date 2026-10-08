@@ -68,7 +68,8 @@ const DefaultUpstreamResponseReadMaxBytes int64 = 128 * 1024 * 1024
 const DefaultModelsListReadMaxBytes int64 = 8 * 1024 * 1024
 
 type Config struct {
-	Runtime                 RuntimeConfig `mapstructure:"runtime"`
+	MultiBrand              MultiBrandConfig `mapstructure:"multibrand"`
+	Runtime                 RuntimeConfig    `mapstructure:"runtime"`
 	astraRoutingLoader      atomic.Pointer[astraRoutingLoader]
 	Server                  ServerConfig                  `mapstructure:"server"`
 	Log                     LogConfig                     `mapstructure:"log"`
@@ -2233,6 +2234,8 @@ func configureConfigSource(setConfigFile, addConfigPath func(string)) {
 }
 
 func setDefaults() {
+	viper.SetDefault("multibrand.enabled", false)
+	viper.SetDefault("multibrand.legacy_jwt_until", "")
 	viper.SetDefault("gateway.upstream_routing.enabled", false)
 	viper.SetDefault("runtime.role", RuntimeRoleFull)
 	viper.SetDefault("runtime.serverless_id", "")
@@ -2935,6 +2938,9 @@ func setEnvReachableDefaults() {
 }
 
 func (c *Config) Validate() error {
+	if err := c.MultiBrand.Validate(); err != nil {
+		return err
+	}
 	if _, err := upstreamroute.New(c.Gateway.UpstreamRouting); err != nil {
 		return fmt.Errorf("gateway.upstream_routing: %w", err)
 	}

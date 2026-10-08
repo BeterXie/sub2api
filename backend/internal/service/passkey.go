@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/go-webauthn/webauthn/protocol"
@@ -151,6 +152,23 @@ func (s *PasskeyService) requireEnabled() error {
 	return nil
 }
 
+func (s *PasskeyService) relyingParty(ctx context.Context) (*webauthn.WebAuthn, error) {
+	if err := s.requireEnabled(); err != nil {
+		return nil, err
+	}
+	scope, scoped := brand.FromContext(ctx)
+	if !scoped {
+		return s.webAuthn, nil
+	}
+	config := *s.webAuthn.Config
+	// The ingress whitelist supplies the only allowed origin. Each root domain
+	// has its own relying party; no cross-domain credential transfer is assumed.
+	config.RPID = scope.Hostname
+	config.RPDisplayName = scope.Name
+	config.RPOrigins = []string{"https://" + scope.Hostname}
+	return webauthn.New(&config)
+}
+
 // verifyPasskeyPassword gates credential enrollment and revocation with the
 // account password so a hijacked session cannot silently add or remove
 // passkeys. The password is used instead of TOTP step-up so the guard also
@@ -197,7 +215,11 @@ func (s *PasskeyService) BeginRegistration(
 		return nil, "", err
 	}
 
-	creation, session, err := s.webAuthn.BeginRegistration(
+	rp, err := s.relyingParty(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	creation, session, err := rp.BeginRegistration(
 		waUser,
 		webauthn.WithResidentKeyRequirement(protocol.ResidentKeyRequirementRequired),
 		webauthn.WithExclusions(webauthn.Credentials(waUser.credentials).CredentialDescriptors()),
@@ -245,7 +267,11 @@ func (s *PasskeyService) FinishRegistration(
 	if err != nil {
 		return nil, err
 	}
-	credential, err := s.webAuthn.FinishRegistration(waUser, session.WebAuthn, request)
+	rp, err := s.relyingParty(ctx)
+	if err != nil {
+		return nil, err
+	}
+	credential, err := rp.FinishRegistration(waUser, session.WebAuthn, request)
 	if err != nil {
 		return nil, ErrPasskeyVerify
 	}
@@ -268,7 +294,11 @@ func (s *PasskeyService) BeginLogin(
 	if err = s.requireEnabled(); err != nil {
 		return nil, "", err
 	}
-	assertion, session, err := s.webAuthn.BeginDiscoverableLogin(
+	rp, err := s.relyingParty(ctx)
+	if err != nil {
+		return nil, "", err
+	}
+	assertion, session, err := rp.BeginDiscoverableLogin(
 		webauthn.WithUserVerification(protocol.VerificationRequired),
 	)
 	if err != nil {
@@ -312,7 +342,11 @@ func (s *PasskeyService) FinishLogin(
 		return s.loadWebAuthnUser(ctx, account, record.UserHandle)
 	}
 
-	validatedUser, credential, err := s.webAuthn.FinishPasskeyLogin(handler, session.WebAuthn, request)
+	rp, err := s.relyingParty(ctx)
+	if err != nil {
+		return nil, err
+	}
+	validatedUser, credential, err := rp.FinishPasskeyLogin(handler, session.WebAuthn, request)
 	if err != nil {
 		return nil, ErrPasskeyVerify
 	}

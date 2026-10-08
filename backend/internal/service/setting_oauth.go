@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/imroc/req/v3"
@@ -163,7 +164,7 @@ func mergeWeChatConnectCapabilitySettings(settings map[string]string, base confi
 
 func (s *SettingService) effectiveWeChatConnectOAuthConfig(settings map[string]string) WeChatConnectOAuthConfig {
 	base := config.WeChatConnectConfig{}
-	if s != nil && s.cfg != nil {
+	if s != nil && s.cfg != nil && settings["_brand_isolated"] != "true" {
 		base = s.cfg.WeChat
 	}
 
@@ -346,6 +347,12 @@ func (s *SettingService) emailOAuthPublicEnabled(settings map[string]string, pro
 
 func (s *SettingService) effectiveEmailOAuthConfig(settings map[string]string, provider string) config.EmailOAuthProviderConfig {
 	cfg := s.emailOAuthBaseConfig(provider)
+	if settings["_brand_isolated"] == "true" {
+		cfg.ClientID = ""
+		cfg.ClientSecret = ""
+		cfg.RedirectURL = ""
+		cfg.FrontendRedirectURL = ""
+	}
 	switch strings.ToLower(strings.TrimSpace(provider)) {
 	case "github":
 		if raw, ok := settings[SettingKeyGitHubOAuthEnabled]; ok {
@@ -468,6 +475,32 @@ func (s *SettingService) GetEmailOAuthProviderConfig(ctx context.Context, provid
 	return cfg, nil
 }
 
+func defaultIsolatedLinuxDoConnectConfig() config.LinuxDoConnectConfig {
+	return config.LinuxDoConnectConfig{
+		AuthorizeURL:        "https://connect.linux.do/oauth2/authorize",
+		TokenURL:            "https://connect.linux.do/oauth2/token",
+		UserInfoURL:         "https://connect.linux.do/api/user",
+		Scopes:              "user",
+		FrontendRedirectURL: "/auth/linuxdo/callback",
+		TokenAuthMethod:     "client_secret_post",
+	}
+}
+
+func defaultIsolatedDingTalkConnectConfig() config.DingTalkConnectConfig {
+	return config.DingTalkConnectConfig{
+		AuthorizeURL:            "https://login.dingtalk.com/oauth2/auth",
+		TokenURL:                "https://api.dingtalk.com/v1.0/oauth2/userAccessToken",
+		UserInfoURL:             "https://api.dingtalk.com/v1.0/contact/users/me",
+		Scopes:                  "openid",
+		FrontendRedirectURL:     "/auth/dingtalk/callback",
+		DingTalkAppKind:         "internal_app",
+		AppType:                 "public",
+		CorpRestrictionPolicy:   "none",
+		RequireEmail:            true,
+		UsernameOverwritePolicy: "if_empty",
+	}
+}
+
 // GetLinuxDoConnectOAuthConfig 返回用于登录的"最终生效" LinuxDo Connect 配置。
 //
 // 优先级：
@@ -479,6 +512,9 @@ func (s *SettingService) GetLinuxDoConnectOAuthConfig(ctx context.Context) (conf
 	}
 
 	effective := s.cfg.LinuxDo
+	if scope, ok := brand.FromContext(ctx); ok && scope.ID != brand.LegacyID {
+		effective = defaultIsolatedLinuxDoConnectConfig()
+	}
 
 	keys := []string{
 		SettingKeyLinuxDoConnectEnabled,
@@ -568,6 +604,9 @@ func (s *SettingService) GetDingTalkConnectOAuthConfig(ctx context.Context) (con
 	}
 
 	effective := s.cfg.DingTalk
+	if scope, ok := brand.FromContext(ctx); ok && scope.ID != brand.LegacyID {
+		effective = defaultIsolatedDingTalkConnectConfig()
+	}
 
 	keys := []string{
 		SettingKeyDingTalkConnectEnabled,
@@ -748,6 +787,9 @@ func (s *SettingService) GetOIDCConnectOAuthConfig(ctx context.Context) (config.
 	}
 
 	effective := s.cfg.OIDC
+	if scope, ok := brand.FromContext(ctx); ok && scope.ID != brand.LegacyID {
+		effective = config.OIDCConnectConfig{}
+	}
 
 	keys := []string{
 		SettingKeyOIDCConnectEnabled,

@@ -26,6 +26,7 @@ func (UserPlatformQuota) Annotations() []schema.Annotation {
 
 func (UserPlatformQuota) Mixin() []ent.Mixin {
 	return []ent.Mixin{
+		mixins.BrandMixin{},
 		mixins.TimeMixin{},
 		mixins.SoftDeleteMixin{},
 	}

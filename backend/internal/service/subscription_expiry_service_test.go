@@ -195,6 +195,17 @@ func TestSubscriptionExpiryService_ExpiryReminderSettingReadErrorFailsClosed(t *
 	require.False(t, svc.expiryReminderEnabled(context.Background()))
 }
 
+func TestSubscriptionExpiryService_MultiBrandScanIgnoresGlobalMailSwitch(t *testing.T) {
+	repo := &subscriptionExpiryRepoStub{}
+	settings := &subscriptionExpirySettingRepoStub{values: map[string]string{SettingKeySubscriptionExpiryNotifyEnabled: "false"}}
+	svc := NewSubscriptionExpiryService(repo, time.Minute)
+	svc.multiBrandEnabled = true
+	svc.SetSettingRepository(settings)
+	svc.SetNotificationEmailService(NewNotificationEmailService(settings, nil))
+	svc.sendExpiryReminders(context.Background())
+	require.Equal(t, 1, repo.listCalls)
+}
+
 func TestSubscriptionExpiryService_MissingSMTPSkipsReminderScanAndLogsOncePerInterval(t *testing.T) {
 	repo := &subscriptionExpiryRepoStub{}
 	settingRepo := &subscriptionExpirySettingRepoStub{values: map[string]string{}}

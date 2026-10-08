@@ -121,7 +121,7 @@ func (h *PaymentWebhookHandler) handleNotify(c *gin.Context, providerKey string)
 		return
 	}
 
-	if err := h.paymentService.HandlePaymentNotification(c.Request.Context(), notification, resolvedProviderKey); err != nil {
+	if err := h.paymentService.HandleVerifiedPaymentNotification(c.Request.Context(), notification, resolvedProviderKey, rawBody, headers); err != nil {
 		// Unknown order: ack with 2xx so the provider stops retrying. This
 		// guards against foreign environments whose webhook endpoints are
 		// (mis)configured to point at us — without a 2xx, the provider will

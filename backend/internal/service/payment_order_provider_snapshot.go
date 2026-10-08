@@ -105,6 +105,9 @@ func (s *PaymentService) resolveSnapshotOrderProviderInstance(ctx context.Contex
 		}
 		return nil, err
 	}
+	if order.BrandID != inst.BrandID {
+		return nil, fmt.Errorf("order provider brand mismatch")
+	}
 
 	if snapshot.ProviderKey != "" && !strings.EqualFold(strings.TrimSpace(inst.ProviderKey), snapshot.ProviderKey) {
 		return nil, fmt.Errorf("order %d provider snapshot key mismatch: snapshot=%s instance=%s", order.ID, snapshot.ProviderKey, inst.ProviderKey)

@@ -5,6 +5,7 @@ package paymentproviderinstance
 import (
 	"time"
 
+	"entgo.io/ent"
 	"entgo.io/ent/dialect/sql"
 )
 
@@ -13,6 +14,8 @@ const (
 	Label = "payment_provider_instance"
 	// FieldID holds the string denoting the id field in the database.
 	FieldID = "id"
+	// FieldBrandID holds the string denoting the brand_id field in the database.
+	FieldBrandID = "brand_id"
 	// FieldProviderKey holds the string denoting the provider_key field in the database.
 	FieldProviderKey = "provider_key"
 	// FieldName holds the string denoting the name field in the database.
@@ -44,6 +47,7 @@ const (
 // Columns holds all SQL columns for paymentproviderinstance fields.
 var Columns = []string{
 	FieldID,
+	FieldBrandID,
 	FieldProviderKey,
 	FieldName,
 	FieldConfig,
@@ -68,7 +72,16 @@ func ValidColumn(column string) bool {
 	return false
 }
 
+// Note that the variables below are initialized by the runtime
+// package on the initialization of the application. Therefore,
+// it should be imported in the main as follows:
+//
+//	import _ "github.com/Wei-Shaw/sub2api/ent/runtime"
 var (
+	Hooks        [1]ent.Hook
+	Interceptors [1]ent.Interceptor
+	// DefaultBrandID holds the default value on creation for the "brand_id" field.
+	DefaultBrandID int64
 	// ProviderKeyValidator is a validator for the "provider_key" field. It is called by the builders before save.
 	ProviderKeyValidator func(string) error
 	// DefaultName holds the default value on creation for the "name" field.
@@ -107,6 +120,11 @@ type OrderOption func(*sql.Selector)
 // ByID orders the results by the id field.
 func ByID(opts ...sql.OrderTermOption) OrderOption {
 	return sql.OrderByField(FieldID, opts...).ToFunc()
+}
+
+// ByBrandID orders the results by the brand_id field.
+func ByBrandID(opts ...sql.OrderTermOption) OrderOption {
+	return sql.OrderByField(FieldBrandID, opts...).ToFunc()
 }
 
 // ByProviderKey orders the results by the provider_key field.

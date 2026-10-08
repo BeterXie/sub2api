@@ -55,6 +55,11 @@ func IDLTE(id int64) predicate.RedeemCode {
 	return predicate.RedeemCode(sql.FieldLTE(FieldID, id))
 }
 
+// BrandID applies equality check predicate on the "brand_id" field. It's identical to BrandIDEQ.
+func BrandID(v int64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldEQ(FieldBrandID, v))
+}
+
 // Code applies equality check predicate on the "code" field. It's identical to CodeEQ.
 func Code(v string) predicate.RedeemCode {
 	return predicate.RedeemCode(sql.FieldEQ(FieldCode, v))
@@ -108,6 +113,46 @@ func GroupID(v int64) predicate.RedeemCode {
 // ValidityDays applies equality check predicate on the "validity_days" field. It's identical to ValidityDaysEQ.
 func ValidityDays(v int) predicate.RedeemCode {
 	return predicate.RedeemCode(sql.FieldEQ(FieldValidityDays, v))
+}
+
+// BrandIDEQ applies the EQ predicate on the "brand_id" field.
+func BrandIDEQ(v int64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldEQ(FieldBrandID, v))
+}
+
+// BrandIDNEQ applies the NEQ predicate on the "brand_id" field.
+func BrandIDNEQ(v int64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldNEQ(FieldBrandID, v))
+}
+
+// BrandIDIn applies the In predicate on the "brand_id" field.
+func BrandIDIn(vs ...int64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldIn(FieldBrandID, vs...))
+}
+
+// BrandIDNotIn applies the NotIn predicate on the "brand_id" field.
+func BrandIDNotIn(vs ...int64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldNotIn(FieldBrandID, vs...))
+}
+
+// BrandIDGT applies the GT predicate on the "brand_id" field.
+func BrandIDGT(v int64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldGT(FieldBrandID, v))
+}
+
+// BrandIDGTE applies the GTE predicate on the "brand_id" field.
+func BrandIDGTE(v int64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldGTE(FieldBrandID, v))
+}
+
+// BrandIDLT applies the LT predicate on the "brand_id" field.
+func BrandIDLT(v int64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldLT(FieldBrandID, v))
+}
+
+// BrandIDLTE applies the LTE predicate on the "brand_id" field.
+func BrandIDLTE(v int64) predicate.RedeemCode {
+	return predicate.RedeemCode(sql.FieldLTE(FieldBrandID, v))
 }
 
 // CodeEQ applies the EQ predicate on the "code" field.

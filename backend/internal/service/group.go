@@ -16,6 +16,7 @@ type GroupCodexModelsManifestConfig = domain.GroupCodexModelsManifestConfig
 type ReasoningEffortMapping = domain.ReasoningEffortMapping
 
 type Group struct {
+	BrandID        int64
 	ID             int64
 	Name           string
 	Description    string

@@ -23,6 +23,7 @@ func (IdempotencyRecord) Annotations() []schema.Annotation {
 
 func (IdempotencyRecord) Mixin() []ent.Mixin {
 	return []ent.Mixin{
+		mixins.BrandMixin{},
 		mixins.TimeMixin{},
 	}
 }
@@ -43,7 +44,7 @@ func (IdempotencyRecord) Fields() []ent.Field {
 
 func (IdempotencyRecord) Indexes() []ent.Index {
 	return []ent.Index{
-		index.Fields("scope", "idempotency_key_hash").Unique(),
+		index.Fields("brand_id", "scope", "idempotency_key_hash").Unique(),
 		index.Fields("expires_at"),
 		index.Fields("status", "locked_until"),
 	}

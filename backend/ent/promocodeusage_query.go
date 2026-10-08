@@ -336,12 +336,12 @@ func (_q *PromoCodeUsageQuery) WithUser(opts ...func(*UserQuery)) *PromoCodeUsag
 // Example:
 //
 //	var v []struct {
-//		PromoCodeID int64 `json:"promo_code_id,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.PromoCodeUsage.Query().
-//		GroupBy(promocodeusage.FieldPromoCodeID).
+//		GroupBy(promocodeusage.FieldBrandID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *PromoCodeUsageQuery) GroupBy(field string, fields ...string) *PromoCodeUsageGroupBy {
@@ -359,11 +359,11 @@ func (_q *PromoCodeUsageQuery) GroupBy(field string, fields ...string) *PromoCod
 // Example:
 //
 //	var v []struct {
-//		PromoCodeID int64 `json:"promo_code_id,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //	}
 //
 //	client.PromoCodeUsage.Query().
-//		Select(promocodeusage.FieldPromoCodeID).
+//		Select(promocodeusage.FieldBrandID).
 //		Scan(ctx, &v)
 func (_q *PromoCodeUsageQuery) Select(fields ...string) *PromoCodeUsageSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

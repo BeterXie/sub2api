@@ -12,6 +12,7 @@ import (
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/ent/paymentauditlog"
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -684,6 +685,19 @@ func TestPaymentAmountToleranceForThreeDecimalCurrency(t *testing.T) {
 	assert.Equal(t, amountToleranceCNY, paymentAmountToleranceForCurrency("CNY"))
 	assert.Equal(t, amountToleranceCNY, paymentAmountToleranceForCurrency("JPY"))
 	assert.InDelta(t, 0.0005, paymentAmountToleranceForCurrency("KWD"), 1e-12)
+}
+
+func TestResolvePaymentNotificationOrderFindsLegacyIDAcrossBrandScope(t *testing.T) {
+	client := newPaymentConfigServiceTestClient(t)
+	orderCtx := brand.WithScope(context.Background(), brand.Scope{ID: brand.LegacyID, Code: "llmp"})
+	order := createPaymentFulfillmentSubscriptionOrder(t, orderCtx, client, OrderStatusPending, time.Now())
+	requestCtx := brand.WithScope(context.Background(), brand.Scope{ID: 2, Code: "mues"})
+	svc := &PaymentService{entClient: client}
+
+	resolved, err := svc.resolvePaymentNotificationOrder(requestCtx, orderIDPrefix+strconv.FormatInt(order.ID, 10))
+	require.NoError(t, err)
+	require.Equal(t, order.ID, resolved.ID)
+	require.Equal(t, brand.LegacyID, resolved.BrandID)
 }
 
 func TestRetryFulfillmentRejectsFreshRechargingLease(t *testing.T) {

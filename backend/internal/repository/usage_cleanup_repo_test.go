@@ -208,7 +208,7 @@ func TestUsageCleanupRepositoryClaimNextPendingTaskNone(t *testing.T) {
 		WithArgs(service.UsageCleanupStatusPending, service.UsageCleanupStatusRunning, int64(1800), service.UsageCleanupStatusRunning).
 		WillReturnRows(sqlmock.NewRows([]string{
 			"id", "status", "filters", "created_by", "deleted_rows", "error_message",
-			"started_at", "finished_at", "created_at", "updated_at",
+			"started_at", "finished_at", "created_at", "updated_at", "brand_id",
 		}))
 
 	task, err := repo.ClaimNextPendingTask(context.Background(), 1800)
@@ -229,7 +229,7 @@ func TestUsageCleanupRepositoryClaimNextPendingTask(t *testing.T) {
 
 	rows := sqlmock.NewRows([]string{
 		"id", "status", "filters", "created_by", "deleted_rows", "error_message",
-		"started_at", "finished_at", "created_at", "updated_at",
+		"started_at", "finished_at", "created_at", "updated_at", "brand_id",
 	}).AddRow(
 		int64(4),
 		service.UsageCleanupStatusRunning,
@@ -241,6 +241,7 @@ func TestUsageCleanupRepositoryClaimNextPendingTask(t *testing.T) {
 		nil,
 		start,
 		start,
+		int64(1),
 	)
 
 	mock.ExpectQuery("UPDATE usage_cleanup_tasks").
@@ -277,7 +278,7 @@ func TestUsageCleanupRepositoryClaimNextPendingTaskInvalidFilters(t *testing.T) 
 
 	rows := sqlmock.NewRows([]string{
 		"id", "status", "filters", "created_by", "deleted_rows", "error_message",
-		"started_at", "finished_at", "created_at", "updated_at",
+		"started_at", "finished_at", "created_at", "updated_at", "brand_id",
 	}).AddRow(
 		int64(4),
 		service.UsageCleanupStatusRunning,
@@ -289,6 +290,7 @@ func TestUsageCleanupRepositoryClaimNextPendingTaskInvalidFilters(t *testing.T) 
 		nil,
 		time.Now().UTC(),
 		time.Now().UTC(),
+		int64(1),
 	)
 
 	mock.ExpectQuery("UPDATE usage_cleanup_tasks").

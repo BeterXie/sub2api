@@ -111,6 +111,8 @@ type APIKeyMutation struct {
 	op                   Op
 	typ                  string
 	id                   *int64
+	brand_id             *int64
+	addbrand_id          *int64
 	created_at           *time.Time
 	updated_at           *time.Time
 	deleted_at           *time.Time
@@ -253,6 +255,62 @@ func (m *APIKeyMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *APIKeyMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *APIKeyMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the APIKey entity.
+// If the APIKey object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *APIKeyMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *APIKeyMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *APIKeyMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *APIKeyMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -1590,7 +1648,10 @@ func (m *APIKeyMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *APIKeyMutation) Fields() []string {
-	fields := make([]string, 0, 24)
+	fields := make([]string, 0, 25)
+	if m.brand_id != nil {
+		fields = append(fields, apikey.FieldBrandID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, apikey.FieldCreatedAt)
 	}
@@ -1671,6 +1732,8 @@ func (m *APIKeyMutation) Fields() []string {
 // schema.
 func (m *APIKeyMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case apikey.FieldBrandID:
+		return m.BrandID()
 	case apikey.FieldCreatedAt:
 		return m.CreatedAt()
 	case apikey.FieldUpdatedAt:
@@ -1728,6 +1791,8 @@ func (m *APIKeyMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *APIKeyMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case apikey.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case apikey.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case apikey.FieldUpdatedAt:
@@ -1785,6 +1850,13 @@ func (m *APIKeyMutation) OldField(ctx context.Context, name string) (ent.Value, 
 // type.
 func (m *APIKeyMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case apikey.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case apikey.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -1961,6 +2033,9 @@ func (m *APIKeyMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *APIKeyMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, apikey.FieldBrandID)
+	}
 	if m.addconcurrency_limit != nil {
 		fields = append(fields, apikey.FieldConcurrencyLimit)
 	}
@@ -1996,6 +2071,8 @@ func (m *APIKeyMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *APIKeyMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case apikey.FieldBrandID:
+		return m.AddedBrandID()
 	case apikey.FieldConcurrencyLimit:
 		return m.AddedConcurrencyLimit()
 	case apikey.FieldQuota:
@@ -2023,6 +2100,13 @@ func (m *APIKeyMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *APIKeyMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case apikey.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case apikey.FieldConcurrencyLimit:
 		v, ok := value.(int)
 		if !ok {
@@ -2170,6 +2254,9 @@ func (m *APIKeyMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *APIKeyMutation) ResetField(name string) error {
 	switch name {
+	case apikey.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case apikey.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -5824,6 +5911,8 @@ type AnnouncementMutation struct {
 	op            Op
 	typ           string
 	id            *int64
+	brand_id      *int64
+	addbrand_id   *int64
 	title         *string
 	content       *string
 	status        *string
@@ -5942,6 +6031,62 @@ func (m *AnnouncementMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *AnnouncementMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *AnnouncementMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the Announcement entity.
+// If the Announcement object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnnouncementMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *AnnouncementMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *AnnouncementMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *AnnouncementMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetTitle sets the "title" field.
@@ -6535,7 +6680,10 @@ func (m *AnnouncementMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AnnouncementMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
+	if m.brand_id != nil {
+		fields = append(fields, announcement.FieldBrandID)
+	}
 	if m.title != nil {
 		fields = append(fields, announcement.FieldTitle)
 	}
@@ -6577,6 +6725,8 @@ func (m *AnnouncementMutation) Fields() []string {
 // schema.
 func (m *AnnouncementMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case announcement.FieldBrandID:
+		return m.BrandID()
 	case announcement.FieldTitle:
 		return m.Title()
 	case announcement.FieldContent:
@@ -6608,6 +6758,8 @@ func (m *AnnouncementMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *AnnouncementMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case announcement.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case announcement.FieldTitle:
 		return m.OldTitle(ctx)
 	case announcement.FieldContent:
@@ -6639,6 +6791,13 @@ func (m *AnnouncementMutation) OldField(ctx context.Context, name string) (ent.V
 // type.
 func (m *AnnouncementMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case announcement.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case announcement.FieldTitle:
 		v, ok := value.(string)
 		if !ok {
@@ -6724,6 +6883,9 @@ func (m *AnnouncementMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *AnnouncementMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, announcement.FieldBrandID)
+	}
 	if m.addcreated_by != nil {
 		fields = append(fields, announcement.FieldCreatedBy)
 	}
@@ -6738,6 +6900,8 @@ func (m *AnnouncementMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *AnnouncementMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case announcement.FieldBrandID:
+		return m.AddedBrandID()
 	case announcement.FieldCreatedBy:
 		return m.AddedCreatedBy()
 	case announcement.FieldUpdatedBy:
@@ -6751,6 +6915,13 @@ func (m *AnnouncementMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *AnnouncementMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case announcement.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case announcement.FieldCreatedBy:
 		v, ok := value.(int64)
 		if !ok {
@@ -6825,6 +6996,9 @@ func (m *AnnouncementMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *AnnouncementMutation) ResetField(name string) error {
 	switch name {
+	case announcement.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case announcement.FieldTitle:
 		m.ResetTitle()
 		return nil
@@ -6952,6 +7126,8 @@ type AnnouncementReadMutation struct {
 	op                  Op
 	typ                 string
 	id                  *int64
+	brand_id            *int64
+	addbrand_id         *int64
 	read_at             *time.Time
 	created_at          *time.Time
 	clearedFields       map[string]struct{}
@@ -7060,6 +7236,62 @@ func (m *AnnouncementReadMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *AnnouncementReadMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *AnnouncementReadMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the AnnouncementRead entity.
+// If the AnnouncementRead object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AnnouncementReadMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *AnnouncementReadMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *AnnouncementReadMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *AnnouncementReadMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetAnnouncementID sets the "announcement_id" field.
@@ -7294,7 +7526,10 @@ func (m *AnnouncementReadMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AnnouncementReadMutation) Fields() []string {
-	fields := make([]string, 0, 4)
+	fields := make([]string, 0, 5)
+	if m.brand_id != nil {
+		fields = append(fields, announcementread.FieldBrandID)
+	}
 	if m.announcement != nil {
 		fields = append(fields, announcementread.FieldAnnouncementID)
 	}
@@ -7315,6 +7550,8 @@ func (m *AnnouncementReadMutation) Fields() []string {
 // schema.
 func (m *AnnouncementReadMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case announcementread.FieldBrandID:
+		return m.BrandID()
 	case announcementread.FieldAnnouncementID:
 		return m.AnnouncementID()
 	case announcementread.FieldUserID:
@@ -7332,6 +7569,8 @@ func (m *AnnouncementReadMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *AnnouncementReadMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case announcementread.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case announcementread.FieldAnnouncementID:
 		return m.OldAnnouncementID(ctx)
 	case announcementread.FieldUserID:
@@ -7349,6 +7588,13 @@ func (m *AnnouncementReadMutation) OldField(ctx context.Context, name string) (e
 // type.
 func (m *AnnouncementReadMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case announcementread.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case announcementread.FieldAnnouncementID:
 		v, ok := value.(int64)
 		if !ok {
@@ -7385,6 +7631,9 @@ func (m *AnnouncementReadMutation) SetField(name string, value ent.Value) error 
 // this mutation.
 func (m *AnnouncementReadMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, announcementread.FieldBrandID)
+	}
 	return fields
 }
 
@@ -7393,6 +7642,8 @@ func (m *AnnouncementReadMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *AnnouncementReadMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case announcementread.FieldBrandID:
+		return m.AddedBrandID()
 	}
 	return nil, false
 }
@@ -7402,6 +7653,13 @@ func (m *AnnouncementReadMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *AnnouncementReadMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case announcementread.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown AnnouncementRead numeric field %s", name)
 }
@@ -7429,6 +7687,9 @@ func (m *AnnouncementReadMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *AnnouncementReadMutation) ResetField(name string) error {
 	switch name {
+	case announcementread.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case announcementread.FieldAnnouncementID:
 		m.ResetAnnouncementID()
 		return nil
@@ -7543,6 +7804,8 @@ type AuthIdentityMutation struct {
 	op                        Op
 	typ                       string
 	id                        *int64
+	brand_id                  *int64
+	addbrand_id               *int64
 	created_at                *time.Time
 	updated_at                *time.Time
 	provider_type             *string
@@ -7661,6 +7924,62 @@ func (m *AuthIdentityMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *AuthIdentityMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *AuthIdentityMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the AuthIdentity entity.
+// If the AuthIdentity object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AuthIdentityMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *AuthIdentityMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *AuthIdentityMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *AuthIdentityMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -8182,7 +8501,10 @@ func (m *AuthIdentityMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AuthIdentityMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
+	if m.brand_id != nil {
+		fields = append(fields, authidentity.FieldBrandID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, authidentity.FieldCreatedAt)
 	}
@@ -8218,6 +8540,8 @@ func (m *AuthIdentityMutation) Fields() []string {
 // schema.
 func (m *AuthIdentityMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case authidentity.FieldBrandID:
+		return m.BrandID()
 	case authidentity.FieldCreatedAt:
 		return m.CreatedAt()
 	case authidentity.FieldUpdatedAt:
@@ -8245,6 +8569,8 @@ func (m *AuthIdentityMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *AuthIdentityMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case authidentity.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case authidentity.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case authidentity.FieldUpdatedAt:
@@ -8272,6 +8598,13 @@ func (m *AuthIdentityMutation) OldField(ctx context.Context, name string) (ent.V
 // type.
 func (m *AuthIdentityMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case authidentity.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case authidentity.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -8343,6 +8676,9 @@ func (m *AuthIdentityMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *AuthIdentityMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, authidentity.FieldBrandID)
+	}
 	return fields
 }
 
@@ -8351,6 +8687,8 @@ func (m *AuthIdentityMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *AuthIdentityMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case authidentity.FieldBrandID:
+		return m.AddedBrandID()
 	}
 	return nil, false
 }
@@ -8360,6 +8698,13 @@ func (m *AuthIdentityMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *AuthIdentityMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case authidentity.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown AuthIdentity numeric field %s", name)
 }
@@ -8402,6 +8747,9 @@ func (m *AuthIdentityMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *AuthIdentityMutation) ResetField(name string) error {
 	switch name {
+	case authidentity.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case authidentity.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -8567,6 +8915,8 @@ type AuthIdentityChannelMutation struct {
 	op              Op
 	typ             string
 	id              *int64
+	brand_id        *int64
+	addbrand_id     *int64
 	created_at      *time.Time
 	updated_at      *time.Time
 	provider_type   *string
@@ -8679,6 +9029,62 @@ func (m *AuthIdentityChannelMutation) IDs(ctx context.Context) ([]int64, error) 
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *AuthIdentityChannelMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *AuthIdentityChannelMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the AuthIdentityChannel entity.
+// If the AuthIdentityChannel object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *AuthIdentityChannelMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *AuthIdentityChannelMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *AuthIdentityChannelMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *AuthIdentityChannelMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -9066,7 +9472,10 @@ func (m *AuthIdentityChannelMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *AuthIdentityChannelMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
+	if m.brand_id != nil {
+		fields = append(fields, authidentitychannel.FieldBrandID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, authidentitychannel.FieldCreatedAt)
 	}
@@ -9102,6 +9511,8 @@ func (m *AuthIdentityChannelMutation) Fields() []string {
 // schema.
 func (m *AuthIdentityChannelMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case authidentitychannel.FieldBrandID:
+		return m.BrandID()
 	case authidentitychannel.FieldCreatedAt:
 		return m.CreatedAt()
 	case authidentitychannel.FieldUpdatedAt:
@@ -9129,6 +9540,8 @@ func (m *AuthIdentityChannelMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *AuthIdentityChannelMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case authidentitychannel.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case authidentitychannel.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case authidentitychannel.FieldUpdatedAt:
@@ -9156,6 +9569,13 @@ func (m *AuthIdentityChannelMutation) OldField(ctx context.Context, name string)
 // type.
 func (m *AuthIdentityChannelMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case authidentitychannel.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case authidentitychannel.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -9227,6 +9647,9 @@ func (m *AuthIdentityChannelMutation) SetField(name string, value ent.Value) err
 // this mutation.
 func (m *AuthIdentityChannelMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, authidentitychannel.FieldBrandID)
+	}
 	return fields
 }
 
@@ -9235,6 +9658,8 @@ func (m *AuthIdentityChannelMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *AuthIdentityChannelMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case authidentitychannel.FieldBrandID:
+		return m.AddedBrandID()
 	}
 	return nil, false
 }
@@ -9244,6 +9669,13 @@ func (m *AuthIdentityChannelMutation) AddedField(name string) (ent.Value, bool) 
 // type.
 func (m *AuthIdentityChannelMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case authidentitychannel.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown AuthIdentityChannel numeric field %s", name)
 }
@@ -9271,6 +9703,9 @@ func (m *AuthIdentityChannelMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *AuthIdentityChannelMutation) ResetField(name string) error {
 	switch name {
+	case authidentitychannel.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case authidentitychannel.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -9382,6 +9817,8 @@ type BatchImageEventMutation struct {
 	op            Op
 	typ           string
 	id            *int64
+	brand_id      *int64
+	addbrand_id   *int64
 	job_id        *string
 	event_type    *string
 	payload       *map[string]interface{}
@@ -9489,6 +9926,62 @@ func (m *BatchImageEventMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *BatchImageEventMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *BatchImageEventMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the BatchImageEvent entity.
+// If the BatchImageEvent object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BatchImageEventMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *BatchImageEventMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *BatchImageEventMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *BatchImageEventMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetJobID sets the "job_id" field.
@@ -9731,7 +10224,10 @@ func (m *BatchImageEventMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *BatchImageEventMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
+	if m.brand_id != nil {
+		fields = append(fields, batchimageevent.FieldBrandID)
+	}
 	if m.job_id != nil {
 		fields = append(fields, batchimageevent.FieldJobID)
 	}
@@ -9755,6 +10251,8 @@ func (m *BatchImageEventMutation) Fields() []string {
 // schema.
 func (m *BatchImageEventMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case batchimageevent.FieldBrandID:
+		return m.BrandID()
 	case batchimageevent.FieldJobID:
 		return m.JobID()
 	case batchimageevent.FieldEventType:
@@ -9774,6 +10272,8 @@ func (m *BatchImageEventMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *BatchImageEventMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case batchimageevent.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case batchimageevent.FieldJobID:
 		return m.OldJobID(ctx)
 	case batchimageevent.FieldEventType:
@@ -9793,6 +10293,13 @@ func (m *BatchImageEventMutation) OldField(ctx context.Context, name string) (en
 // type.
 func (m *BatchImageEventMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case batchimageevent.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case batchimageevent.FieldJobID:
 		v, ok := value.(string)
 		if !ok {
@@ -9835,13 +10342,21 @@ func (m *BatchImageEventMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *BatchImageEventMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, batchimageevent.FieldBrandID)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *BatchImageEventMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case batchimageevent.FieldBrandID:
+		return m.AddedBrandID()
+	}
 	return nil, false
 }
 
@@ -9850,6 +10365,13 @@ func (m *BatchImageEventMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *BatchImageEventMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case batchimageevent.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown BatchImageEvent numeric field %s", name)
 }
@@ -9892,6 +10414,9 @@ func (m *BatchImageEventMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *BatchImageEventMutation) ResetField(name string) error {
 	switch name {
+	case batchimageevent.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case batchimageevent.FieldJobID:
 		m.ResetJobID()
 		return nil
@@ -9965,6 +10490,8 @@ type BatchImageItemMutation struct {
 	op                     Op
 	typ                    string
 	id                     *int64
+	brand_id               *int64
+	addbrand_id            *int64
 	job_id                 *string
 	custom_id              *string
 	status                 *string
@@ -10089,6 +10616,62 @@ func (m *BatchImageItemMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *BatchImageItemMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *BatchImageItemMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the BatchImageItem entity.
+// If the BatchImageItem object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BatchImageItemMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *BatchImageItemMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *BatchImageItemMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *BatchImageItemMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetJobID sets the "job_id" field.
@@ -10997,7 +11580,10 @@ func (m *BatchImageItemMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *BatchImageItemMutation) Fields() []string {
-	fields := make([]string, 0, 17)
+	fields := make([]string, 0, 18)
+	if m.brand_id != nil {
+		fields = append(fields, batchimageitem.FieldBrandID)
+	}
 	if m.job_id != nil {
 		fields = append(fields, batchimageitem.FieldJobID)
 	}
@@ -11057,6 +11643,8 @@ func (m *BatchImageItemMutation) Fields() []string {
 // schema.
 func (m *BatchImageItemMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case batchimageitem.FieldBrandID:
+		return m.BrandID()
 	case batchimageitem.FieldJobID:
 		return m.JobID()
 	case batchimageitem.FieldCustomID:
@@ -11100,6 +11688,8 @@ func (m *BatchImageItemMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *BatchImageItemMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case batchimageitem.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case batchimageitem.FieldJobID:
 		return m.OldJobID(ctx)
 	case batchimageitem.FieldCustomID:
@@ -11143,6 +11733,13 @@ func (m *BatchImageItemMutation) OldField(ctx context.Context, name string) (ent
 // type.
 func (m *BatchImageItemMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case batchimageitem.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case batchimageitem.FieldJobID:
 		v, ok := value.(string)
 		if !ok {
@@ -11270,6 +11867,9 @@ func (m *BatchImageItemMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *BatchImageItemMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, batchimageitem.FieldBrandID)
+	}
 	if m.addsource_line_number != nil {
 		fields = append(fields, batchimageitem.FieldSourceLineNumber)
 	}
@@ -11293,6 +11893,8 @@ func (m *BatchImageItemMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *BatchImageItemMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case batchimageitem.FieldBrandID:
+		return m.AddedBrandID()
 	case batchimageitem.FieldSourceLineNumber:
 		return m.AddedSourceLineNumber()
 	case batchimageitem.FieldSourceByteOffset:
@@ -11312,6 +11914,13 @@ func (m *BatchImageItemMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *BatchImageItemMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case batchimageitem.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case batchimageitem.FieldSourceLineNumber:
 		v, ok := value.(int)
 		if !ok {
@@ -11449,6 +12058,9 @@ func (m *BatchImageItemMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *BatchImageItemMutation) ResetField(name string) error {
 	switch name {
+	case batchimageitem.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case batchimageitem.FieldJobID:
 		m.ResetJobID()
 		return nil
@@ -11558,6 +12170,8 @@ type BatchImageJobMutation struct {
 	op                  Op
 	typ                 string
 	id                  *int64
+	brand_id            *int64
+	addbrand_id         *int64
 	batch_id            *string
 	user_id             *int64
 	adduser_id          *int64
@@ -11712,6 +12326,62 @@ func (m *BatchImageJobMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *BatchImageJobMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *BatchImageJobMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the BatchImageJob entity.
+// If the BatchImageJob object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *BatchImageJobMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *BatchImageJobMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *BatchImageJobMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *BatchImageJobMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetBatchID sets the "batch_id" field.
@@ -13744,7 +14414,10 @@ func (m *BatchImageJobMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *BatchImageJobMutation) Fields() []string {
-	fields := make([]string, 0, 40)
+	fields := make([]string, 0, 41)
+	if m.brand_id != nil {
+		fields = append(fields, batchimagejob.FieldBrandID)
+	}
 	if m.batch_id != nil {
 		fields = append(fields, batchimagejob.FieldBatchID)
 	}
@@ -13873,6 +14546,8 @@ func (m *BatchImageJobMutation) Fields() []string {
 // schema.
 func (m *BatchImageJobMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case batchimagejob.FieldBrandID:
+		return m.BrandID()
 	case batchimagejob.FieldBatchID:
 		return m.BatchID()
 	case batchimagejob.FieldUserID:
@@ -13962,6 +14637,8 @@ func (m *BatchImageJobMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *BatchImageJobMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case batchimagejob.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case batchimagejob.FieldBatchID:
 		return m.OldBatchID(ctx)
 	case batchimagejob.FieldUserID:
@@ -14051,6 +14728,13 @@ func (m *BatchImageJobMutation) OldField(ctx context.Context, name string) (ent.
 // type.
 func (m *BatchImageJobMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case batchimagejob.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case batchimagejob.FieldBatchID:
 		v, ok := value.(string)
 		if !ok {
@@ -14339,6 +15023,9 @@ func (m *BatchImageJobMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *BatchImageJobMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, batchimagejob.FieldBrandID)
+	}
 	if m.adduser_id != nil {
 		fields = append(fields, batchimagejob.FieldUserID)
 	}
@@ -14383,6 +15070,8 @@ func (m *BatchImageJobMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *BatchImageJobMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case batchimagejob.FieldBrandID:
+		return m.AddedBrandID()
 	case batchimagejob.FieldUserID:
 		return m.AddedUserID()
 	case batchimagejob.FieldAPIKeyID:
@@ -14416,6 +15105,13 @@ func (m *BatchImageJobMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *BatchImageJobMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case batchimagejob.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case batchimagejob.FieldUserID:
 		v, ok := value.(int64)
 		if !ok {
@@ -14674,6 +15370,9 @@ func (m *BatchImageJobMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *BatchImageJobMutation) ResetField(name string) error {
 	switch name {
+	case batchimagejob.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case batchimagejob.FieldBatchID:
 		m.ResetBatchID()
 		return nil
@@ -19958,6 +20657,8 @@ type CompositeModelRouteMutation struct {
 	op              Op
 	typ             string
 	id              *int64
+	brand_id        *int64
+	addbrand_id     *int64
 	created_at      *time.Time
 	updated_at      *time.Time
 	deleted_at      *time.Time
@@ -20074,6 +20775,62 @@ func (m *CompositeModelRouteMutation) IDs(ctx context.Context) ([]int64, error) 
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *CompositeModelRouteMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *CompositeModelRouteMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the CompositeModelRoute entity.
+// If the CompositeModelRoute object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *CompositeModelRouteMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *CompositeModelRouteMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *CompositeModelRouteMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *CompositeModelRouteMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -20615,7 +21372,10 @@ func (m *CompositeModelRouteMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *CompositeModelRouteMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 13)
+	if m.brand_id != nil {
+		fields = append(fields, compositemodelroute.FieldBrandID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, compositemodelroute.FieldCreatedAt)
 	}
@@ -20660,6 +21420,8 @@ func (m *CompositeModelRouteMutation) Fields() []string {
 // schema.
 func (m *CompositeModelRouteMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case compositemodelroute.FieldBrandID:
+		return m.BrandID()
 	case compositemodelroute.FieldCreatedAt:
 		return m.CreatedAt()
 	case compositemodelroute.FieldUpdatedAt:
@@ -20693,6 +21455,8 @@ func (m *CompositeModelRouteMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *CompositeModelRouteMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case compositemodelroute.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case compositemodelroute.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case compositemodelroute.FieldUpdatedAt:
@@ -20726,6 +21490,13 @@ func (m *CompositeModelRouteMutation) OldField(ctx context.Context, name string)
 // type.
 func (m *CompositeModelRouteMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case compositemodelroute.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case compositemodelroute.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -20818,6 +21589,9 @@ func (m *CompositeModelRouteMutation) SetField(name string, value ent.Value) err
 // this mutation.
 func (m *CompositeModelRouteMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, compositemodelroute.FieldBrandID)
+	}
 	if m.addpriority != nil {
 		fields = append(fields, compositemodelroute.FieldPriority)
 	}
@@ -20829,6 +21603,8 @@ func (m *CompositeModelRouteMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *CompositeModelRouteMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case compositemodelroute.FieldBrandID:
+		return m.AddedBrandID()
 	case compositemodelroute.FieldPriority:
 		return m.AddedPriority()
 	}
@@ -20840,6 +21616,13 @@ func (m *CompositeModelRouteMutation) AddedField(name string) (ent.Value, bool) 
 // type.
 func (m *CompositeModelRouteMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case compositemodelroute.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case compositemodelroute.FieldPriority:
 		v, ok := value.(int)
 		if !ok {
@@ -20889,6 +21672,9 @@ func (m *CompositeModelRouteMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *CompositeModelRouteMutation) ResetField(name string) error {
 	switch name {
+	case compositemodelroute.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case compositemodelroute.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -22329,6 +23115,8 @@ type GroupMutation struct {
 	op                                      Op
 	typ                                     string
 	id                                      *int64
+	brand_id                                *int64
+	addbrand_id                             *int64
 	created_at                              *time.Time
 	updated_at                              *time.Time
 	deleted_at                              *time.Time
@@ -22546,6 +23334,62 @@ func (m *GroupMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *GroupMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *GroupMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the Group entity.
+// If the Group object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *GroupMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *GroupMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *GroupMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *GroupMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -26206,7 +27050,10 @@ func (m *GroupMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *GroupMutation) Fields() []string {
-	fields := make([]string, 0, 67)
+	fields := make([]string, 0, 68)
+	if m.brand_id != nil {
+		fields = append(fields, group.FieldBrandID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, group.FieldCreatedAt)
 	}
@@ -26416,6 +27263,8 @@ func (m *GroupMutation) Fields() []string {
 // schema.
 func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case group.FieldBrandID:
+		return m.BrandID()
 	case group.FieldCreatedAt:
 		return m.CreatedAt()
 	case group.FieldUpdatedAt:
@@ -26559,6 +27408,8 @@ func (m *GroupMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case group.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case group.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case group.FieldUpdatedAt:
@@ -26702,6 +27553,13 @@ func (m *GroupMutation) OldField(ctx context.Context, name string) (ent.Value, e
 // type.
 func (m *GroupMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case group.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case group.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -27179,6 +28037,9 @@ func (m *GroupMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *GroupMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, group.FieldBrandID)
+	}
 	if m.addrate_multiplier != nil {
 		fields = append(fields, group.FieldRateMultiplier)
 	}
@@ -27268,6 +28129,8 @@ func (m *GroupMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *GroupMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case group.FieldBrandID:
+		return m.AddedBrandID()
 	case group.FieldRateMultiplier:
 		return m.AddedRateMultiplier()
 	case group.FieldPeakRateMultiplier:
@@ -27331,6 +28194,13 @@ func (m *GroupMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *GroupMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case group.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case group.FieldRateMultiplier:
 		v, ok := value.(float64)
 		if !ok {
@@ -27682,6 +28552,9 @@ func (m *GroupMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *GroupMutation) ResetField(name string) error {
 	switch name {
+	case group.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case group.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -28107,6 +28980,8 @@ type IdempotencyRecordMutation struct {
 	op                   Op
 	typ                  string
 	id                   *int64
+	brand_id             *int64
+	addbrand_id          *int64
 	created_at           *time.Time
 	updated_at           *time.Time
 	scope                *string
@@ -28221,6 +29096,62 @@ func (m *IdempotencyRecordMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *IdempotencyRecordMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *IdempotencyRecordMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the IdempotencyRecord entity.
+// If the IdempotencyRecord object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IdempotencyRecordMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *IdempotencyRecordMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *IdempotencyRecordMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *IdempotencyRecordMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -28726,7 +29657,10 @@ func (m *IdempotencyRecordMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *IdempotencyRecordMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
+	if m.brand_id != nil {
+		fields = append(fields, idempotencyrecord.FieldBrandID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, idempotencyrecord.FieldCreatedAt)
 	}
@@ -28768,6 +29702,8 @@ func (m *IdempotencyRecordMutation) Fields() []string {
 // schema.
 func (m *IdempotencyRecordMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case idempotencyrecord.FieldBrandID:
+		return m.BrandID()
 	case idempotencyrecord.FieldCreatedAt:
 		return m.CreatedAt()
 	case idempotencyrecord.FieldUpdatedAt:
@@ -28799,6 +29735,8 @@ func (m *IdempotencyRecordMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *IdempotencyRecordMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case idempotencyrecord.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case idempotencyrecord.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case idempotencyrecord.FieldUpdatedAt:
@@ -28830,6 +29768,13 @@ func (m *IdempotencyRecordMutation) OldField(ctx context.Context, name string) (
 // type.
 func (m *IdempotencyRecordMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case idempotencyrecord.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case idempotencyrecord.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -28915,6 +29860,9 @@ func (m *IdempotencyRecordMutation) SetField(name string, value ent.Value) error
 // this mutation.
 func (m *IdempotencyRecordMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, idempotencyrecord.FieldBrandID)
+	}
 	if m.addresponse_status != nil {
 		fields = append(fields, idempotencyrecord.FieldResponseStatus)
 	}
@@ -28926,6 +29874,8 @@ func (m *IdempotencyRecordMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *IdempotencyRecordMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case idempotencyrecord.FieldBrandID:
+		return m.AddedBrandID()
 	case idempotencyrecord.FieldResponseStatus:
 		return m.AddedResponseStatus()
 	}
@@ -28937,6 +29887,13 @@ func (m *IdempotencyRecordMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *IdempotencyRecordMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case idempotencyrecord.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case idempotencyrecord.FieldResponseStatus:
 		v, ok := value.(int)
 		if !ok {
@@ -28998,6 +29955,9 @@ func (m *IdempotencyRecordMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *IdempotencyRecordMutation) ResetField(name string) error {
 	switch name {
+	case idempotencyrecord.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case idempotencyrecord.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -29089,6 +30049,8 @@ type IdentityAdoptionDecisionMutation struct {
 	op                          Op
 	typ                         string
 	id                          *int64
+	brand_id                    *int64
+	addbrand_id                 *int64
 	created_at                  *time.Time
 	updated_at                  *time.Time
 	adopt_display_name          *bool
@@ -29200,6 +30162,62 @@ func (m *IdentityAdoptionDecisionMutation) IDs(ctx context.Context) ([]int64, er
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *IdentityAdoptionDecisionMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *IdentityAdoptionDecisionMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the IdentityAdoptionDecision entity.
+// If the IdentityAdoptionDecision object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *IdentityAdoptionDecisionMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *IdentityAdoptionDecisionMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *IdentityAdoptionDecisionMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *IdentityAdoptionDecisionMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -29555,7 +30573,10 @@ func (m *IdentityAdoptionDecisionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *IdentityAdoptionDecisionMutation) Fields() []string {
-	fields := make([]string, 0, 7)
+	fields := make([]string, 0, 8)
+	if m.brand_id != nil {
+		fields = append(fields, identityadoptiondecision.FieldBrandID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, identityadoptiondecision.FieldCreatedAt)
 	}
@@ -29585,6 +30606,8 @@ func (m *IdentityAdoptionDecisionMutation) Fields() []string {
 // schema.
 func (m *IdentityAdoptionDecisionMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case identityadoptiondecision.FieldBrandID:
+		return m.BrandID()
 	case identityadoptiondecision.FieldCreatedAt:
 		return m.CreatedAt()
 	case identityadoptiondecision.FieldUpdatedAt:
@@ -29608,6 +30631,8 @@ func (m *IdentityAdoptionDecisionMutation) Field(name string) (ent.Value, bool) 
 // database failed.
 func (m *IdentityAdoptionDecisionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case identityadoptiondecision.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case identityadoptiondecision.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case identityadoptiondecision.FieldUpdatedAt:
@@ -29631,6 +30656,13 @@ func (m *IdentityAdoptionDecisionMutation) OldField(ctx context.Context, name st
 // type.
 func (m *IdentityAdoptionDecisionMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case identityadoptiondecision.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case identityadoptiondecision.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -29688,6 +30720,9 @@ func (m *IdentityAdoptionDecisionMutation) SetField(name string, value ent.Value
 // this mutation.
 func (m *IdentityAdoptionDecisionMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, identityadoptiondecision.FieldBrandID)
+	}
 	return fields
 }
 
@@ -29696,6 +30731,8 @@ func (m *IdentityAdoptionDecisionMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *IdentityAdoptionDecisionMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case identityadoptiondecision.FieldBrandID:
+		return m.AddedBrandID()
 	}
 	return nil, false
 }
@@ -29705,6 +30742,13 @@ func (m *IdentityAdoptionDecisionMutation) AddedField(name string) (ent.Value, b
 // type.
 func (m *IdentityAdoptionDecisionMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case identityadoptiondecision.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown IdentityAdoptionDecision numeric field %s", name)
 }
@@ -29741,6 +30785,9 @@ func (m *IdentityAdoptionDecisionMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *IdentityAdoptionDecisionMutation) ResetField(name string) error {
 	switch name {
+	case identityadoptiondecision.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case identityadoptiondecision.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -29864,6 +30911,8 @@ type PaymentAuditLogMutation struct {
 	op            Op
 	typ           string
 	id            *int64
+	brand_id      *int64
+	addbrand_id   *int64
 	order_id      *string
 	action        *string
 	detail        *string
@@ -29971,6 +31020,62 @@ func (m *PaymentAuditLogMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *PaymentAuditLogMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *PaymentAuditLogMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the PaymentAuditLog entity.
+// If the PaymentAuditLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentAuditLogMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *PaymentAuditLogMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *PaymentAuditLogMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *PaymentAuditLogMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetOrderID sets the "order_id" field.
@@ -30187,7 +31292,10 @@ func (m *PaymentAuditLogMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentAuditLogMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
+	if m.brand_id != nil {
+		fields = append(fields, paymentauditlog.FieldBrandID)
+	}
 	if m.order_id != nil {
 		fields = append(fields, paymentauditlog.FieldOrderID)
 	}
@@ -30211,6 +31319,8 @@ func (m *PaymentAuditLogMutation) Fields() []string {
 // schema.
 func (m *PaymentAuditLogMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case paymentauditlog.FieldBrandID:
+		return m.BrandID()
 	case paymentauditlog.FieldOrderID:
 		return m.OrderID()
 	case paymentauditlog.FieldAction:
@@ -30230,6 +31340,8 @@ func (m *PaymentAuditLogMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *PaymentAuditLogMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case paymentauditlog.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case paymentauditlog.FieldOrderID:
 		return m.OldOrderID(ctx)
 	case paymentauditlog.FieldAction:
@@ -30249,6 +31361,13 @@ func (m *PaymentAuditLogMutation) OldField(ctx context.Context, name string) (en
 // type.
 func (m *PaymentAuditLogMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case paymentauditlog.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case paymentauditlog.FieldOrderID:
 		v, ok := value.(string)
 		if !ok {
@@ -30291,13 +31410,21 @@ func (m *PaymentAuditLogMutation) SetField(name string, value ent.Value) error {
 // AddedFields returns all numeric fields that were incremented/decremented during
 // this mutation.
 func (m *PaymentAuditLogMutation) AddedFields() []string {
-	return nil
+	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, paymentauditlog.FieldBrandID)
+	}
+	return fields
 }
 
 // AddedField returns the numeric value that was incremented/decremented on a field
 // with the given name. The second boolean return value indicates that this field
 // was not set, or was not defined in the schema.
 func (m *PaymentAuditLogMutation) AddedField(name string) (ent.Value, bool) {
+	switch name {
+	case paymentauditlog.FieldBrandID:
+		return m.AddedBrandID()
+	}
 	return nil, false
 }
 
@@ -30306,6 +31433,13 @@ func (m *PaymentAuditLogMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *PaymentAuditLogMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case paymentauditlog.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown PaymentAuditLog numeric field %s", name)
 }
@@ -30333,6 +31467,9 @@ func (m *PaymentAuditLogMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *PaymentAuditLogMutation) ResetField(name string) error {
 	switch name {
+	case paymentauditlog.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case paymentauditlog.FieldOrderID:
 		m.ResetOrderID()
 		return nil
@@ -30406,6 +31543,8 @@ type PaymentOrderMutation struct {
 	op                       Op
 	typ                      string
 	id                       *int64
+	brand_id                 *int64
+	addbrand_id              *int64
 	user_email               *string
 	user_name                *string
 	user_notes               *string
@@ -30557,6 +31696,62 @@ func (m *PaymentOrderMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *PaymentOrderMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *PaymentOrderMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the PaymentOrder entity.
+// If the PaymentOrder object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentOrderMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *PaymentOrderMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *PaymentOrderMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *PaymentOrderMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetUserID sets the "user_id" field.
@@ -32483,7 +33678,10 @@ func (m *PaymentOrderMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentOrderMutation) Fields() []string {
-	fields := make([]string, 0, 40)
+	fields := make([]string, 0, 41)
+	if m.brand_id != nil {
+		fields = append(fields, paymentorder.FieldBrandID)
+	}
 	if m.user != nil {
 		fields = append(fields, paymentorder.FieldUserID)
 	}
@@ -32612,6 +33810,8 @@ func (m *PaymentOrderMutation) Fields() []string {
 // schema.
 func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case paymentorder.FieldBrandID:
+		return m.BrandID()
 	case paymentorder.FieldUserID:
 		return m.UserID()
 	case paymentorder.FieldUserEmail:
@@ -32701,6 +33901,8 @@ func (m *PaymentOrderMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case paymentorder.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case paymentorder.FieldUserID:
 		return m.OldUserID(ctx)
 	case paymentorder.FieldUserEmail:
@@ -32790,6 +33992,13 @@ func (m *PaymentOrderMutation) OldField(ctx context.Context, name string) (ent.V
 // type.
 func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case paymentorder.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case paymentorder.FieldUserID:
 		v, ok := value.(int64)
 		if !ok {
@@ -33078,6 +34287,9 @@ func (m *PaymentOrderMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *PaymentOrderMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, paymentorder.FieldBrandID)
+	}
 	if m.addamount != nil {
 		fields = append(fields, paymentorder.FieldAmount)
 	}
@@ -33110,6 +34322,8 @@ func (m *PaymentOrderMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *PaymentOrderMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case paymentorder.FieldBrandID:
+		return m.AddedBrandID()
 	case paymentorder.FieldAmount:
 		return m.AddedAmount()
 	case paymentorder.FieldPayAmount:
@@ -33135,6 +34349,13 @@ func (m *PaymentOrderMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *PaymentOrderMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case paymentorder.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case paymentorder.FieldAmount:
 		v, ok := value.(float64)
 		if !ok {
@@ -33341,6 +34562,9 @@ func (m *PaymentOrderMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *PaymentOrderMutation) ResetField(name string) error {
 	switch name {
+	case paymentorder.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case paymentorder.FieldUserID:
 		m.ResetUserID()
 		return nil
@@ -33545,6 +34769,8 @@ type PaymentProviderInstanceMutation struct {
 	op                Op
 	typ               string
 	id                *int64
+	brand_id          *int64
+	addbrand_id       *int64
 	provider_key      *string
 	name              *string
 	_config           *string
@@ -33660,6 +34886,62 @@ func (m *PaymentProviderInstanceMutation) IDs(ctx context.Context) ([]int64, err
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *PaymentProviderInstanceMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *PaymentProviderInstanceMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the PaymentProviderInstance entity.
+// If the PaymentProviderInstance object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PaymentProviderInstanceMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *PaymentProviderInstanceMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *PaymentProviderInstanceMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *PaymentProviderInstanceMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetProviderKey sets the "provider_key" field.
@@ -34148,7 +35430,10 @@ func (m *PaymentProviderInstanceMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PaymentProviderInstanceMutation) Fields() []string {
-	fields := make([]string, 0, 12)
+	fields := make([]string, 0, 13)
+	if m.brand_id != nil {
+		fields = append(fields, paymentproviderinstance.FieldBrandID)
+	}
 	if m.provider_key != nil {
 		fields = append(fields, paymentproviderinstance.FieldProviderKey)
 	}
@@ -34193,6 +35478,8 @@ func (m *PaymentProviderInstanceMutation) Fields() []string {
 // schema.
 func (m *PaymentProviderInstanceMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case paymentproviderinstance.FieldBrandID:
+		return m.BrandID()
 	case paymentproviderinstance.FieldProviderKey:
 		return m.ProviderKey()
 	case paymentproviderinstance.FieldName:
@@ -34226,6 +35513,8 @@ func (m *PaymentProviderInstanceMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *PaymentProviderInstanceMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case paymentproviderinstance.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case paymentproviderinstance.FieldProviderKey:
 		return m.OldProviderKey(ctx)
 	case paymentproviderinstance.FieldName:
@@ -34259,6 +35548,13 @@ func (m *PaymentProviderInstanceMutation) OldField(ctx context.Context, name str
 // type.
 func (m *PaymentProviderInstanceMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case paymentproviderinstance.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case paymentproviderinstance.FieldProviderKey:
 		v, ok := value.(string)
 		if !ok {
@@ -34351,6 +35647,9 @@ func (m *PaymentProviderInstanceMutation) SetField(name string, value ent.Value)
 // this mutation.
 func (m *PaymentProviderInstanceMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, paymentproviderinstance.FieldBrandID)
+	}
 	if m.addsort_order != nil {
 		fields = append(fields, paymentproviderinstance.FieldSortOrder)
 	}
@@ -34362,6 +35661,8 @@ func (m *PaymentProviderInstanceMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *PaymentProviderInstanceMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case paymentproviderinstance.FieldBrandID:
+		return m.AddedBrandID()
 	case paymentproviderinstance.FieldSortOrder:
 		return m.AddedSortOrder()
 	}
@@ -34373,6 +35674,13 @@ func (m *PaymentProviderInstanceMutation) AddedField(name string) (ent.Value, bo
 // type.
 func (m *PaymentProviderInstanceMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case paymentproviderinstance.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case paymentproviderinstance.FieldSortOrder:
 		v, ok := value.(int)
 		if !ok {
@@ -34407,6 +35715,9 @@ func (m *PaymentProviderInstanceMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *PaymentProviderInstanceMutation) ResetField(name string) error {
 	switch name {
+	case paymentproviderinstance.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case paymentproviderinstance.FieldProviderKey:
 		m.ResetProviderKey()
 		return nil
@@ -34501,6 +35812,8 @@ type PendingAuthSessionMutation struct {
 	op                         Op
 	typ                        string
 	id                         *int64
+	brand_id                   *int64
+	addbrand_id                *int64
 	created_at                 *time.Time
 	updated_at                 *time.Time
 	session_token              *string
@@ -34627,6 +35940,62 @@ func (m *PendingAuthSessionMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *PendingAuthSessionMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *PendingAuthSessionMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the PendingAuthSession entity.
+// If the PendingAuthSession object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PendingAuthSessionMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *PendingAuthSessionMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *PendingAuthSessionMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *PendingAuthSessionMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -35563,7 +36932,10 @@ func (m *PendingAuthSessionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PendingAuthSessionMutation) Fields() []string {
-	fields := make([]string, 0, 21)
+	fields := make([]string, 0, 22)
+	if m.brand_id != nil {
+		fields = append(fields, pendingauthsession.FieldBrandID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, pendingauthsession.FieldCreatedAt)
 	}
@@ -35635,6 +37007,8 @@ func (m *PendingAuthSessionMutation) Fields() []string {
 // schema.
 func (m *PendingAuthSessionMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case pendingauthsession.FieldBrandID:
+		return m.BrandID()
 	case pendingauthsession.FieldCreatedAt:
 		return m.CreatedAt()
 	case pendingauthsession.FieldUpdatedAt:
@@ -35686,6 +37060,8 @@ func (m *PendingAuthSessionMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *PendingAuthSessionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case pendingauthsession.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case pendingauthsession.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case pendingauthsession.FieldUpdatedAt:
@@ -35737,6 +37113,13 @@ func (m *PendingAuthSessionMutation) OldField(ctx context.Context, name string) 
 // type.
 func (m *PendingAuthSessionMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case pendingauthsession.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case pendingauthsession.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -35892,6 +37275,9 @@ func (m *PendingAuthSessionMutation) SetField(name string, value ent.Value) erro
 // this mutation.
 func (m *PendingAuthSessionMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, pendingauthsession.FieldBrandID)
+	}
 	return fields
 }
 
@@ -35900,6 +37286,8 @@ func (m *PendingAuthSessionMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *PendingAuthSessionMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case pendingauthsession.FieldBrandID:
+		return m.AddedBrandID()
 	}
 	return nil, false
 }
@@ -35909,6 +37297,13 @@ func (m *PendingAuthSessionMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *PendingAuthSessionMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case pendingauthsession.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown PendingAuthSession numeric field %s", name)
 }
@@ -35975,6 +37370,9 @@ func (m *PendingAuthSessionMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *PendingAuthSessionMutation) ResetField(name string) error {
 	switch name {
+	case pendingauthsession.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case pendingauthsession.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -36140,6 +37538,8 @@ type PromoCodeMutation struct {
 	op                   Op
 	typ                  string
 	id                   *int64
+	brand_id             *int64
+	addbrand_id          *int64
 	code                 *string
 	bonus_amount         *float64
 	addbonus_amount      *float64
@@ -36257,6 +37657,62 @@ func (m *PromoCodeMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *PromoCodeMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *PromoCodeMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the PromoCode entity.
+// If the PromoCode object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PromoCodeMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *PromoCodeMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *PromoCodeMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *PromoCodeMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetCode sets the "code" field.
@@ -36757,7 +38213,10 @@ func (m *PromoCodeMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PromoCodeMutation) Fields() []string {
-	fields := make([]string, 0, 9)
+	fields := make([]string, 0, 10)
+	if m.brand_id != nil {
+		fields = append(fields, promocode.FieldBrandID)
+	}
 	if m.code != nil {
 		fields = append(fields, promocode.FieldCode)
 	}
@@ -36793,6 +38252,8 @@ func (m *PromoCodeMutation) Fields() []string {
 // schema.
 func (m *PromoCodeMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case promocode.FieldBrandID:
+		return m.BrandID()
 	case promocode.FieldCode:
 		return m.Code()
 	case promocode.FieldBonusAmount:
@@ -36820,6 +38281,8 @@ func (m *PromoCodeMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *PromoCodeMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case promocode.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case promocode.FieldCode:
 		return m.OldCode(ctx)
 	case promocode.FieldBonusAmount:
@@ -36847,6 +38310,13 @@ func (m *PromoCodeMutation) OldField(ctx context.Context, name string) (ent.Valu
 // type.
 func (m *PromoCodeMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case promocode.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case promocode.FieldCode:
 		v, ok := value.(string)
 		if !ok {
@@ -36918,6 +38388,9 @@ func (m *PromoCodeMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *PromoCodeMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, promocode.FieldBrandID)
+	}
 	if m.addbonus_amount != nil {
 		fields = append(fields, promocode.FieldBonusAmount)
 	}
@@ -36935,6 +38408,8 @@ func (m *PromoCodeMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *PromoCodeMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case promocode.FieldBrandID:
+		return m.AddedBrandID()
 	case promocode.FieldBonusAmount:
 		return m.AddedBonusAmount()
 	case promocode.FieldMaxUses:
@@ -36950,6 +38425,13 @@ func (m *PromoCodeMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *PromoCodeMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case promocode.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case promocode.FieldBonusAmount:
 		v, ok := value.(float64)
 		if !ok {
@@ -37013,6 +38495,9 @@ func (m *PromoCodeMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *PromoCodeMutation) ResetField(name string) error {
 	switch name {
+	case promocode.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case promocode.FieldCode:
 		m.ResetCode()
 		return nil
@@ -37134,6 +38619,8 @@ type PromoCodeUsageMutation struct {
 	op                Op
 	typ               string
 	id                *int64
+	brand_id          *int64
+	addbrand_id       *int64
 	bonus_amount      *float64
 	addbonus_amount   *float64
 	used_at           *time.Time
@@ -37243,6 +38730,62 @@ func (m *PromoCodeUsageMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *PromoCodeUsageMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *PromoCodeUsageMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the PromoCodeUsage entity.
+// If the PromoCodeUsage object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *PromoCodeUsageMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *PromoCodeUsageMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *PromoCodeUsageMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *PromoCodeUsageMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetPromoCodeID sets the "promo_code_id" field.
@@ -37497,7 +39040,10 @@ func (m *PromoCodeUsageMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *PromoCodeUsageMutation) Fields() []string {
-	fields := make([]string, 0, 4)
+	fields := make([]string, 0, 5)
+	if m.brand_id != nil {
+		fields = append(fields, promocodeusage.FieldBrandID)
+	}
 	if m.promo_code != nil {
 		fields = append(fields, promocodeusage.FieldPromoCodeID)
 	}
@@ -37518,6 +39064,8 @@ func (m *PromoCodeUsageMutation) Fields() []string {
 // schema.
 func (m *PromoCodeUsageMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case promocodeusage.FieldBrandID:
+		return m.BrandID()
 	case promocodeusage.FieldPromoCodeID:
 		return m.PromoCodeID()
 	case promocodeusage.FieldUserID:
@@ -37535,6 +39083,8 @@ func (m *PromoCodeUsageMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *PromoCodeUsageMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case promocodeusage.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case promocodeusage.FieldPromoCodeID:
 		return m.OldPromoCodeID(ctx)
 	case promocodeusage.FieldUserID:
@@ -37552,6 +39102,13 @@ func (m *PromoCodeUsageMutation) OldField(ctx context.Context, name string) (ent
 // type.
 func (m *PromoCodeUsageMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case promocodeusage.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case promocodeusage.FieldPromoCodeID:
 		v, ok := value.(int64)
 		if !ok {
@@ -37588,6 +39145,9 @@ func (m *PromoCodeUsageMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *PromoCodeUsageMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, promocodeusage.FieldBrandID)
+	}
 	if m.addbonus_amount != nil {
 		fields = append(fields, promocodeusage.FieldBonusAmount)
 	}
@@ -37599,6 +39159,8 @@ func (m *PromoCodeUsageMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *PromoCodeUsageMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case promocodeusage.FieldBrandID:
+		return m.AddedBrandID()
 	case promocodeusage.FieldBonusAmount:
 		return m.AddedBonusAmount()
 	}
@@ -37610,6 +39172,13 @@ func (m *PromoCodeUsageMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *PromoCodeUsageMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case promocodeusage.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case promocodeusage.FieldBonusAmount:
 		v, ok := value.(float64)
 		if !ok {
@@ -37644,6 +39213,9 @@ func (m *PromoCodeUsageMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *PromoCodeUsageMutation) ResetField(name string) error {
 	switch name {
+	case promocodeusage.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case promocodeusage.FieldPromoCodeID:
 		m.ResetPromoCodeID()
 		return nil
@@ -39175,6 +40747,8 @@ type RedeemCodeMutation struct {
 	op               Op
 	typ              string
 	id               *int64
+	brand_id         *int64
+	addbrand_id      *int64
 	code             *string
 	_type            *string
 	value            *float64
@@ -39292,6 +40866,62 @@ func (m *RedeemCodeMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *RedeemCodeMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *RedeemCodeMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the RedeemCode entity.
+// If the RedeemCode object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *RedeemCodeMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *RedeemCodeMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *RedeemCodeMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *RedeemCodeMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetCode sets the "code" field.
@@ -39896,7 +41526,10 @@ func (m *RedeemCodeMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *RedeemCodeMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
+	if m.brand_id != nil {
+		fields = append(fields, redeemcode.FieldBrandID)
+	}
 	if m.code != nil {
 		fields = append(fields, redeemcode.FieldCode)
 	}
@@ -39938,6 +41571,8 @@ func (m *RedeemCodeMutation) Fields() []string {
 // schema.
 func (m *RedeemCodeMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case redeemcode.FieldBrandID:
+		return m.BrandID()
 	case redeemcode.FieldCode:
 		return m.Code()
 	case redeemcode.FieldType:
@@ -39969,6 +41604,8 @@ func (m *RedeemCodeMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *RedeemCodeMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case redeemcode.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case redeemcode.FieldCode:
 		return m.OldCode(ctx)
 	case redeemcode.FieldType:
@@ -40000,6 +41637,13 @@ func (m *RedeemCodeMutation) OldField(ctx context.Context, name string) (ent.Val
 // type.
 func (m *RedeemCodeMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case redeemcode.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case redeemcode.FieldCode:
 		v, ok := value.(string)
 		if !ok {
@@ -40085,6 +41729,9 @@ func (m *RedeemCodeMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *RedeemCodeMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, redeemcode.FieldBrandID)
+	}
 	if m.addvalue != nil {
 		fields = append(fields, redeemcode.FieldValue)
 	}
@@ -40099,6 +41746,8 @@ func (m *RedeemCodeMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *RedeemCodeMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case redeemcode.FieldBrandID:
+		return m.AddedBrandID()
 	case redeemcode.FieldValue:
 		return m.AddedValue()
 	case redeemcode.FieldValidityDays:
@@ -40112,6 +41761,13 @@ func (m *RedeemCodeMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *RedeemCodeMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case redeemcode.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case redeemcode.FieldValue:
 		v, ok := value.(float64)
 		if !ok {
@@ -40186,6 +41842,9 @@ func (m *RedeemCodeMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *RedeemCodeMutation) ResetField(name string) error {
 	switch name {
+	case redeemcode.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case redeemcode.FieldCode:
 		m.ResetCode()
 		return nil
@@ -41243,6 +42902,8 @@ type SubscriptionPlanMutation struct {
 	op                Op
 	typ               string
 	id                *int64
+	brand_id          *int64
+	addbrand_id       *int64
 	group_id          *int64
 	addgroup_id       *int64
 	name              *string
@@ -41364,6 +43025,62 @@ func (m *SubscriptionPlanMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *SubscriptionPlanMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *SubscriptionPlanMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the SubscriptionPlan entity.
+// If the SubscriptionPlan object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *SubscriptionPlanMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *SubscriptionPlanMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *SubscriptionPlanMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *SubscriptionPlanMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetGroupID sets the "group_id" field.
@@ -42018,7 +43735,10 @@ func (m *SubscriptionPlanMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *SubscriptionPlanMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 15)
+	if m.brand_id != nil {
+		fields = append(fields, subscriptionplan.FieldBrandID)
+	}
 	if m.group_id != nil {
 		fields = append(fields, subscriptionplan.FieldGroupID)
 	}
@@ -42069,6 +43789,8 @@ func (m *SubscriptionPlanMutation) Fields() []string {
 // schema.
 func (m *SubscriptionPlanMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case subscriptionplan.FieldBrandID:
+		return m.BrandID()
 	case subscriptionplan.FieldGroupID:
 		return m.GroupID()
 	case subscriptionplan.FieldName:
@@ -42106,6 +43828,8 @@ func (m *SubscriptionPlanMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *SubscriptionPlanMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case subscriptionplan.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case subscriptionplan.FieldGroupID:
 		return m.OldGroupID(ctx)
 	case subscriptionplan.FieldName:
@@ -42143,6 +43867,13 @@ func (m *SubscriptionPlanMutation) OldField(ctx context.Context, name string) (e
 // type.
 func (m *SubscriptionPlanMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case subscriptionplan.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case subscriptionplan.FieldGroupID:
 		v, ok := value.(int64)
 		if !ok {
@@ -42249,6 +43980,9 @@ func (m *SubscriptionPlanMutation) SetField(name string, value ent.Value) error 
 // this mutation.
 func (m *SubscriptionPlanMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, subscriptionplan.FieldBrandID)
+	}
 	if m.addgroup_id != nil {
 		fields = append(fields, subscriptionplan.FieldGroupID)
 	}
@@ -42272,6 +44006,8 @@ func (m *SubscriptionPlanMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *SubscriptionPlanMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case subscriptionplan.FieldBrandID:
+		return m.AddedBrandID()
 	case subscriptionplan.FieldGroupID:
 		return m.AddedGroupID()
 	case subscriptionplan.FieldPrice:
@@ -42291,6 +44027,13 @@ func (m *SubscriptionPlanMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *SubscriptionPlanMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case subscriptionplan.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case subscriptionplan.FieldGroupID:
 		v, ok := value.(int64)
 		if !ok {
@@ -42362,6 +44105,9 @@ func (m *SubscriptionPlanMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *SubscriptionPlanMutation) ResetField(name string) error {
 	switch name {
+	case subscriptionplan.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case subscriptionplan.FieldGroupID:
 		m.ResetGroupID()
 		return nil
@@ -43836,6 +45582,8 @@ type UsageCleanupTaskMutation struct {
 	op              Op
 	typ             string
 	id              *int64
+	brand_id        *int64
+	addbrand_id     *int64
 	created_at      *time.Time
 	updated_at      *time.Time
 	status          *string
@@ -43953,6 +45701,62 @@ func (m *UsageCleanupTaskMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *UsageCleanupTaskMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *UsageCleanupTaskMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the UsageCleanupTask entity.
+// If the UsageCleanupTask object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageCleanupTaskMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *UsageCleanupTaskMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *UsageCleanupTaskMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *UsageCleanupTaskMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -44526,7 +46330,10 @@ func (m *UsageCleanupTaskMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UsageCleanupTaskMutation) Fields() []string {
-	fields := make([]string, 0, 11)
+	fields := make([]string, 0, 12)
+	if m.brand_id != nil {
+		fields = append(fields, usagecleanuptask.FieldBrandID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, usagecleanuptask.FieldCreatedAt)
 	}
@@ -44568,6 +46375,8 @@ func (m *UsageCleanupTaskMutation) Fields() []string {
 // schema.
 func (m *UsageCleanupTaskMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case usagecleanuptask.FieldBrandID:
+		return m.BrandID()
 	case usagecleanuptask.FieldCreatedAt:
 		return m.CreatedAt()
 	case usagecleanuptask.FieldUpdatedAt:
@@ -44599,6 +46408,8 @@ func (m *UsageCleanupTaskMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *UsageCleanupTaskMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case usagecleanuptask.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case usagecleanuptask.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case usagecleanuptask.FieldUpdatedAt:
@@ -44630,6 +46441,13 @@ func (m *UsageCleanupTaskMutation) OldField(ctx context.Context, name string) (e
 // type.
 func (m *UsageCleanupTaskMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case usagecleanuptask.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case usagecleanuptask.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -44715,6 +46533,9 @@ func (m *UsageCleanupTaskMutation) SetField(name string, value ent.Value) error 
 // this mutation.
 func (m *UsageCleanupTaskMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, usagecleanuptask.FieldBrandID)
+	}
 	if m.addcreated_by != nil {
 		fields = append(fields, usagecleanuptask.FieldCreatedBy)
 	}
@@ -44732,6 +46553,8 @@ func (m *UsageCleanupTaskMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *UsageCleanupTaskMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case usagecleanuptask.FieldBrandID:
+		return m.AddedBrandID()
 	case usagecleanuptask.FieldCreatedBy:
 		return m.AddedCreatedBy()
 	case usagecleanuptask.FieldDeletedRows:
@@ -44747,6 +46570,13 @@ func (m *UsageCleanupTaskMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *UsageCleanupTaskMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case usagecleanuptask.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case usagecleanuptask.FieldCreatedBy:
 		v, ok := value.(int64)
 		if !ok {
@@ -44828,6 +46658,9 @@ func (m *UsageCleanupTaskMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *UsageCleanupTaskMutation) ResetField(name string) error {
 	switch name {
+	case usagecleanuptask.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case usagecleanuptask.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -44919,6 +46752,8 @@ type UsageLogMutation struct {
 	op                           Op
 	typ                          string
 	id                           *int64
+	brand_id                     *int64
+	addbrand_id                  *int64
 	request_id                   *string
 	model                        *string
 	requested_model              *string
@@ -45094,6 +46929,62 @@ func (m *UsageLogMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *UsageLogMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *UsageLogMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the UsageLog entity.
+// If the UsageLog object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UsageLogMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *UsageLogMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *UsageLogMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *UsageLogMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetUserID sets the "user_id" field.
@@ -47668,7 +49559,10 @@ func (m *UsageLogMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UsageLogMutation) Fields() []string {
-	fields := make([]string, 0, 47)
+	fields := make([]string, 0, 48)
+	if m.brand_id != nil {
+		fields = append(fields, usagelog.FieldBrandID)
+	}
 	if m.user != nil {
 		fields = append(fields, usagelog.FieldUserID)
 	}
@@ -47818,6 +49712,8 @@ func (m *UsageLogMutation) Fields() []string {
 // schema.
 func (m *UsageLogMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case usagelog.FieldBrandID:
+		return m.BrandID()
 	case usagelog.FieldUserID:
 		return m.UserID()
 	case usagelog.FieldAPIKeyID:
@@ -47921,6 +49817,8 @@ func (m *UsageLogMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *UsageLogMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case usagelog.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case usagelog.FieldUserID:
 		return m.OldUserID(ctx)
 	case usagelog.FieldAPIKeyID:
@@ -48024,6 +49922,13 @@ func (m *UsageLogMutation) OldField(ctx context.Context, name string) (ent.Value
 // type.
 func (m *UsageLogMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case usagelog.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case usagelog.FieldUserID:
 		v, ok := value.(int64)
 		if !ok {
@@ -48361,6 +50266,9 @@ func (m *UsageLogMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *UsageLogMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, usagelog.FieldBrandID)
+	}
 	if m.addchannel_id != nil {
 		fields = append(fields, usagelog.FieldChannelID)
 	}
@@ -48432,6 +50340,8 @@ func (m *UsageLogMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *UsageLogMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case usagelog.FieldBrandID:
+		return m.AddedBrandID()
 	case usagelog.FieldChannelID:
 		return m.AddedChannelID()
 	case usagelog.FieldInputTokens:
@@ -48483,6 +50393,13 @@ func (m *UsageLogMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *UsageLogMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case usagelog.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case usagelog.FieldChannelID:
 		v, ok := value.(int64)
 		if !ok {
@@ -48792,6 +50709,9 @@ func (m *UsageLogMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *UsageLogMutation) ResetField(name string) error {
 	switch name {
+	case usagelog.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case usagelog.FieldUserID:
 		m.ResetUserID()
 		return nil
@@ -49089,6 +51009,8 @@ type UserMutation struct {
 	op                            Op
 	typ                           string
 	id                            *int64
+	brand_id                      *int64
+	addbrand_id                   *int64
 	created_at                    *time.Time
 	updated_at                    *time.Time
 	deleted_at                    *time.Time
@@ -49263,6 +51185,62 @@ func (m *UserMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *UserMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *UserMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the User entity.
+// If the User object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *UserMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *UserMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *UserMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -51151,7 +53129,10 @@ func (m *UserMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserMutation) Fields() []string {
-	fields := make([]string, 0, 26)
+	fields := make([]string, 0, 27)
+	if m.brand_id != nil {
+		fields = append(fields, user.FieldBrandID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, user.FieldCreatedAt)
 	}
@@ -51238,6 +53219,8 @@ func (m *UserMutation) Fields() []string {
 // schema.
 func (m *UserMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case user.FieldBrandID:
+		return m.BrandID()
 	case user.FieldCreatedAt:
 		return m.CreatedAt()
 	case user.FieldUpdatedAt:
@@ -51299,6 +53282,8 @@ func (m *UserMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case user.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case user.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case user.FieldUpdatedAt:
@@ -51360,6 +53345,13 @@ func (m *UserMutation) OldField(ctx context.Context, name string) (ent.Value, er
 // type.
 func (m *UserMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case user.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case user.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -51550,6 +53542,9 @@ func (m *UserMutation) SetField(name string, value ent.Value) error {
 // this mutation.
 func (m *UserMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, user.FieldBrandID)
+	}
 	if m.addbalance != nil {
 		fields = append(fields, user.FieldBalance)
 	}
@@ -51576,6 +53571,8 @@ func (m *UserMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *UserMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case user.FieldBrandID:
+		return m.AddedBrandID()
 	case user.FieldBalance:
 		return m.AddedBalance()
 	case user.FieldFrozenBalance:
@@ -51597,6 +53594,13 @@ func (m *UserMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *UserMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case user.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case user.FieldBalance:
 		v, ok := value.(float64)
 		if !ok {
@@ -51705,6 +53709,9 @@ func (m *UserMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *UserMutation) ResetField(name string) error {
 	switch name {
+	case user.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case user.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -52188,6 +54195,8 @@ type UserAllowedGroupMutation struct {
 	config
 	op            Op
 	typ           string
+	brand_id      *int64
+	addbrand_id   *int64
 	created_at    *time.Time
 	clearedFields map[string]struct{}
 	user          *int64
@@ -52235,6 +54244,45 @@ func (m UserAllowedGroupMutation) Tx() (*Tx, error) {
 	tx := &Tx{config: m.config}
 	tx.init()
 	return tx, nil
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *UserAllowedGroupMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *UserAllowedGroupMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *UserAllowedGroupMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *UserAllowedGroupMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *UserAllowedGroupMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetUserID sets the "user_id" field.
@@ -52382,7 +54430,10 @@ func (m *UserAllowedGroupMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserAllowedGroupMutation) Fields() []string {
-	fields := make([]string, 0, 3)
+	fields := make([]string, 0, 4)
+	if m.brand_id != nil {
+		fields = append(fields, userallowedgroup.FieldBrandID)
+	}
 	if m.user != nil {
 		fields = append(fields, userallowedgroup.FieldUserID)
 	}
@@ -52400,6 +54451,8 @@ func (m *UserAllowedGroupMutation) Fields() []string {
 // schema.
 func (m *UserAllowedGroupMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case userallowedgroup.FieldBrandID:
+		return m.BrandID()
 	case userallowedgroup.FieldUserID:
 		return m.UserID()
 	case userallowedgroup.FieldGroupID:
@@ -52422,6 +54475,13 @@ func (m *UserAllowedGroupMutation) OldField(ctx context.Context, name string) (e
 // type.
 func (m *UserAllowedGroupMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case userallowedgroup.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case userallowedgroup.FieldUserID:
 		v, ok := value.(int64)
 		if !ok {
@@ -52451,6 +54511,9 @@ func (m *UserAllowedGroupMutation) SetField(name string, value ent.Value) error 
 // this mutation.
 func (m *UserAllowedGroupMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, userallowedgroup.FieldBrandID)
+	}
 	return fields
 }
 
@@ -52459,6 +54522,8 @@ func (m *UserAllowedGroupMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *UserAllowedGroupMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case userallowedgroup.FieldBrandID:
+		return m.AddedBrandID()
 	}
 	return nil, false
 }
@@ -52468,6 +54533,13 @@ func (m *UserAllowedGroupMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *UserAllowedGroupMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case userallowedgroup.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown UserAllowedGroup numeric field %s", name)
 }
@@ -52495,6 +54567,9 @@ func (m *UserAllowedGroupMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *UserAllowedGroupMutation) ResetField(name string) error {
 	switch name {
+	case userallowedgroup.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case userallowedgroup.FieldUserID:
 		m.ResetUserID()
 		return nil
@@ -52606,6 +54681,8 @@ type UserAttributeDefinitionMutation struct {
 	op               Op
 	typ              string
 	id               *int64
+	brand_id         *int64
+	addbrand_id      *int64
 	created_at       *time.Time
 	updated_at       *time.Time
 	deleted_at       *time.Time
@@ -52726,6 +54803,62 @@ func (m *UserAttributeDefinitionMutation) IDs(ctx context.Context) ([]int64, err
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *UserAttributeDefinitionMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *UserAttributeDefinitionMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the UserAttributeDefinition entity.
+// If the UserAttributeDefinition object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserAttributeDefinitionMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *UserAttributeDefinitionMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *UserAttributeDefinitionMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *UserAttributeDefinitionMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -53332,7 +55465,10 @@ func (m *UserAttributeDefinitionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserAttributeDefinitionMutation) Fields() []string {
-	fields := make([]string, 0, 13)
+	fields := make([]string, 0, 14)
+	if m.brand_id != nil {
+		fields = append(fields, userattributedefinition.FieldBrandID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, userattributedefinition.FieldCreatedAt)
 	}
@@ -53380,6 +55516,8 @@ func (m *UserAttributeDefinitionMutation) Fields() []string {
 // schema.
 func (m *UserAttributeDefinitionMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case userattributedefinition.FieldBrandID:
+		return m.BrandID()
 	case userattributedefinition.FieldCreatedAt:
 		return m.CreatedAt()
 	case userattributedefinition.FieldUpdatedAt:
@@ -53415,6 +55553,8 @@ func (m *UserAttributeDefinitionMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *UserAttributeDefinitionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case userattributedefinition.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case userattributedefinition.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case userattributedefinition.FieldUpdatedAt:
@@ -53450,6 +55590,13 @@ func (m *UserAttributeDefinitionMutation) OldField(ctx context.Context, name str
 // type.
 func (m *UserAttributeDefinitionMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case userattributedefinition.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case userattributedefinition.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -53549,6 +55696,9 @@ func (m *UserAttributeDefinitionMutation) SetField(name string, value ent.Value)
 // this mutation.
 func (m *UserAttributeDefinitionMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, userattributedefinition.FieldBrandID)
+	}
 	if m.adddisplay_order != nil {
 		fields = append(fields, userattributedefinition.FieldDisplayOrder)
 	}
@@ -53560,6 +55710,8 @@ func (m *UserAttributeDefinitionMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *UserAttributeDefinitionMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case userattributedefinition.FieldBrandID:
+		return m.AddedBrandID()
 	case userattributedefinition.FieldDisplayOrder:
 		return m.AddedDisplayOrder()
 	}
@@ -53571,6 +55723,13 @@ func (m *UserAttributeDefinitionMutation) AddedField(name string) (ent.Value, bo
 // type.
 func (m *UserAttributeDefinitionMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case userattributedefinition.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case userattributedefinition.FieldDisplayOrder:
 		v, ok := value.(int)
 		if !ok {
@@ -53614,6 +55773,9 @@ func (m *UserAttributeDefinitionMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *UserAttributeDefinitionMutation) ResetField(name string) error {
 	switch name {
+	case userattributedefinition.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case userattributedefinition.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -53747,6 +55909,8 @@ type UserAttributeValueMutation struct {
 	op                Op
 	typ               string
 	id                *int64
+	brand_id          *int64
+	addbrand_id       *int64
 	created_at        *time.Time
 	updated_at        *time.Time
 	value             *string
@@ -53856,6 +56020,62 @@ func (m *UserAttributeValueMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *UserAttributeValueMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *UserAttributeValueMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the UserAttributeValue entity.
+// If the UserAttributeValue object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserAttributeValueMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *UserAttributeValueMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *UserAttributeValueMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *UserAttributeValueMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -54139,7 +56359,10 @@ func (m *UserAttributeValueMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserAttributeValueMutation) Fields() []string {
-	fields := make([]string, 0, 5)
+	fields := make([]string, 0, 6)
+	if m.brand_id != nil {
+		fields = append(fields, userattributevalue.FieldBrandID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, userattributevalue.FieldCreatedAt)
 	}
@@ -54163,6 +56386,8 @@ func (m *UserAttributeValueMutation) Fields() []string {
 // schema.
 func (m *UserAttributeValueMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case userattributevalue.FieldBrandID:
+		return m.BrandID()
 	case userattributevalue.FieldCreatedAt:
 		return m.CreatedAt()
 	case userattributevalue.FieldUpdatedAt:
@@ -54182,6 +56407,8 @@ func (m *UserAttributeValueMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *UserAttributeValueMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case userattributevalue.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case userattributevalue.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case userattributevalue.FieldUpdatedAt:
@@ -54201,6 +56428,13 @@ func (m *UserAttributeValueMutation) OldField(ctx context.Context, name string) 
 // type.
 func (m *UserAttributeValueMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case userattributevalue.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case userattributevalue.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -54244,6 +56478,9 @@ func (m *UserAttributeValueMutation) SetField(name string, value ent.Value) erro
 // this mutation.
 func (m *UserAttributeValueMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, userattributevalue.FieldBrandID)
+	}
 	return fields
 }
 
@@ -54252,6 +56489,8 @@ func (m *UserAttributeValueMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *UserAttributeValueMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case userattributevalue.FieldBrandID:
+		return m.AddedBrandID()
 	}
 	return nil, false
 }
@@ -54261,6 +56500,13 @@ func (m *UserAttributeValueMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *UserAttributeValueMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case userattributevalue.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	}
 	return fmt.Errorf("unknown UserAttributeValue numeric field %s", name)
 }
@@ -54288,6 +56534,9 @@ func (m *UserAttributeValueMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *UserAttributeValueMutation) ResetField(name string) error {
 	switch name {
+	case userattributevalue.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case userattributevalue.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -54405,6 +56654,8 @@ type UserPlatformQuotaMutation struct {
 	op                   Op
 	typ                  string
 	id                   *int64
+	brand_id             *int64
+	addbrand_id          *int64
 	created_at           *time.Time
 	updated_at           *time.Time
 	deleted_at           *time.Time
@@ -54528,6 +56779,62 @@ func (m *UserPlatformQuotaMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *UserPlatformQuotaMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *UserPlatformQuotaMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the UserPlatformQuota entity.
+// If the UserPlatformQuota object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserPlatformQuotaMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *UserPlatformQuotaMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *UserPlatformQuotaMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *UserPlatformQuotaMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -55309,7 +57616,10 @@ func (m *UserPlatformQuotaMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserPlatformQuotaMutation) Fields() []string {
-	fields := make([]string, 0, 14)
+	fields := make([]string, 0, 15)
+	if m.brand_id != nil {
+		fields = append(fields, userplatformquota.FieldBrandID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, userplatformquota.FieldCreatedAt)
 	}
@@ -55360,6 +57670,8 @@ func (m *UserPlatformQuotaMutation) Fields() []string {
 // schema.
 func (m *UserPlatformQuotaMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case userplatformquota.FieldBrandID:
+		return m.BrandID()
 	case userplatformquota.FieldCreatedAt:
 		return m.CreatedAt()
 	case userplatformquota.FieldUpdatedAt:
@@ -55397,6 +57709,8 @@ func (m *UserPlatformQuotaMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *UserPlatformQuotaMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case userplatformquota.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case userplatformquota.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case userplatformquota.FieldUpdatedAt:
@@ -55434,6 +57748,13 @@ func (m *UserPlatformQuotaMutation) OldField(ctx context.Context, name string) (
 // type.
 func (m *UserPlatformQuotaMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case userplatformquota.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case userplatformquota.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -55540,6 +57861,9 @@ func (m *UserPlatformQuotaMutation) SetField(name string, value ent.Value) error
 // this mutation.
 func (m *UserPlatformQuotaMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, userplatformquota.FieldBrandID)
+	}
 	if m.adddaily_limit_usd != nil {
 		fields = append(fields, userplatformquota.FieldDailyLimitUsd)
 	}
@@ -55566,6 +57890,8 @@ func (m *UserPlatformQuotaMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *UserPlatformQuotaMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case userplatformquota.FieldBrandID:
+		return m.AddedBrandID()
 	case userplatformquota.FieldDailyLimitUsd:
 		return m.AddedDailyLimitUsd()
 	case userplatformquota.FieldWeeklyLimitUsd:
@@ -55587,6 +57913,13 @@ func (m *UserPlatformQuotaMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *UserPlatformQuotaMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case userplatformquota.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case userplatformquota.FieldDailyLimitUsd:
 		v, ok := value.(float64)
 		if !ok {
@@ -55701,6 +58034,9 @@ func (m *UserPlatformQuotaMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *UserPlatformQuotaMutation) ResetField(name string) error {
 	switch name {
+	case userplatformquota.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case userplatformquota.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil
@@ -55827,6 +58163,8 @@ type UserSubscriptionMutation struct {
 	op                      Op
 	typ                     string
 	id                      *int64
+	brand_id                *int64
+	addbrand_id             *int64
 	created_at              *time.Time
 	updated_at              *time.Time
 	deleted_at              *time.Time
@@ -55955,6 +58293,62 @@ func (m *UserSubscriptionMutation) IDs(ctx context.Context) ([]int64, error) {
 	default:
 		return nil, fmt.Errorf("IDs is not allowed on %s operations", m.op)
 	}
+}
+
+// SetBrandID sets the "brand_id" field.
+func (m *UserSubscriptionMutation) SetBrandID(i int64) {
+	m.brand_id = &i
+	m.addbrand_id = nil
+}
+
+// BrandID returns the value of the "brand_id" field in the mutation.
+func (m *UserSubscriptionMutation) BrandID() (r int64, exists bool) {
+	v := m.brand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// OldBrandID returns the old "brand_id" field's value of the UserSubscription entity.
+// If the UserSubscription object wasn't provided to the builder, the object is fetched from the database.
+// An error is returned if the mutation operation is not UpdateOne, or the database query fails.
+func (m *UserSubscriptionMutation) OldBrandID(ctx context.Context) (v int64, err error) {
+	if !m.op.Is(OpUpdateOne) {
+		return v, errors.New("OldBrandID is only allowed on UpdateOne operations")
+	}
+	if m.id == nil || m.oldValue == nil {
+		return v, errors.New("OldBrandID requires an ID field in the mutation")
+	}
+	oldValue, err := m.oldValue(ctx)
+	if err != nil {
+		return v, fmt.Errorf("querying old value for OldBrandID: %w", err)
+	}
+	return oldValue.BrandID, nil
+}
+
+// AddBrandID adds i to the "brand_id" field.
+func (m *UserSubscriptionMutation) AddBrandID(i int64) {
+	if m.addbrand_id != nil {
+		*m.addbrand_id += i
+	} else {
+		m.addbrand_id = &i
+	}
+}
+
+// AddedBrandID returns the value that was added to the "brand_id" field in this mutation.
+func (m *UserSubscriptionMutation) AddedBrandID() (r int64, exists bool) {
+	v := m.addbrand_id
+	if v == nil {
+		return
+	}
+	return *v, true
+}
+
+// ResetBrandID resets all changes to the "brand_id" field.
+func (m *UserSubscriptionMutation) ResetBrandID() {
+	m.brand_id = nil
+	m.addbrand_id = nil
 }
 
 // SetCreatedAt sets the "created_at" field.
@@ -56889,7 +59283,10 @@ func (m *UserSubscriptionMutation) Type() string {
 // order to get all numeric fields that were incremented/decremented, call
 // AddedFields().
 func (m *UserSubscriptionMutation) Fields() []string {
-	fields := make([]string, 0, 17)
+	fields := make([]string, 0, 18)
+	if m.brand_id != nil {
+		fields = append(fields, usersubscription.FieldBrandID)
+	}
 	if m.created_at != nil {
 		fields = append(fields, usersubscription.FieldCreatedAt)
 	}
@@ -56949,6 +59346,8 @@ func (m *UserSubscriptionMutation) Fields() []string {
 // schema.
 func (m *UserSubscriptionMutation) Field(name string) (ent.Value, bool) {
 	switch name {
+	case usersubscription.FieldBrandID:
+		return m.BrandID()
 	case usersubscription.FieldCreatedAt:
 		return m.CreatedAt()
 	case usersubscription.FieldUpdatedAt:
@@ -56992,6 +59391,8 @@ func (m *UserSubscriptionMutation) Field(name string) (ent.Value, bool) {
 // database failed.
 func (m *UserSubscriptionMutation) OldField(ctx context.Context, name string) (ent.Value, error) {
 	switch name {
+	case usersubscription.FieldBrandID:
+		return m.OldBrandID(ctx)
 	case usersubscription.FieldCreatedAt:
 		return m.OldCreatedAt(ctx)
 	case usersubscription.FieldUpdatedAt:
@@ -57035,6 +59436,13 @@ func (m *UserSubscriptionMutation) OldField(ctx context.Context, name string) (e
 // type.
 func (m *UserSubscriptionMutation) SetField(name string, value ent.Value) error {
 	switch name {
+	case usersubscription.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.SetBrandID(v)
+		return nil
 	case usersubscription.FieldCreatedAt:
 		v, ok := value.(time.Time)
 		if !ok {
@@ -57162,6 +59570,9 @@ func (m *UserSubscriptionMutation) SetField(name string, value ent.Value) error 
 // this mutation.
 func (m *UserSubscriptionMutation) AddedFields() []string {
 	var fields []string
+	if m.addbrand_id != nil {
+		fields = append(fields, usersubscription.FieldBrandID)
+	}
 	if m.adddaily_usage_usd != nil {
 		fields = append(fields, usersubscription.FieldDailyUsageUsd)
 	}
@@ -57179,6 +59590,8 @@ func (m *UserSubscriptionMutation) AddedFields() []string {
 // was not set, or was not defined in the schema.
 func (m *UserSubscriptionMutation) AddedField(name string) (ent.Value, bool) {
 	switch name {
+	case usersubscription.FieldBrandID:
+		return m.AddedBrandID()
 	case usersubscription.FieldDailyUsageUsd:
 		return m.AddedDailyUsageUsd()
 	case usersubscription.FieldWeeklyUsageUsd:
@@ -57194,6 +59607,13 @@ func (m *UserSubscriptionMutation) AddedField(name string) (ent.Value, bool) {
 // type.
 func (m *UserSubscriptionMutation) AddField(name string, value ent.Value) error {
 	switch name {
+	case usersubscription.FieldBrandID:
+		v, ok := value.(int64)
+		if !ok {
+			return fmt.Errorf("unexpected type %T for field %s", value, name)
+		}
+		m.AddBrandID(v)
+		return nil
 	case usersubscription.FieldDailyUsageUsd:
 		v, ok := value.(float64)
 		if !ok {
@@ -57281,6 +59701,9 @@ func (m *UserSubscriptionMutation) ClearField(name string) error {
 // It returns an error if the field is not defined in the schema.
 func (m *UserSubscriptionMutation) ResetField(name string) error {
 	switch name {
+	case usersubscription.FieldBrandID:
+		m.ResetBrandID()
+		return nil
 	case usersubscription.FieldCreatedAt:
 		m.ResetCreatedAt()
 		return nil

@@ -291,6 +291,33 @@ func TestChannelMonitorV2ErrorAggregationCountsFinalUserErrorsOnly(t *testing.T)
 	require.Contains(t, query, "current_error.created_at >= $1 - interval '90 minutes'")
 }
 
+func TestChannelMonitorV2AggregationKeepsBrandDimension(t *testing.T) {
+	for name, query := range map[string]string{
+		"usage":         channelMonitorV2UsageMetricsSQL,
+		"users":         channelMonitorV2UserMetricsSQL,
+		"histograms":    channelMonitorV2HistogramSQL,
+		"errors":        channelMonitorV2ErrorAggregationSQL,
+		"metricsRollup": channelMonitorV2MetricsRollupSQL,
+		"usersRollup":   channelMonitorV2UserMetricsRollupSQL,
+		"histRollup":    channelMonitorV2HistogramRollupSQL,
+		"errorsRollup":  channelMonitorV2ErrorRollupSQL,
+	} {
+		t.Run(name, func(t *testing.T) {
+			require.Contains(t, strings.ToLower(query), "brand_id")
+		})
+	}
+
+	errorQuery := strings.ToLower(channelMonitorV2ErrorAggregationSQL)
+	require.Contains(t, errorQuery, "select distinct brand_id, request_id")
+	require.Contains(t, errorQuery, "distinct on (current_error.brand_id")
+	require.Contains(t, errorQuery, "candidate.brand_id = current_error.brand_id")
+	require.Contains(t, errorQuery, "on conflict (brand_id, bucket_start, platform, group_id, model)")
+	require.Contains(t, errorQuery, "on conflict (brand_id, bucket_start, platform, group_id, model, user_id)")
+	require.Contains(t, errorQuery, "on conflict (brand_id, bucket_start, platform, group_id, model, error_category, taxonomy_version)")
+	require.Contains(t, strings.ToLower(channelMonitorV2FixedRollupDeleteSQL), "brand_id")
+	require.Contains(t, strings.ToLower(channelMonitorV2BrandScopeSQL), "sub2api.brand_id")
+}
+
 func TestChannelMonitorV2ErrorAggregationResolvesCompositePlatform(t *testing.T) {
 	query := strings.ToLower(channelMonitorV2ErrorAggregationSQL)
 	// Composite groups are a routing layer: error facts must resolve the concrete

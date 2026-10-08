@@ -27,6 +27,7 @@ func (UserAttributeValue) Annotations() []schema.Annotation {
 
 func (UserAttributeValue) Mixin() []ent.Mixin {
 	return []ent.Mixin{
+		mixins.BrandMixin{},
 		// Only use TimeMixin, no soft delete - values are hard deleted
 		mixins.TimeMixin{},
 	}

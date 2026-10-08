@@ -27,6 +27,20 @@ type UsageLogCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *UsageLogCreate) SetBrandID(v int64) *UsageLogCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *UsageLogCreate) SetNillableBrandID(v *int64) *UsageLogCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetUserID sets the "user_id" field.
 func (_c *UsageLogCreate) SetUserID(v int64) *UsageLogCreate {
 	_c.mutation.SetUserID(v)
@@ -669,7 +683,9 @@ func (_c *UsageLogCreate) Mutation() *UsageLogMutation {
 
 // Save creates the UsageLog in the database.
 func (_c *UsageLogCreate) Save(ctx context.Context) (*UsageLog, error) {
-	_c.defaults()
+	if err := _c.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -696,7 +712,11 @@ func (_c *UsageLogCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *UsageLogCreate) defaults() {
+func (_c *UsageLogCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := usagelog.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.InputTokens(); !ok {
 		v := usagelog.DefaultInputTokens
 		_c.mutation.SetInputTokens(v)
@@ -774,13 +794,20 @@ func (_c *UsageLogCreate) defaults() {
 		_c.mutation.SetCacheTTLOverridden(v)
 	}
 	if _, ok := _c.mutation.CreatedAt(); !ok {
+		if usagelog.DefaultCreatedAt == nil {
+			return fmt.Errorf("ent: uninitialized usagelog.DefaultCreatedAt (forgotten import ent/runtime?)")
+		}
 		v := usagelog.DefaultCreatedAt()
 		_c.mutation.SetCreatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *UsageLogCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "UsageLog.brand_id"`)}
+	}
 	if _, ok := _c.mutation.UserID(); !ok {
 		return &ValidationError{Name: "user_id", err: errors.New(`ent: missing required field "UsageLog.user_id"`)}
 	}
@@ -967,6 +994,10 @@ func (_c *UsageLogCreate) createSpec() (*UsageLog, *sqlgraph.CreateSpec) {
 		_spec = sqlgraph.NewCreateSpec(usagelog.Table, sqlgraph.NewFieldSpec(usagelog.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(usagelog.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.RequestID(); ok {
 		_spec.SetField(usagelog.FieldRequestID, field.TypeString, value)
 		_node.RequestID = value
@@ -1227,7 +1258,7 @@ func (_c *UsageLogCreate) createSpec() (*UsageLog, *sqlgraph.CreateSpec) {
 // of the `INSERT` statement. For example:
 //
 //	client.UsageLog.Create().
-//		SetUserID(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -1236,7 +1267,7 @@ func (_c *UsageLogCreate) createSpec() (*UsageLog, *sqlgraph.CreateSpec) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.UsageLogUpsert) {
-//			SetUserID(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *UsageLogCreate) OnConflict(opts ...sql.ConflictOption) *UsageLogUpsertOne {
@@ -2093,6 +2124,9 @@ func (u *UsageLogUpsert) UpdateCacheTTLOverridden() *UsageLogUpsert {
 func (u *UsageLogUpsertOne) UpdateNewValues() *UsageLogUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(usagelog.FieldBrandID)
+		}
 		if _, exists := u.create.mutation.CreatedAt(); exists {
 			s.SetIgnore(usagelog.FieldCreatedAt)
 		}
@@ -3207,7 +3241,7 @@ func (_c *UsageLogCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.UsageLogUpsert) {
-//			SetUserID(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *UsageLogCreateBulk) OnConflict(opts ...sql.ConflictOption) *UsageLogUpsertBulk {
@@ -3248,6 +3282,9 @@ func (u *UsageLogUpsertBulk) UpdateNewValues() *UsageLogUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
 	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
 		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(usagelog.FieldBrandID)
+			}
 			if _, exists := b.mutation.CreatedAt(); exists {
 				s.SetIgnore(usagelog.FieldCreatedAt)
 			}

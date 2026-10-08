@@ -81,6 +81,14 @@ describe('AppSidebar subscription feature flag', () => {
   })
 })
 
+describe('AppSidebar tenant brand navigation', () => {
+	it('uses the registered order route and applies shared navigation filtering', () => {
+		expect(componentSource).not.toContain("path: '/admin/payment/orders'")
+		expect(componentSource).toMatch(/path: '\/admin\/orders', label: t\('brand\.revenue'\)[^\n]*hideInSimpleMode: true[^\n]*featureFlag: flagPayment/)
+		expect(componentSource).toMatch(/if \(brand\.enabled && !brand\.isPlatformAdmin\) \{[\s\S]*?return finalizeNav\(\[/)
+	})
+})
+
 describe('AppSidebar smart operations group', () => {
   const smartOpsBlock = componentSource.match(/path: '\/admin\/smart-ops'[\s\S]*?\n {4}\] \},/)?.[0] ?? ''
   const pathsIn = (source: string) => [...source.matchAll(/path: '([^']+)'/g)].map(match => match[1])

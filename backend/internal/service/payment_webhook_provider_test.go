@@ -14,6 +14,7 @@ import (
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 	"github.com/stretchr/testify/require"
 )
@@ -92,6 +93,7 @@ func TestGetOrderProviderInstanceResolvesUniqueLegacyProviderKey(t *testing.T) {
 
 	providerKey := payment.TypeStripe
 	order := &dbent.PaymentOrder{
+		BrandID:     1,
 		PaymentType: payment.TypeStripe,
 		ProviderKey: &providerKey,
 	}
@@ -120,6 +122,7 @@ func TestGetOrderProviderInstanceResolvesUniqueLegacyPaymentType(t *testing.T) {
 	require.NoError(t, err)
 
 	order := &dbent.PaymentOrder{
+		BrandID:     1,
 		PaymentType: payment.TypeWxpayDirect,
 	}
 
@@ -155,6 +158,7 @@ func TestGetOrderProviderInstanceLeavesAmbiguousLegacyOrderUnresolved(t *testing
 	require.NoError(t, err)
 
 	order := &dbent.PaymentOrder{
+		BrandID:     1,
 		PaymentType: payment.TypeWxpay,
 	}
 
@@ -190,6 +194,7 @@ func TestGetOrderProviderInstanceLeavesLegacyProviderKeyUnresolvedWhenHistorical
 
 	providerKey := payment.TypeStripe
 	order := &dbent.PaymentOrder{
+		BrandID:     1,
 		PaymentType: payment.TypeStripe,
 		ProviderKey: &providerKey,
 	}
@@ -218,6 +223,7 @@ func TestGetOrderProviderInstanceLeavesProviderKeyMatchUnresolvedWhenTypeNotSupp
 
 	providerKey := payment.TypeWxpay
 	order := &dbent.PaymentOrder{
+		BrandID:     1,
 		PaymentType: payment.TypeAlipayDirect,
 		ProviderKey: &providerKey,
 	}
@@ -245,6 +251,7 @@ func TestGetOrderProviderInstanceUsesProviderSnapshotWhenPinnedColumnMissing(t *
 	require.NoError(t, err)
 
 	order := &dbent.PaymentOrder{
+		BrandID:     1,
 		ID:          42,
 		PaymentType: payment.TypeStripe,
 		ProviderSnapshot: map[string]any{
@@ -278,6 +285,7 @@ func TestGetOrderProviderInstanceRejectsMissingSnapshotInstanceWithoutLegacyFall
 	require.NoError(t, err)
 
 	order := &dbent.PaymentOrder{
+		BrandID:     1,
 		ID:          43,
 		PaymentType: payment.TypeStripe,
 		ProviderSnapshot: map[string]any{
@@ -392,6 +400,35 @@ func TestGetWebhookProviderAllowsSingleInstanceRegistryFallback(t *testing.T) {
 	require.Len(t, providers, 1)
 	prov := providers[0]
 	require.Equal(t, payment.TypeStripe, prov.ProviderKey())
+}
+
+func TestGetWebhookProviderUsesSoleBrandDatabaseInstance(t *testing.T) {
+	ctx := brand.WithScope(context.Background(), brand.Scope{ID: 2, Code: "mues"})
+	client := newPaymentConfigServiceTestClient(t)
+	_, err := client.PaymentProviderInstance.Create().
+		SetProviderKey(payment.TypeStripe).
+		SetName("mues-stripe").
+		SetConfig(encryptWebhookProviderConfig(t, map[string]string{
+			"secretKey":     "sk_test_mues",
+			"webhookSecret": "whsec_mues",
+		})).
+		SetSupportedTypes("stripe").
+		SetEnabled(true).
+		Save(ctx)
+	require.NoError(t, err)
+
+	svc := &PaymentService{
+		entClient:       client,
+		brandStore:      brand.NewStore(nil),
+		loadBalancer:    newWebhookProviderTestLoadBalancer(client),
+		registry:        payment.NewRegistry(),
+		providersLoaded: true,
+	}
+
+	providers, err := svc.GetWebhookProviders(ctx, payment.TypeStripe, "")
+	require.NoError(t, err)
+	require.Len(t, providers, 1)
+	require.Equal(t, payment.TypeStripe, providers[0].ProviderKey())
 }
 
 func TestGetWebhookProviderRejectsRegistryFallbackForPinnedOrder(t *testing.T) {

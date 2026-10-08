@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/redis/go-redis/v9"
 )
@@ -40,7 +41,7 @@ func (s *passkeySessionStore) Store(
 	if err != nil {
 		return "", fmt.Errorf("encode passkey session: %w", err)
 	}
-	if err = s.redis.Set(ctx, passkeySessionPrefix+token, payload, ttl).Err(); err != nil {
+	if err = s.redis.Set(ctx, brand.CacheKey(ctx, passkeySessionPrefix+token), payload, ttl).Err(); err != nil {
 		return "", fmt.Errorf("store passkey session: %w", err)
 	}
 	return token, nil
@@ -54,7 +55,7 @@ func (s *passkeySessionStore) Consume(
 	if token == "" || len(token) > 128 {
 		return nil, service.ErrPasskeySession
 	}
-	payload, err := s.redis.GetDel(ctx, passkeySessionPrefix+token).Bytes()
+	payload, err := s.redis.GetDel(ctx, brand.CacheKey(ctx, passkeySessionPrefix+token)).Bytes()
 	if err == redis.Nil {
 		return nil, service.ErrPasskeySession
 	}

@@ -301,12 +301,12 @@ func (_q *AnnouncementQuery) WithReads(opts ...func(*AnnouncementReadQuery)) *An
 // Example:
 //
 //	var v []struct {
-//		Title string `json:"title,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.Announcement.Query().
-//		GroupBy(announcement.FieldTitle).
+//		GroupBy(announcement.FieldBrandID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *AnnouncementQuery) GroupBy(field string, fields ...string) *AnnouncementGroupBy {
@@ -324,11 +324,11 @@ func (_q *AnnouncementQuery) GroupBy(field string, fields ...string) *Announceme
 // Example:
 //
 //	var v []struct {
-//		Title string `json:"title,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //	}
 //
 //	client.Announcement.Query().
-//		Select(announcement.FieldTitle).
+//		Select(announcement.FieldBrandID).
 //		Scan(ctx, &v)
 func (_q *AnnouncementQuery) Select(fields ...string) *AnnouncementSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

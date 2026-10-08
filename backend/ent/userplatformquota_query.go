@@ -300,12 +300,12 @@ func (_q *UserPlatformQuotaQuery) WithUser(opts ...func(*UserQuery)) *UserPlatfo
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.UserPlatformQuota.Query().
-//		GroupBy(userplatformquota.FieldCreatedAt).
+//		GroupBy(userplatformquota.FieldBrandID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *UserPlatformQuotaQuery) GroupBy(field string, fields ...string) *UserPlatformQuotaGroupBy {
@@ -323,11 +323,11 @@ func (_q *UserPlatformQuotaQuery) GroupBy(field string, fields ...string) *UserP
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //	}
 //
 //	client.UserPlatformQuota.Query().
-//		Select(userplatformquota.FieldCreatedAt).
+//		Select(userplatformquota.FieldBrandID).
 //		Scan(ctx, &v)
 func (_q *UserPlatformQuotaQuery) Select(fields ...string) *UserPlatformQuotaSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

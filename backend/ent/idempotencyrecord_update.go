@@ -198,7 +198,9 @@ func (_u *IdempotencyRecordUpdate) Mutation() *IdempotencyRecordMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *IdempotencyRecordUpdate) Save(ctx context.Context) (int, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return 0, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -225,11 +227,15 @@ func (_u *IdempotencyRecordUpdate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *IdempotencyRecordUpdate) defaults() {
+func (_u *IdempotencyRecordUpdate) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if idempotencyrecord.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized idempotencyrecord.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := idempotencyrecord.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -522,7 +528,9 @@ func (_u *IdempotencyRecordUpdateOne) Select(field string, fields ...string) *Id
 
 // Save executes the query and returns the updated IdempotencyRecord entity.
 func (_u *IdempotencyRecordUpdateOne) Save(ctx context.Context) (*IdempotencyRecord, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -549,11 +557,15 @@ func (_u *IdempotencyRecordUpdateOne) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *IdempotencyRecordUpdateOne) defaults() {
+func (_u *IdempotencyRecordUpdateOne) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if idempotencyrecord.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized idempotencyrecord.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := idempotencyrecord.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.

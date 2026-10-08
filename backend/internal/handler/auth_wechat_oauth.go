@@ -17,7 +17,6 @@ import (
 	"github.com/Wei-Shaw/sub2api/ent/authidentitychannel"
 	"github.com/Wei-Shaw/sub2api/internal/payment"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
-	"github.com/Wei-Shaw/sub2api/internal/pkg/oauth"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
@@ -105,7 +104,7 @@ func (h *AuthHandler) WeChatOAuthStart(c *gin.Context) {
 		return
 	}
 
-	state, err := oauth.GenerateState()
+	state, err := h.generateOAuthState(c)
 	if err != nil {
 		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_STATE_GEN_FAILED", "failed to generate oauth state").WithCause(err))
 		return
@@ -179,7 +178,7 @@ func (h *AuthHandler) WeChatOAuthCallback(c *gin.Context) {
 	}()
 
 	expectedState, err := readCookieDecoded(c, wechatOAuthStateCookieName)
-	if err != nil || expectedState == "" || state != expectedState {
+	if err != nil || expectedState == "" || state != expectedState || !h.validOAuthState(c, state) {
 		redirectOAuthError(c, frontendCallback, "invalid_state", "invalid oauth state", "")
 		return
 	}
@@ -345,7 +344,7 @@ func (h *AuthHandler) WeChatPaymentOAuthStart(c *gin.Context) {
 		return
 	}
 
-	state, err := oauth.GenerateState()
+	state, err := h.generateOAuthState(c)
 	if err != nil {
 		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_STATE_GEN_FAILED", "failed to generate oauth state").WithCause(err))
 		return
@@ -410,7 +409,7 @@ func (h *AuthHandler) WeChatPaymentOAuthCallback(c *gin.Context) {
 	}()
 
 	expectedState, err := readCookieDecoded(c, wechatPaymentOAuthStateName)
-	if err != nil || expectedState == "" || state != expectedState {
+	if err != nil || expectedState == "" || state != expectedState || !h.validOAuthState(c, state) {
 		redirectOAuthError(c, frontendCallback, "invalid_state", "invalid oauth state", "")
 		return
 	}

@@ -24,6 +24,20 @@ type PromoCodeUsageCreate struct {
 	conflict []sql.ConflictOption
 }
 
+// SetBrandID sets the "brand_id" field.
+func (_c *PromoCodeUsageCreate) SetBrandID(v int64) *PromoCodeUsageCreate {
+	_c.mutation.SetBrandID(v)
+	return _c
+}
+
+// SetNillableBrandID sets the "brand_id" field if the given value is not nil.
+func (_c *PromoCodeUsageCreate) SetNillableBrandID(v *int64) *PromoCodeUsageCreate {
+	if v != nil {
+		_c.SetBrandID(*v)
+	}
+	return _c
+}
+
 // SetPromoCodeID sets the "promo_code_id" field.
 func (_c *PromoCodeUsageCreate) SetPromoCodeID(v int64) *PromoCodeUsageCreate {
 	_c.mutation.SetPromoCodeID(v)
@@ -73,7 +87,9 @@ func (_c *PromoCodeUsageCreate) Mutation() *PromoCodeUsageMutation {
 
 // Save creates the PromoCodeUsage in the database.
 func (_c *PromoCodeUsageCreate) Save(ctx context.Context) (*PromoCodeUsage, error) {
-	_c.defaults()
+	if err := _c.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _c.sqlSave, _c.mutation, _c.hooks)
 }
 
@@ -100,15 +116,26 @@ func (_c *PromoCodeUsageCreate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_c *PromoCodeUsageCreate) defaults() {
+func (_c *PromoCodeUsageCreate) defaults() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		v := promocodeusage.DefaultBrandID
+		_c.mutation.SetBrandID(v)
+	}
 	if _, ok := _c.mutation.UsedAt(); !ok {
+		if promocodeusage.DefaultUsedAt == nil {
+			return fmt.Errorf("ent: uninitialized promocodeusage.DefaultUsedAt (forgotten import ent/runtime?)")
+		}
 		v := promocodeusage.DefaultUsedAt()
 		_c.mutation.SetUsedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
 func (_c *PromoCodeUsageCreate) check() error {
+	if _, ok := _c.mutation.BrandID(); !ok {
+		return &ValidationError{Name: "brand_id", err: errors.New(`ent: missing required field "PromoCodeUsage.brand_id"`)}
+	}
 	if _, ok := _c.mutation.PromoCodeID(); !ok {
 		return &ValidationError{Name: "promo_code_id", err: errors.New(`ent: missing required field "PromoCodeUsage.promo_code_id"`)}
 	}
@@ -154,6 +181,10 @@ func (_c *PromoCodeUsageCreate) createSpec() (*PromoCodeUsage, *sqlgraph.CreateS
 		_spec = sqlgraph.NewCreateSpec(promocodeusage.Table, sqlgraph.NewFieldSpec(promocodeusage.FieldID, field.TypeInt64))
 	)
 	_spec.OnConflict = _c.conflict
+	if value, ok := _c.mutation.BrandID(); ok {
+		_spec.SetField(promocodeusage.FieldBrandID, field.TypeInt64, value)
+		_node.BrandID = value
+	}
 	if value, ok := _c.mutation.BonusAmount(); ok {
 		_spec.SetField(promocodeusage.FieldBonusAmount, field.TypeFloat64, value)
 		_node.BonusAmount = value
@@ -203,7 +234,7 @@ func (_c *PromoCodeUsageCreate) createSpec() (*PromoCodeUsage, *sqlgraph.CreateS
 // of the `INSERT` statement. For example:
 //
 //	client.PromoCodeUsage.Create().
-//		SetPromoCodeID(v).
+//		SetBrandID(v).
 //		OnConflict(
 //			// Update the row with the new values
 //			// the was proposed for insertion.
@@ -212,7 +243,7 @@ func (_c *PromoCodeUsageCreate) createSpec() (*PromoCodeUsage, *sqlgraph.CreateS
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.PromoCodeUsageUpsert) {
-//			SetPromoCodeID(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *PromoCodeUsageCreate) OnConflict(opts ...sql.ConflictOption) *PromoCodeUsageUpsertOne {
@@ -312,6 +343,11 @@ func (u *PromoCodeUsageUpsert) UpdateUsedAt() *PromoCodeUsageUpsert {
 //		Exec(ctx)
 func (u *PromoCodeUsageUpsertOne) UpdateNewValues() *PromoCodeUsageUpsertOne {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		if _, exists := u.create.mutation.BrandID(); exists {
+			s.SetIgnore(promocodeusage.FieldBrandID)
+		}
+	}))
 	return u
 }
 
@@ -540,7 +576,7 @@ func (_c *PromoCodeUsageCreateBulk) ExecX(ctx context.Context) {
 //		// Override some of the fields with custom
 //		// update values.
 //		Update(func(u *ent.PromoCodeUsageUpsert) {
-//			SetPromoCodeID(v+v).
+//			SetBrandID(v+v).
 //		}).
 //		Exec(ctx)
 func (_c *PromoCodeUsageCreateBulk) OnConflict(opts ...sql.ConflictOption) *PromoCodeUsageUpsertBulk {
@@ -579,6 +615,13 @@ type PromoCodeUsageUpsertBulk struct {
 //		Exec(ctx)
 func (u *PromoCodeUsageUpsertBulk) UpdateNewValues() *PromoCodeUsageUpsertBulk {
 	u.create.conflict = append(u.create.conflict, sql.ResolveWithNewValues())
+	u.create.conflict = append(u.create.conflict, sql.ResolveWith(func(s *sql.UpdateSet) {
+		for _, b := range u.create.builders {
+			if _, exists := b.mutation.BrandID(); exists {
+				s.SetIgnore(promocodeusage.FieldBrandID)
+			}
+		}
+	}))
 	return u
 }
 

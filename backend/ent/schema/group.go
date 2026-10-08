@@ -28,6 +28,7 @@ func (Group) Annotations() []schema.Annotation {
 
 func (Group) Mixin() []ent.Mixin {
 	return []ent.Mixin{
+		mixins.BrandMixin{},
 		mixins.TimeMixin{},
 		mixins.SoftDeleteMixin{},
 	}

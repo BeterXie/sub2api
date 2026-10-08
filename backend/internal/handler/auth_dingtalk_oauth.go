@@ -14,7 +14,6 @@ import (
 	dbuser "github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
-	"github.com/Wei-Shaw/sub2api/internal/pkg/oauth"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 
@@ -123,7 +122,7 @@ func (h *AuthHandler) DingTalkOAuthStart(c *gin.Context) {
 		return
 	}
 
-	state, err := oauth.GenerateState()
+	state, err := h.generateOAuthState(c)
 	if err != nil {
 		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_STATE_GEN_FAILED", "failed to generate oauth state").WithCause(err))
 		return
@@ -325,7 +324,7 @@ func (h *AuthHandler) DingTalkOAuthCallback(c *gin.Context) {
 	}()
 
 	expectedState, err := readCookieDecoded(c, dingTalkOAuthStateCookieName)
-	if err != nil || state != expectedState {
+	if err != nil || state != expectedState || !h.validOAuthState(c, state) {
 		redirectOAuthError(c, frontendCallback, "csrf", "state mismatch", "")
 		return
 	}

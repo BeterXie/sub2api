@@ -336,12 +336,12 @@ func (_q *UserAttributeValueQuery) WithDefinition(opts ...func(*UserAttributeDef
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.UserAttributeValue.Query().
-//		GroupBy(userattributevalue.FieldCreatedAt).
+//		GroupBy(userattributevalue.FieldBrandID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *UserAttributeValueQuery) GroupBy(field string, fields ...string) *UserAttributeValueGroupBy {
@@ -359,11 +359,11 @@ func (_q *UserAttributeValueQuery) GroupBy(field string, fields ...string) *User
 // Example:
 //
 //	var v []struct {
-//		CreatedAt time.Time `json:"created_at,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //	}
 //
 //	client.UserAttributeValue.Query().
-//		Select(userattributevalue.FieldCreatedAt).
+//		Select(userattributevalue.FieldBrandID).
 //		Scan(ctx, &v)
 func (_q *UserAttributeValueQuery) Select(fields ...string) *UserAttributeValueSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)

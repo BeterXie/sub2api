@@ -87,7 +87,9 @@ export default defineConfig(({ mode }) => {
     plugins: [
       vue(),
       checker({
-        vueTsc: true
+        vueTsc: true,
+        // The build script already runs vue-tsc directly before Vite.
+        enableBuild: false
       }),
       injectPublicSettings(backendUrl)
     ],

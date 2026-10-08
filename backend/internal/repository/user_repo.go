@@ -20,6 +20,7 @@ import (
 	dbuser "github.com/Wei-Shaw/sub2api/ent/user"
 	"github.com/Wei-Shaw/sub2api/ent/userallowedgroup"
 	"github.com/Wei-Shaw/sub2api/ent/usersubscription"
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/pagination"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/lib/pq"
@@ -97,13 +98,13 @@ func (r *userRepository) create(ctx context.Context, userIn *service.User, guard
 		}
 	}
 
-	lockKeys := []string{normalizedEmailUniquenessLockKey(userIn.Email)}
+	lockKeys := []string{brand.CacheKey(ctx, normalizedEmailUniquenessLockKey(userIn.Email))}
 	if guardEmailAlias {
 		// 别名变体的字面量不同，唯一索引无法兜底；用收件箱身份锁把同一收件箱的并发注册串行化。
-		lockKeys = append(lockKeys, emailAliasUniquenessLockKey(userIn.Email))
+		lockKeys = append(lockKeys, brand.CacheKey(ctx, emailAliasUniquenessLockKey(userIn.Email)))
 	}
 	if domainLimit != "" {
-		lockKeys = append(lockKeys, registrationEmailDomainLockKey(domainLimit))
+		lockKeys = append(lockKeys, brand.CacheKey(ctx, registrationEmailDomainLockKey(domainLimit)))
 	}
 	releaseEmailLock, err := lockRepositoryScopedKeys(
 		txCtx,
@@ -275,7 +276,7 @@ func (r *userRepository) Update(ctx context.Context, userIn *service.User, field
 			txCtx,
 			txClient,
 			txAwareSQLExecutor(txCtx, r.sql, r.client),
-			normalizedEmailUniquenessLockKey(userIn.Email),
+			brand.CacheKey(ctx, normalizedEmailUniquenessLockKey(userIn.Email)),
 		)
 		if err != nil {
 			return err
@@ -390,6 +391,7 @@ func ensureEmailAuthIdentityWithClient(ctx context.Context, client *dbent.Client
 		SetVerifiedAt(time.Now().UTC()).
 		SetMetadata(map[string]any{"source": source}).
 		OnConflictColumns(
+			authidentity.FieldBrandID,
 			authidentity.FieldProviderType,
 			authidentity.FieldProviderKey,
 			authidentity.FieldProviderSubject,
@@ -1234,8 +1236,8 @@ func (r *userRepository) UpdateEmailWithAliasGuard(
 		ctx,
 		client,
 		txAwareSQLExecutor(ctx, r.sql, r.client),
-		normalizedEmailUniquenessLockKey(email),
-		emailAliasUniquenessLockKey(email),
+		brand.CacheKey(ctx, normalizedEmailUniquenessLockKey(email)),
+		brand.CacheKey(ctx, emailAliasUniquenessLockKey(email)),
 	)
 	if err != nil {
 		return err
@@ -1540,6 +1542,7 @@ func applyUserEntityToService(dst *service.User, src *dbent.User) {
 		return
 	}
 	dst.ID = src.ID
+	dst.BrandID = src.BrandID
 	dst.SignupSource = src.SignupSource
 	dst.LastLoginAt = src.LastLoginAt
 	dst.LastActiveAt = src.LastActiveAt

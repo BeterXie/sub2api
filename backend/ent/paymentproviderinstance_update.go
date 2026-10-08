@@ -188,7 +188,9 @@ func (_u *PaymentProviderInstanceUpdate) Mutation() *PaymentProviderInstanceMuta
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *PaymentProviderInstanceUpdate) Save(ctx context.Context) (int, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return 0, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -215,11 +217,15 @@ func (_u *PaymentProviderInstanceUpdate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *PaymentProviderInstanceUpdate) defaults() {
+func (_u *PaymentProviderInstanceUpdate) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if paymentproviderinstance.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized paymentproviderinstance.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := paymentproviderinstance.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -488,7 +494,9 @@ func (_u *PaymentProviderInstanceUpdateOne) Select(field string, fields ...strin
 
 // Save executes the query and returns the updated PaymentProviderInstance entity.
 func (_u *PaymentProviderInstanceUpdateOne) Save(ctx context.Context) (*PaymentProviderInstance, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -515,11 +523,15 @@ func (_u *PaymentProviderInstanceUpdateOne) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *PaymentProviderInstanceUpdateOne) defaults() {
+func (_u *PaymentProviderInstanceUpdateOne) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if paymentproviderinstance.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized paymentproviderinstance.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := paymentproviderinstance.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.

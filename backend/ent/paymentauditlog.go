@@ -17,6 +17,8 @@ type PaymentAuditLog struct {
 	config `json:"-"`
 	// ID of the ent.
 	ID int64 `json:"id,omitempty"`
+	// BrandID holds the value of the "brand_id" field.
+	BrandID int64 `json:"brand_id,omitempty"`
 	// OrderID holds the value of the "order_id" field.
 	OrderID string `json:"order_id,omitempty"`
 	// Action holds the value of the "action" field.
@@ -35,7 +37,7 @@ func (*PaymentAuditLog) scanValues(columns []string) ([]any, error) {
 	values := make([]any, len(columns))
 	for i := range columns {
 		switch columns[i] {
-		case paymentauditlog.FieldID:
+		case paymentauditlog.FieldID, paymentauditlog.FieldBrandID:
 			values[i] = new(sql.NullInt64)
 		case paymentauditlog.FieldOrderID, paymentauditlog.FieldAction, paymentauditlog.FieldDetail, paymentauditlog.FieldOperator:
 			values[i] = new(sql.NullString)
@@ -62,6 +64,12 @@ func (_m *PaymentAuditLog) assignValues(columns []string, values []any) error {
 				return fmt.Errorf("unexpected type %T for field id", value)
 			}
 			_m.ID = int64(value.Int64)
+		case paymentauditlog.FieldBrandID:
+			if value, ok := values[i].(*sql.NullInt64); !ok {
+				return fmt.Errorf("unexpected type %T for field brand_id", values[i])
+			} else if value.Valid {
+				_m.BrandID = value.Int64
+			}
 		case paymentauditlog.FieldOrderID:
 			if value, ok := values[i].(*sql.NullString); !ok {
 				return fmt.Errorf("unexpected type %T for field order_id", values[i])
@@ -128,6 +136,9 @@ func (_m *PaymentAuditLog) String() string {
 	var builder strings.Builder
 	builder.WriteString("PaymentAuditLog(")
 	builder.WriteString(fmt.Sprintf("id=%v, ", _m.ID))
+	builder.WriteString("brand_id=")
+	builder.WriteString(fmt.Sprintf("%v", _m.BrandID))
+	builder.WriteString(", ")
 	builder.WriteString("order_id=")
 	builder.WriteString(_m.OrderID)
 	builder.WriteString(", ")

@@ -80,6 +80,10 @@ func jwtAuth(
 		}
 
 		// 检查用户状态
+		if !authService.RequestBrandMatches(c.Request.Context(), claims, user) {
+			AbortWithError(c, 401, "INVALID_TOKEN", "Invalid token")
+			return
+		}
 		if !user.IsActive() {
 			AbortWithError(c, 401, "USER_INACTIVE", "User account is not active")
 			return

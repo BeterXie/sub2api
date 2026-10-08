@@ -42,6 +42,7 @@ const (
 // AuditLog 一条管理面操作审计记录。
 type AuditLog struct {
 	ID               int64          `json:"id"`
+	BrandID          int64          `json:"brand_id"`
 	CreatedAt        time.Time      `json:"created_at"`
 	ActorUserID      *int64         `json:"actor_user_id,omitempty"`
 	ActorEmail       string         `json:"actor_email"`

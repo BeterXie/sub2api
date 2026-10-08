@@ -12,7 +12,6 @@ import (
 	dbent "github.com/Wei-Shaw/sub2api/ent"
 	"github.com/Wei-Shaw/sub2api/internal/config"
 	infraerrors "github.com/Wei-Shaw/sub2api/internal/pkg/errors"
-	"github.com/Wei-Shaw/sub2api/internal/pkg/oauth"
 	"github.com/Wei-Shaw/sub2api/internal/pkg/response"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/gin-gonic/gin"
@@ -67,7 +66,7 @@ func (h *AuthHandler) emailOAuthStart(c *gin.Context, provider string) {
 		response.ErrorFrom(c, err)
 		return
 	}
-	state, err := oauth.GenerateState()
+	state, err := h.generateOAuthState(c)
 	if err != nil {
 		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_STATE_GEN_FAILED", "failed to generate oauth state").WithCause(err))
 		return
@@ -126,7 +125,7 @@ func (h *AuthHandler) emailOAuthCallback(c *gin.Context, provider string) {
 		clearOAuthPromoCodeCookie(c, secureCookie)
 	}()
 	expectedState, err := readCookieDecoded(c, emailOAuthStateCookieName)
-	if err != nil || expectedState == "" || expectedState != state {
+	if err != nil || expectedState == "" || expectedState != state || !h.validOAuthState(c, state) {
 		redirectOAuthError(c, frontendCallback, "invalid_state", "invalid oauth state", "")
 		return
 	}

@@ -438,6 +438,7 @@ export const useAppStore = defineStore('app', () => {
   // ==================== Return Store API ====================
 
   return {
+    applySettings,
     // State
     sidebarCollapsed,
     mobileOpen,

@@ -5,6 +5,7 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"database/sql/driver"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -115,12 +116,19 @@ func InitEnt(cfg *config.Config) (*ent.Client, *sql.DB, error) {
 	// 使用 Ent 的 SQL 驱动打开 PostgreSQL 连接。
 	// dialect.Postgres 指定使用 PostgreSQL 方言进行 SQL 生成。
 	var drv *entsql.Driver
-	if cfg.Server.EnableServerTiming {
+	if cfg.Server.EnableServerTiming || cfg.MultiBrand.Enabled {
 		connector, err := pq.NewConnector(dsn)
 		if err != nil {
 			return nil, nil, err
 		}
-		drv = entsql.OpenDB(dialect.Postgres, sql.OpenDB(newServerTimingConnector(connector)))
+		var wrapped driver.Connector = connector
+		if cfg.MultiBrand.Enabled {
+			wrapped = newBrandConnector(wrapped)
+		}
+		if cfg.Server.EnableServerTiming {
+			wrapped = newServerTimingConnector(wrapped)
+		}
+		drv = entsql.OpenDB(dialect.Postgres, sql.OpenDB(wrapped))
 	} else {
 		var err error
 		drv, err = entsql.Open(dialect.Postgres, dsn)
@@ -143,6 +151,10 @@ func InitEnt(cfg *config.Config) (*ent.Client, *sql.DB, error) {
 	}
 
 	// 创建 Ent 客户端，绑定到已配置的数据库驱动。
+	if err := validateBrandDatabase(migrationCtx, drv.DB(), cfg.MultiBrand.Enabled); err != nil {
+		_ = drv.Close()
+		return nil, nil, err
+	}
 	client := ent.NewClient(ent.Driver(drv))
 
 	// 启动阶段：从配置或数据库中确保系统密钥可用。

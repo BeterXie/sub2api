@@ -218,7 +218,9 @@ func (_u *UsageCleanupTaskUpdate) Mutation() *UsageCleanupTaskMutation {
 
 // Save executes the query and returns the number of nodes affected by the update operation.
 func (_u *UsageCleanupTaskUpdate) Save(ctx context.Context) (int, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return 0, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -245,11 +247,15 @@ func (_u *UsageCleanupTaskUpdate) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *UsageCleanupTaskUpdate) defaults() {
+func (_u *UsageCleanupTaskUpdate) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if usagecleanuptask.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized usagecleanuptask.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := usagecleanuptask.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.
@@ -554,7 +560,9 @@ func (_u *UsageCleanupTaskUpdateOne) Select(field string, fields ...string) *Usa
 
 // Save executes the query and returns the updated UsageCleanupTask entity.
 func (_u *UsageCleanupTaskUpdateOne) Save(ctx context.Context) (*UsageCleanupTask, error) {
-	_u.defaults()
+	if err := _u.defaults(); err != nil {
+		return nil, err
+	}
 	return withHooks(ctx, _u.sqlSave, _u.mutation, _u.hooks)
 }
 
@@ -581,11 +589,15 @@ func (_u *UsageCleanupTaskUpdateOne) ExecX(ctx context.Context) {
 }
 
 // defaults sets the default values of the builder before save.
-func (_u *UsageCleanupTaskUpdateOne) defaults() {
+func (_u *UsageCleanupTaskUpdateOne) defaults() error {
 	if _, ok := _u.mutation.UpdatedAt(); !ok {
+		if usagecleanuptask.UpdateDefaultUpdatedAt == nil {
+			return fmt.Errorf("ent: uninitialized usagecleanuptask.UpdateDefaultUpdatedAt (forgotten import ent/runtime?)")
+		}
 		v := usagecleanuptask.UpdateDefaultUpdatedAt()
 		_u.mutation.SetUpdatedAt(v)
 	}
+	return nil
 }
 
 // check runs all checks and user-defined validators on the builder.

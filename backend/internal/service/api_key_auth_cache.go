@@ -4,6 +4,7 @@ import "time"
 
 // APIKeyAuthSnapshot API Key 认证缓存快照（仅包含认证所需字段）
 type APIKeyAuthSnapshot struct {
+	BrandID          int64                    `json:"brand_id"`
 	ConcurrencyLimit int                      `json:"concurrency_limit"`
 	Version          int                      `json:"version"`
 	APIKeyID         int64                    `json:"api_key_id"`
@@ -31,6 +32,7 @@ type APIKeyAuthSnapshot struct {
 
 // APIKeyAuthUserSnapshot 用户快照
 type APIKeyAuthUserSnapshot struct {
+	BrandID       int64   `json:"brand_id"`
 	ID            int64   `json:"id"`
 	Status        string  `json:"status"`
 	Role          string  `json:"role"`
@@ -61,6 +63,7 @@ type APIKeyAuthUserSnapshot struct {
 
 // APIKeyAuthGroupSnapshot 分组快照
 type APIKeyAuthGroupSnapshot struct {
+	BrandID                         int64                         `json:"brand_id"`
 	ID                              int64                         `json:"id"`
 	Name                            string                        `json:"name"`
 	Platform                        string                        `json:"platform"`

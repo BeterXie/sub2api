@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"io"
 	"net/http"
 	"sort"
@@ -64,6 +65,9 @@ func (p *BatchImageProviderProcessor) Process(ctx context.Context, batchID strin
 	job, err := p.Repo.GetBatchImageJobByBatchID(ctx, batchID)
 	if err != nil {
 		return BatchImageProcessResult{}, err
+	}
+	if job.BrandID > 0 {
+		ctx = brand.WithScope(ctx, brand.Scope{ID: job.BrandID})
 	}
 	if isBatchImageProcessorDoneStatus(job.Status) {
 		if err := p.releaseTerminalHold(ctx, job); err != nil {

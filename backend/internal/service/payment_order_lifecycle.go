@@ -331,7 +331,11 @@ func (s *PaymentService) ReconcilePendingPaymentOrders(ctx context.Context) (int
 
 	recovered := 0
 	for _, order := range orders {
-		if s.reconcilePaid(ctx, order) == checkPaidResultAlreadyPaid {
+		orderCtx, err := s.paymentOrderBrandContext(ctx, order)
+		if err != nil {
+			return recovered, err
+		}
+		if s.reconcilePaid(orderCtx, order) == checkPaidResultAlreadyPaid {
 			recovered++
 		}
 	}
@@ -386,7 +390,11 @@ func (s *PaymentService) ExpireTimedOutOrders(ctx context.Context) (int, error) 
 	for _, o := range orders {
 		// Check upstream payment status before expiring — the user may have
 		// paid just before timeout and the webhook hasn't arrived yet.
-		outcome, _ := s.cancelCore(ctx, o, OrderStatusExpired, "system", "order expired")
+		orderCtx, scopeErr := s.paymentOrderBrandContext(ctx, o)
+		if scopeErr != nil {
+			return n, scopeErr
+		}
+		outcome, _ := s.cancelCore(orderCtx, o, OrderStatusExpired, "system", "order expired")
 		if outcome == checkPaidResultAlreadyPaid {
 			slog.Info("order was paid during expiry", "orderID", o.ID)
 			continue
@@ -424,6 +432,9 @@ func (s *PaymentService) getOrderProvider(ctx context.Context, o *dbent.PaymentO
 
 func paymentOrderAllowsRegistryFallback(order *dbent.PaymentOrder) bool {
 	if order == nil {
+		return false
+	}
+	if order.BrandID > 1 {
 		return false
 	}
 	if psOrderProviderSnapshot(order) != nil {

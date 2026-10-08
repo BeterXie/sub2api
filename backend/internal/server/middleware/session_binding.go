@@ -92,6 +92,7 @@ func enforceSessionBinding(
 			path = c.Request.URL.Path
 		}
 		auditService.Record(&service.AuditLog{
+			BrandID:     claims.BrandID,
 			ActorUserID: &uid,
 			ActorEmail:  claims.Email,
 			ActorRole:   claims.Role,

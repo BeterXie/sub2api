@@ -672,11 +672,31 @@ func (r *dashboardAggregationRepository) createUsageLogsPartition(ctx context.Co
 	monthStart := truncateToMonthUTC(month)
 	nextMonth := monthStart.AddDate(0, 1, 0)
 	name := fmt.Sprintf("usage_logs_%s", monthStart.Format("200601"))
+	partition := pq.QuoteIdentifier(name)
 	query := fmt.Sprintf(
-		"CREATE TABLE IF NOT EXISTS %s PARTITION OF usage_logs FOR VALUES FROM (%s) TO (%s)",
-		pq.QuoteIdentifier(name),
+		`CREATE TABLE IF NOT EXISTS %s PARTITION OF usage_logs FOR VALUES FROM (%s) TO (%s);
+ALTER TABLE %s ENABLE ROW LEVEL SECURITY;
+ALTER TABLE %s FORCE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS tenant_scope ON %s;
+CREATE POLICY tenant_scope ON %s
+USING (current_user <> 'sub2api_brand_runtime' OR brand_id = COALESCE(NULLIF(current_setting('sub2api.brand_id',true),'')::BIGINT,0))
+WITH CHECK (current_user <> 'sub2api_brand_runtime' OR brand_id = COALESCE(NULLIF(current_setting('sub2api.brand_id',true),'')::BIGINT,0));
+DO $secure_partition$
+BEGIN
+	IF NOT EXISTS(SELECT 1 FROM pg_trigger WHERE tgrelid=%s::regclass AND tgname='enforce_brand' AND tgenabled='O') THEN
+		EXECUTE %s;
+	END IF;
+END
+$secure_partition$`,
+		partition,
 		pq.QuoteLiteral(monthStart.Format("2006-01-02")),
 		pq.QuoteLiteral(nextMonth.Format("2006-01-02")),
+		partition,
+		partition,
+		partition,
+		partition,
+		pq.QuoteLiteral(partition),
+		pq.QuoteLiteral("CREATE TRIGGER enforce_brand BEFORE INSERT OR UPDATE ON "+partition+" FOR EACH ROW EXECUTE FUNCTION sub2api_enforce_brand()"),
 	)
 	_, err := r.sql.ExecContext(ctx, query)
 	return err

@@ -91,7 +91,7 @@ func (h *AuthHandler) LinuxDoOAuthStart(c *gin.Context) {
 		return
 	}
 
-	state, err := oauth.GenerateState()
+	state, err := h.generateOAuthState(c)
 	if err != nil {
 		response.ErrorFrom(c, infraerrors.InternalServer("OAUTH_STATE_GEN_FAILED", "failed to generate oauth state").WithCause(err))
 		return
@@ -190,7 +190,7 @@ func (h *AuthHandler) LinuxDoOAuthCallback(c *gin.Context) {
 	}()
 
 	expectedState, err := readCookieDecoded(c, linuxDoOAuthStateCookieName)
-	if err != nil || expectedState == "" || state != expectedState {
+	if err != nil || expectedState == "" || state != expectedState || !h.validOAuthState(c, state) {
 		redirectOAuthError(c, frontendCallback, "invalid_state", "invalid oauth state", "")
 		return
 	}
@@ -1213,7 +1213,7 @@ func (h *AuthHandler) resolveOAuthBindTargetUserID(c *gin.Context) (*int64, erro
 	if err != nil {
 		return nil, err
 	}
-	if user == nil || !user.IsActive() || claims.TokenVersion != user.TokenVersion {
+	if user == nil || !user.IsActive() || claims.TokenVersion != user.TokenVersion || !h.authService.RequestBrandMatches(c.Request.Context(), claims, user) {
 		return nil, service.ErrInvalidToken
 	}
 	return &user.ID, nil

@@ -7,6 +7,7 @@ import (
 	"time"
 
 	dbent "github.com/Wei-Shaw/sub2api/ent"
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 )
 
@@ -24,14 +25,15 @@ func (r *idempotencyRepository) CreateProcessing(ctx context.Context, record *se
 	}
 	query := `
 		INSERT INTO idempotency_records (
-			scope, idempotency_key_hash, request_fingerprint, status, locked_until, expires_at
-		) VALUES ($1, $2, $3, $4, $5, $6)
-		ON CONFLICT (scope, idempotency_key_hash) DO NOTHING
+			brand_id, scope, idempotency_key_hash, request_fingerprint, status, locked_until, expires_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+		ON CONFLICT (brand_id, scope, idempotency_key_hash) DO NOTHING
 		RETURNING id, created_at, updated_at
 	`
 	var createdAt time.Time
 	var updatedAt time.Time
 	err := scanSingleRow(ctx, r.sql, query, []any{
+		brand.ID(ctx),
 		record.Scope,
 		record.IdempotencyKeyHash,
 		record.RequestFingerprint,
@@ -56,14 +58,14 @@ func (r *idempotencyRepository) GetByScopeAndKeyHash(ctx context.Context, scope,
 			id, scope, idempotency_key_hash, request_fingerprint, status, response_status,
 			response_body, error_reason, locked_until, expires_at, created_at, updated_at
 		FROM idempotency_records
-		WHERE scope = $1 AND idempotency_key_hash = $2
+		WHERE brand_id = $1 AND scope = $2 AND idempotency_key_hash = $3
 	`
 	record := &service.IdempotencyRecord{}
 	var responseStatus sql.NullInt64
 	var responseBody sql.NullString
 	var errorReason sql.NullString
 	var lockedUntil sql.NullTime
-	err := scanSingleRow(ctx, r.sql, query, []any{scope, keyHash},
+	err := scanSingleRow(ctx, r.sql, query, []any{brand.ID(ctx), scope, keyHash},
 		&record.ID,
 		&record.Scope,
 		&record.IdempotencyKeyHash,

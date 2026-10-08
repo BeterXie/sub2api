@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"fmt"
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"maps"
 	"sort"
 	"strings"
@@ -87,6 +88,9 @@ func (s *ChannelService) ListAvailable(ctx context.Context) ([]AvailableChannel,
 			}
 		}
 		sort.SliceStable(groups, func(i, j int) bool { return groups[i].Name < groups[j].Name })
+		if _, scoped := brand.FromContext(ctx); scoped && len(groups) == 0 {
+			continue
+		}
 
 		ch.normalizeBillingModelSource()
 

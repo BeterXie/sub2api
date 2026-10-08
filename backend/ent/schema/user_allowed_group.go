@@ -1,6 +1,7 @@
 package schema
 
 import (
+	"github.com/Wei-Shaw/sub2api/ent/schema/mixins"
 	"time"
 
 	"entgo.io/ent"
@@ -25,6 +26,8 @@ func (UserAllowedGroup) Annotations() []schema.Annotation {
 		field.ID("user_id", "group_id"),
 	}
 }
+
+func (UserAllowedGroup) Mixin() []ent.Mixin { return []ent.Mixin{mixins.BrandMixin{}} }
 
 func (UserAllowedGroup) Fields() []ent.Field {
 	return []ent.Field{

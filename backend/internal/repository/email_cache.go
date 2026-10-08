@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Wei-Shaw/sub2api/internal/brand"
 	"github.com/Wei-Shaw/sub2api/internal/service"
 	"github.com/redis/go-redis/v9"
 )
@@ -85,6 +86,7 @@ func NewEmailCache(rdb *redis.Client) service.EmailCache {
 }
 
 func (c *emailCache) getCode(ctx context.Context, key string) (*service.VerificationCodeData, error) {
+	key = brand.CacheKey(ctx, key)
 	val, err := c.rdb.Get(ctx, key).Result()
 	if err != nil {
 		return nil, err
@@ -100,6 +102,7 @@ func (c *emailCache) getCode(ctx context.Context, key string) (*service.Verifica
 }
 
 func (c *emailCache) setCode(ctx context.Context, key string, data *service.VerificationCodeData, ttl time.Duration) error {
+	key = brand.CacheKey(ctx, key)
 	val, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -115,6 +118,7 @@ func (c *emailCache) setCode(ctx context.Context, key string, data *service.Veri
 }
 
 func (c *emailCache) incrCodeAttempts(ctx context.Context, key string) (int, error) {
+	key = brand.CacheKey(ctx, key)
 	n, err := incrAttemptsScript.Run(ctx, c.rdb, []string{key, key + attemptsKeySuffix}).Int()
 	if err != nil {
 		return 0, err
@@ -126,6 +130,7 @@ func (c *emailCache) incrCodeAttempts(ctx context.Context, key string) (int, err
 }
 
 func (c *emailCache) deleteCode(ctx context.Context, key string) error {
+	key = brand.CacheKey(ctx, key)
 	return c.rdb.Del(ctx, key, key+attemptsKeySuffix).Err()
 }
 
@@ -148,7 +153,7 @@ func (c *emailCache) DeleteVerificationCode(ctx context.Context, email string) e
 // Password reset token methods
 
 func (c *emailCache) GetPasswordResetToken(ctx context.Context, email string) (*service.PasswordResetTokenData, error) {
-	key := passwordResetKey(email)
+	key := brand.CacheKey(ctx, passwordResetKey(email))
 	val, err := c.rdb.Get(ctx, key).Result()
 	if err != nil {
 		return nil, err
@@ -161,7 +166,7 @@ func (c *emailCache) GetPasswordResetToken(ctx context.Context, email string) (*
 }
 
 func (c *emailCache) SetPasswordResetToken(ctx context.Context, email string, data *service.PasswordResetTokenData, ttl time.Duration) error {
-	key := passwordResetKey(email)
+	key := brand.CacheKey(ctx, passwordResetKey(email))
 	val, err := json.Marshal(data)
 	if err != nil {
 		return err
@@ -172,7 +177,7 @@ func (c *emailCache) SetPasswordResetToken(ctx context.Context, email string, da
 // ConsumePasswordResetToken atomically deletes the stored reset token when its
 // stored hash equals tokenHash. Returns true only for the single winning caller.
 func (c *emailCache) ConsumePasswordResetToken(ctx context.Context, email, tokenHash string) (bool, error) {
-	n, err := consumeResetTokenScript.Run(ctx, c.rdb, []string{passwordResetKey(email)}, tokenHash).Int()
+	n, err := consumeResetTokenScript.Run(ctx, c.rdb, []string{brand.CacheKey(ctx, passwordResetKey(email))}, tokenHash).Int()
 	if err != nil {
 		return false, err
 	}
@@ -180,20 +185,20 @@ func (c *emailCache) ConsumePasswordResetToken(ctx context.Context, email, token
 }
 
 func (c *emailCache) DeletePasswordResetToken(ctx context.Context, email string) error {
-	key := passwordResetKey(email)
+	key := brand.CacheKey(ctx, passwordResetKey(email))
 	return c.rdb.Del(ctx, key).Err()
 }
 
 // Password reset email cooldown methods
 
 func (c *emailCache) IsPasswordResetEmailInCooldown(ctx context.Context, email string) bool {
-	key := passwordResetSentAtKey(email)
+	key := brand.CacheKey(ctx, passwordResetSentAtKey(email))
 	exists, err := c.rdb.Exists(ctx, key).Result()
 	return err == nil && exists > 0
 }
 
 func (c *emailCache) SetPasswordResetEmailCooldown(ctx context.Context, email string, ttl time.Duration) error {
-	key := passwordResetSentAtKey(email)
+	key := brand.CacheKey(ctx, passwordResetSentAtKey(email))
 	return c.rdb.Set(ctx, key, "1", ttl).Err()
 }
 

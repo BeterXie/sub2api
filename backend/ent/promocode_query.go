@@ -301,12 +301,12 @@ func (_q *PromoCodeQuery) WithUsageRecords(opts ...func(*PromoCodeUsageQuery)) *
 // Example:
 //
 //	var v []struct {
-//		Code string `json:"code,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //		Count int `json:"count,omitempty"`
 //	}
 //
 //	client.PromoCode.Query().
-//		GroupBy(promocode.FieldCode).
+//		GroupBy(promocode.FieldBrandID).
 //		Aggregate(ent.Count()).
 //		Scan(ctx, &v)
 func (_q *PromoCodeQuery) GroupBy(field string, fields ...string) *PromoCodeGroupBy {
@@ -324,11 +324,11 @@ func (_q *PromoCodeQuery) GroupBy(field string, fields ...string) *PromoCodeGrou
 // Example:
 //
 //	var v []struct {
-//		Code string `json:"code,omitempty"`
+//		BrandID int64 `json:"brand_id,omitempty"`
 //	}
 //
 //	client.PromoCode.Query().
-//		Select(promocode.FieldCode).
+//		Select(promocode.FieldBrandID).
 //		Scan(ctx, &v)
 func (_q *PromoCodeQuery) Select(fields ...string) *PromoCodeSelect {
 	_q.ctx.Fields = append(_q.ctx.Fields, fields...)
