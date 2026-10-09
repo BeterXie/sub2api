@@ -22,7 +22,7 @@ func NewOpenAIOAuthReauthRepository(db *sql.DB) service.OpenAIOAuthReauthReposit
 }
 
 func (r *openAIOAuthReauthRepository) UpsertConfig(ctx context.Context, config *service.OpenAIOAuthReauthStoredConfig) error {
-	_, err := r.db.ExecContext(ctx, `
+	result, err := r.db.ExecContext(ctx, `
 		INSERT INTO openai_oauth_reauth_configs (
 			account_id, login_email, credential_mode, engine, proxy_source, proxy_id,
 			password_ciphertext, totp_secret_ciphertext, otp_url_ciphertext
@@ -38,8 +38,24 @@ func (r *openAIOAuthReauthRepository) UpsertConfig(ctx context.Context, config *
 			totp_secret_ciphertext = EXCLUDED.totp_secret_ciphertext,
 			otp_url_ciphertext = EXCLUDED.otp_url_ciphertext,
 			updated_at = NOW()
+        WHERE openai_oauth_reauth_configs.updated_at = $10
 	`, config.AccountID, config.LoginEmail, config.CredentialMode, config.Engine, config.ProxySource, config.ProxyID,
-		config.PasswordCiphertext, config.TOTPSecretCiphertext, config.OTPURLCiphertext)
+		config.PasswordCiphertext, config.TOTPSecretCiphertext, config.OTPURLCiphertext, config.UpdatedAt)
+	if err != nil {
+		var p *pq.Error
+		if errors.As(err, &p) && p.Code == "55000" {
+			return infraerrors.Conflict("TOTP_ACCOUNT_BUSY", "Resolve the 2FA task before editing login credentials")
+		}
+	}
+	if err == nil {
+		n, countErr := result.RowsAffected()
+		if countErr != nil {
+			return countErr
+		}
+		if n == 0 {
+			return infraerrors.Conflict("OPENAI_REAUTH_CONFIG_CHANGED", "Login configuration changed; reload before saving")
+		}
+	}
 	return err
 }
 
@@ -99,6 +115,7 @@ func (r *openAIOAuthReauthRepository) GetLatestTask(ctx context.Context, account
 			created_at, updated_at, finished_at
 		FROM openai_oauth_reauth_tasks
 		WHERE account_id = $1
+        AND NOT EXISTS (SELECT 1 FROM openai_totp_rotations rotation WHERE rotation.task_id=openai_oauth_reauth_tasks.id)
 		ORDER BY created_at DESC, id DESC
 		LIMIT 1
 	`, accountID)
@@ -155,7 +172,8 @@ func (r *openAIOAuthReauthRepository) ClaimNextTaskForRuntime(ctx context.Contex
 				finished_at = NOW(),
 				updated_at = NOW()
 			WHERE status = $3
-				AND claimed_at < NOW() - ($4 * INTERVAL '1 second')
+                AND NOT EXISTS (SELECT 1 FROM openai_totp_rotations rotation WHERE rotation.task_id=openai_oauth_reauth_tasks.id)
+                AND claimed_at < NOW() - ($4 * INTERVAL '1 second')
 		), next_task AS (
 			SELECT id
 			FROM openai_oauth_reauth_tasks

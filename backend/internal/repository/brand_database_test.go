@@ -69,6 +69,19 @@ func TestMultiBrandDatabase(t *testing.T) {
 	var oldUserID int64
 	err = admin.QueryRowContext(ctx, "INSERT INTO users(email,password_hash,role,balance,concurrency,status) VALUES('legacy@multibrand.test','hash','admin',17.25,3,'active') RETURNING id").Scan(&oldUserID)
 	require.NoError(t, err)
+	// Production already has the brand migrations before the upstream 2FA
+	// migration arrives. Exercise that order as well as a fresh installation.
+	deployed := fstest.MapFS{}
+	for _, file := range files {
+		if file.IsDir() || !strings.HasSuffix(file.Name(), ".sql") || file.Name() == "269_openai_totp_rotation.sql" {
+			continue
+		}
+		data, err := fs.ReadFile(migrations.FS, file.Name())
+		require.NoError(t, err)
+		deployed[file.Name()] = &fstest.MapFile{Data: data}
+	}
+	require.NoError(t, applyMigrationsFS(ctx, admin, deployed))
+	require.NoError(t, validateBrandDatabase(ctx, admin, true))
 	require.NoError(t, applyMigrationsFS(ctx, admin, migrations.FS))
 	require.NoError(t, validateBrandDatabase(ctx, admin, true))
 	var oldBrand int64
@@ -221,6 +234,29 @@ func TestMultiBrandDatabase(t *testing.T) {
 			require.False(t, rows.Next(), table)
 			require.NoError(t, rows.Err())
 		}
+	})
+	t.Run("ops outcomes without keys stay separate across brands", func(t *testing.T) {
+		start := time.Date(2005, 1, 1, 0, 0, 0, 0, time.UTC)
+		end := start.Add(time.Hour)
+		for i := 0; i < 2; i++ {
+			for duplicate := 0; duplicate < 2; duplicate++ {
+				_, err := db.ExecContext(scopes[i], `INSERT INTO ops_error_logs (
+					request_id,platform,error_phase,error_type,error_owner,status_code,created_at
+				) VALUES ('same-unattributed-request','openai','upstream','upstream_error','provider',502,$1)`,
+					start.Add(time.Duration(duplicate)*time.Minute))
+				require.NoError(t, err)
+			}
+			ops := NewOpsRepository(db).(*opsRepository)
+			total, _, sla, _, _, _, err := ops.queryErrorCounts(scopes[i], nil, start, end)
+			require.NoError(t, err)
+			require.EqualValues(t, 1, total)
+			require.Equal(t, total, sla)
+		}
+		ops := NewOpsRepository(admin).(*opsRepository)
+		total, _, sla, _, _, _, err := ops.queryErrorCounts(ctx, nil, start, end)
+		require.NoError(t, err)
+		require.EqualValues(t, 2, total, "deduplicate within each brand, including requests without API keys or groups")
+		require.Equal(t, total, sla)
 	})
 	t.Run("aliases share LLMP and forged headers cannot choose a brand", func(t *testing.T) {
 		_, err := admin.ExecContext(ctx, "UPDATE domains SET enabled=TRUE WHERE brand_id=1")
