@@ -140,6 +140,8 @@
             :disabled="running"
             :hint="t('admin.accounts.pelicanTest.modelHint', { model: defaultModel })"
           />
+          <p v-if="loadingModels" class="mt-2 text-xs text-gray-500">{{ t('admin.accounts.pelicanTest.loadingModels') }}</p>
+          <p v-else-if="modelCatalogError" class="mt-2 text-xs text-red-600" data-testid="model-catalog-error">{{ modelCatalogError }}</p>
           <div>
             <label class="input-label mb-1.5 block">{{ t('admin.accounts.pelicanTest.reasoning') }}</label>
             <Select data-testid="reasoning-select" v-model="reasoningEffort" :options="reasoningOptions" :disabled="running || loadingReasoning" />
@@ -351,7 +353,6 @@ const availableModels = ref<Array<{ id: string; display_name?: string }>>([])
 const modelId = ref(defaultModel.value)
 const reasoningEffort = ref('medium')
 const reasoningLevels = ref<string[]>(['low', 'medium', 'high'])
-const availableModels = ref<Array<{ id: string; display_name?: string }>>([])
 const modelOptions = computed(() => {
   const models = new Map(availableModels.value.map((model) => [model.id, model.display_name?.trim()]))
   // A diagnostic test must also allow explicitly configured public model names,
@@ -398,9 +399,9 @@ async function loadModels() {
   if (!props.account) return
   const accountId = props.account.id
   const token = ++modelLoadToken
-  const accountId = props.account.id
   const initialModel = modelId.value
   availableModels.value = []
+  loadingModels.value = true
   try {
     const models = await getAvailableModels(accountId)
     if (token !== modelLoadToken || props.account?.id !== accountId || !props.show) return
@@ -412,7 +413,14 @@ async function loadModels() {
       modelCatalogError.value = t('admin.accounts.pelicanTest.noPrismModels')
     }
   } catch {
-    if (token === modelLoadToken && props.account?.id === accountId) availableModels.value = []
+    if (token !== modelLoadToken || props.account?.id !== accountId) return
+    availableModels.value = []
+    if (isPrismAccount.value) modelCatalogError.value = t('admin.accounts.pelicanTest.modelCatalogFailed')
+  } finally {
+    if (token === modelLoadToken) {
+      loadingModels.value = false
+      void loadReasoning()
+    }
   }
 }
 let reasoningLoadToken = 0

@@ -172,6 +172,7 @@ func TestPrismBrowserStreamKeepaliveBeforeBufferedResult(t *testing.T) {
 			require.Equal(t, http.StatusOK, response.StatusCode)
 			require.Equal(t, "text/event-stream", response.Header.Get("Content-Type"))
 			require.Equal(t, "no", response.Header.Get("X-Accel-Buffering"))
+			require.Equal(t, UsageSourceEstimatedVisibleText, response.Header.Get("X-Prism-Usage"))
 			reader := bufio.NewReader(response.Body)
 			readPrismEventHeartbeat(t, reader)
 			release.Do(func() { close(gate) })

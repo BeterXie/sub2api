@@ -424,6 +424,17 @@ func (s *AccountTestService) TestAccountConnection(c *gin.Context, accountID int
 	}
 
 	if account.IsOpenAI() {
+		modelID = strings.TrimSpace(modelID)
+		if modelID == "" && accountHasPrismBrowser(account) {
+			models, err := s.FetchOpenAIAccountModels(c.Request.Context(), account)
+			if err != nil {
+				return s.sendErrorAndEnd(c, "Prism live model discovery is unavailable")
+			}
+			if len(models) == 0 {
+				return s.sendErrorAndEnd(c, "This account has no available Prism models")
+			}
+			modelID = models[0].ID
+		}
 		if account.IsPrismBrowserEnabledForModel(modelID) && s.openaiGatewayService != nil && s.openaiGatewayService.prismBrowserGloballyEnabled(c.Request.Context()) {
 			if normalizeAccountTestMode(mode) != AccountTestModeDefault || testOpts.ImageDataURL != "" || testOpts.AudioDataURL != "" {
 				return s.sendErrorAndEnd(c, "Prism supports the default text test only")

@@ -167,15 +167,19 @@ func (g *controlledExperimentGateway) Execute(parent context.Context, route Cont
 		}
 		d.ResponseModel = result.UpstreamResponseModel
 		d.Usage = result.Usage
-		d.UsageSource = "provider"
-		if result.UsageUnavailable {
+		d.UsageSource = result.UsageSource
+		if d.UsageSource == "" {
+			d.UsageSource = "provider"
+		}
+		usageUnavailable := result.UsageUnavailable || route.Channel == "prism" && result.UsageSource == UsageSourceEstimatedVisibleText
+		if usageUnavailable {
 			d.UsageSource = "unavailable"
 		}
 		if result.ReasoningEffort != nil {
 			d.EffectiveEffort = *result.ReasoningEffort
 		}
 		d.EffortEvidence = "request_sent"
-		if g.billing != nil && !result.UsageUnavailable {
+		if g.billing != nil && !usageUnavailable {
 			cacheCreation := result.Usage.CacheCreationInputTokens
 			if account.IsExcelBPSCacheCreationAsInputEnabled() && result.UpstreamEndpoint == "/basispoints/api/responses" {
 				cacheCreation = 0
